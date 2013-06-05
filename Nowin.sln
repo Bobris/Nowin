@@ -1,0 +1,57 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FluxServer", "FluxServer\FluxServer.csproj", "{787958AE-2D58-43EE-A611-112CB280DA8F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NowinSample", "NowinSample\NowinSample.csproj", "{59409616-C3C9-4962-B965-2F8E107E51BA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HttpListener", "HttpListener\HttpListener.csproj", "{6A81F49B-FD6B-40AB-93EC-4CFB5B61C93A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoHttpListener", "MonoHttpListener\MonoHttpListener.csproj", "{F6D99F6A-D443-4E50-8548-D1E34F524DF7}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "OtherWebServerSamples", "OtherWebServerSamples", "{8959FD9E-0D6D-455D-9F62-83AF9692867B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleOwinApp", "SampleOwinApp\SampleOwinApp.csproj", "{5897FAEE-8B03-405A-9661-099CBFB2A162}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NowinWebServer", "NowinWebServer\NowinWebServer.csproj", "{EFF3B76F-E9E4-4DA6-B46D-E2DEA456545E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{787958AE-2D58-43EE-A611-112CB280DA8F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{787958AE-2D58-43EE-A611-112CB280DA8F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{787958AE-2D58-43EE-A611-112CB280DA8F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{787958AE-2D58-43EE-A611-112CB280DA8F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{59409616-C3C9-4962-B965-2F8E107E51BA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{59409616-C3C9-4962-B965-2F8E107E51BA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{59409616-C3C9-4962-B965-2F8E107E51BA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{59409616-C3C9-4962-B965-2F8E107E51BA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6A81F49B-FD6B-40AB-93EC-4CFB5B61C93A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6A81F49B-FD6B-40AB-93EC-4CFB5B61C93A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6A81F49B-FD6B-40AB-93EC-4CFB5B61C93A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6A81F49B-FD6B-40AB-93EC-4CFB5B61C93A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F6D99F6A-D443-4E50-8548-D1E34F524DF7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F6D99F6A-D443-4E50-8548-D1E34F524DF7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F6D99F6A-D443-4E50-8548-D1E34F524DF7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F6D99F6A-D443-4E50-8548-D1E34F524DF7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5897FAEE-8B03-405A-9661-099CBFB2A162}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5897FAEE-8B03-405A-9661-099CBFB2A162}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5897FAEE-8B03-405A-9661-099CBFB2A162}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5897FAEE-8B03-405A-9661-099CBFB2A162}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EFF3B76F-E9E4-4DA6-B46D-E2DEA456545E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EFF3B76F-E9E4-4DA6-B46D-E2DEA456545E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EFF3B76F-E9E4-4DA6-B46D-E2DEA456545E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EFF3B76F-E9E4-4DA6-B46D-E2DEA456545E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{787958AE-2D58-43EE-A611-112CB280DA8F} = {8959FD9E-0D6D-455D-9F62-83AF9692867B}
+		{6A81F49B-FD6B-40AB-93EC-4CFB5B61C93A} = {8959FD9E-0D6D-455D-9F62-83AF9692867B}
+		{F6D99F6A-D443-4E50-8548-D1E34F524DF7} = {8959FD9E-0D6D-455D-9F62-83AF9692867B}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,38 @@
+scenario
+{
+    name    = "default";
+ 
+    warmup      = 5;
+    duration    = 30;
+    cooldown    = 5;
+ 
+    default 
+    {
+        setheader
+        {
+            name    = "Connection";
+            value   = "keep-alive";
+        }
+        setheader
+        {
+            name    = "Host";
+            value   = "127.0.0.1:8080";
+        }
+        port        = 8080;
+        version     = HTTP11;
+        statuscode  = 200;
+        close       = ka;
+    }
+     
+    transaction
+    {
+        id = "hello";
+        weight = 1000;
+        request
+        {
+            url = "/";
+            secure = true;
+            protocol = TLS1;
+        }
+    }
+}

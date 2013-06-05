@@ -1,0 +1,31 @@
+/***#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#***\
+\ W |    PRE-COMPILED PACKS FOR WLMP PROJECT    | W /
+/ L | - - - - - - - - - - - - - - - - - - - - - | L \
+\ M |         Copyright (C) 2006 - 2012         | M /
+/ P |  WLMP Project - http://wlmp-project.net/  | P \
+\***#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#***/
+
+// -- PACKAGE: WeigHTTP-0.3-Win32 -- //
+
+===================
+PACKAGE INFORMATION
+===================
+
+Package Name:             WeigHTTP (Win32)
+Package Type:             Binary
+Package Version:          0.3
+Revision:                 1bdbe400
+Release Date:             2012-01-10
+
+Status:                   Stable Release
+Language:                 English
+Compilation Platform:     i686-pc-cygwin (GCC-4.5.3)
+
+Author:                   Thomas Porzelt
+License:                  MIT License
+
+Operating System:         Microsoft Windows 2000 / XP / 2003 / Vista / 2008 / 7
+
+Online documentation:     http://redmine.lighttpd.net/projects/weighttp/wiki
+
+Notice:                   This version is built for WLMP Webserver Package.

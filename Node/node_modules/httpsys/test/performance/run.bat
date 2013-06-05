@@ -1,0 +1,1 @@
+cscript "%programfiles%\wcat\wcat.wsf" -terminate -run -clients localhost -t httpsys.ubr -s localhost -p 8080 -v 50 -singleip -x

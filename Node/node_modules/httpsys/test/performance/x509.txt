@@ -1,0 +1,18 @@
+The x509.pfx was created by running:
+
+makecert -sr LocalMachine -ss My -pe -n "CN=localhost" -a sha256 -len 1024 -r
+
+and exporting the certificate from LocalMachine|My certificate store into x509.pfx, 
+encrypted with `httpsys` password.
+
+To configure the certificate to be used for HTTP.SYS, make sure it is available 
+in the LocalMachine|My certificate store, then run:
+
+netsh http add sslcert ipport=0.0.0.0:8080 certhash=9c53ccbf622316f66770512815eedeec32a233aa appid={00112233-4455-6677-8899-AABBCCDDEEFE}
+
+(The value of the certhash corresponds to the checked in x509.pfx; 
+if another certificate was generated with makecert, that value needs to be updated)
+
+To verify the certificate had been configured, run:
+
+netsh http show sslcert ipport=0.0.0.0:8080

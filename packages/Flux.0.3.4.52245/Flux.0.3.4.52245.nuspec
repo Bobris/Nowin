@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>Flux</id>
+    <version>0.3.4.52245</version>
+    <title>Flux</title>
+    <authors>Mark Rendle</authors>
+    <owners>Mark Rendle</owners>
+    <licenseUrl>http://www.opensource.org/licenses/mit-license.php</licenseUrl>
+    <projectUrl>http://github.com/markrendle/Flux</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>A lightweight web server.</description>
+    <summary>A lightweight web server.</summary>
+    <releaseNotes />
+    <copyright>Mark Rendle</copyright>
+    <language />
+    <tags>fix owin http</tags>
+    <dependencies>
+      <dependency id="Fix" version="0.3" />
+    </dependencies>
+  </metadata>
+</package>
