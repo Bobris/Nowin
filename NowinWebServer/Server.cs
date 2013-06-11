@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace NowinWebServer
 {
-    public class Server
+    public class Server : IDisposable
     {
         static readonly byte[] Status100Continue = Encoding.UTF8.GetBytes("HTTP/1.1 100 Continue\r\n");
         internal static readonly byte[] Status500InternalServerError10 = Encoding.UTF8.GetBytes("HTTP/1.0 500 Internal Server Error\r\n\r\n");
@@ -104,5 +104,9 @@ namespace NowinWebServer
             token.ProcessDisconnect(e);
         }
 
+        public void Dispose()
+        {
+            Stop();
+        }
     }
 }

@@ -21,9 +21,9 @@ namespace NowinWebServer
         public bool IsKeepAlive;
         public bool Send100Continue;
         public bool ResponseHeadersSend;
-        public IDictionary<string, object> Environment;
-        Dictionary<string, string[]> _reqHeaders;
-        Dictionary<string, string[]> _respHeaders;
+        public readonly IDictionary<string, object> Environment;
+        readonly Dictionary<string, string[]> _reqHeaders;
+        readonly Dictionary<string, string[]> _respHeaders;
         public readonly SocketAsyncEventArgs ReceiveSocketAsyncEventArgs;
         public readonly SocketAsyncEventArgs SendSocketAsyncEventArgs;
         readonly Socket _listenSocket;
@@ -31,6 +31,7 @@ namespace NowinWebServer
         public readonly ResponseStream ResponseStream;
         public readonly RequestStream RequestStream;
         TaskCompletionSource<bool> _tcsSend;
+        CancellationTokenSource _cancellation;
         int _responseHeaderPos;
         public bool LastPacket;
 
@@ -57,8 +58,9 @@ namespace NowinWebServer
             Environment.Clear();
             _reqHeaders.Clear();
             _respHeaders.Clear();
+            _cancellation = new CancellationTokenSource();
             Environment.Add(OwinKeys.Version, "1.0");
-            Environment.Add(OwinKeys.CallCancelled, new CancellationToken(false));
+            Environment.Add(OwinKeys.CallCancelled, _cancellation.Token);
             Environment.Add(OwinKeys.RequestBody, RequestStream);
             Environment.Add(OwinKeys.RequestHeaders, _reqHeaders);
             Environment.Add(OwinKeys.RequestPathBase, "");
@@ -230,8 +232,21 @@ namespace NowinWebServer
                         return;
                     case (byte)'?':
                         reqPath = ParsePath(buffer, start, p);
-                        start = p + 1;
-                        throw new NotImplementedException();
+                        p++;
+                        start = p;
+                        switch(SearchForFirstSpaceOrEndOfLine(buffer, ref p))
+                        {
+                            case (byte)' ':
+                                reqQueryString = StringFromLatin1(buffer, start, p);
+                                pos = p + 1;
+                                return;
+                            case 13:
+                                reqQueryString = StringFromLatin1(buffer, start, p);
+                                pos = p;
+                                return;
+                            default:
+                                throw new InvalidOperationException();
+                        }
                     default:
                         throw new InvalidOperationException();
                 }
@@ -287,6 +302,16 @@ namespace NowinWebServer
             if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
             if (ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
             return -1;
+        }
+
+        static byte SearchForFirstSpaceOrEndOfLine(byte[] buffer, ref int p)
+        {
+            while (true)
+            {
+                var ch = buffer[p];
+                if (ch == ' ' ||  ch == 13) return ch;
+                p++;
+            }
         }
 
         static byte SearchForFirstSpaceOrQuestionMarkOrEndOfLine(byte[] buffer, ref int p)
@@ -360,7 +385,7 @@ namespace NowinWebServer
 
         void FillResponse(bool finished)
         {
-            var status = (int)Environment[OwinKeys.ResponseStatusCode];
+            var status = GetStatusFromEnvironment();
             _responseHeaderPos = 0;
             HeaderAppend(IsHttp10 ? "HTTP/1.0 " : "HTTP/1.1 ");
             HeaderAppend(status.ToString(CultureInfo.InvariantCulture));
@@ -423,6 +448,14 @@ namespace NowinWebServer
             HeaderAppendCrLf();
         }
 
+        int GetStatusFromEnvironment()
+        {
+            object value;
+            if (!Environment.TryGetValue(OwinKeys.ResponseStatusCode, out value))
+                return 200;
+            return (int)value;
+        }
+
         void HeaderAppendCrLf()
         {
             if (_responseHeaderPos > ReceiveBufferSize - 2)
@@ -466,16 +499,22 @@ namespace NowinWebServer
                         {
                             ReceiveSocketAsyncEventArgs.SetBuffer(NextBufferOffset, count);
                             var willRaiseEvent = Socket.ReceiveAsync(ReceiveSocketAsyncEventArgs);
-                            if (!willRaiseEvent)
-                            {
-                                return true;
-                            }
-                            return false;
+                            return !willRaiseEvent;
                         }
                     }
                     WaitingForRequest = false;
-                    ParseRequest(ReceiveSocketAsyncEventArgs.Buffer, StartBufferOffset, posOfReqEnd);
-                    var task = _app(Environment);
+                    Task task;
+                    try
+                    {
+                        ParseRequest(ReceiveSocketAsyncEventArgs.Buffer, StartBufferOffset, posOfReqEnd);
+                        task = _app(Environment);
+                    }
+                    catch (Exception ex)
+                    {
+                        var tcs = new TaskCompletionSource<bool>();
+                        tcs.SetException(ex);
+                        task = tcs.Task;
+                    }
                     if (task.IsCompleted)
                     {
                         AppFinished(task);
@@ -500,7 +539,14 @@ namespace NowinWebServer
         {
             if (task.IsFaulted || task.IsCanceled)
             {
-                SendInternalServerError();
+                _cancellation.Cancel();
+                if (!ResponseHeadersSend)
+                    SendInternalServerError();
+                else
+                {
+                    IsKeepAlive = false;
+                    CloseClientSocket(SendSocketAsyncEventArgs);
+                }
                 return;
             }
             var offset = ResponseStream.StartOffset;
