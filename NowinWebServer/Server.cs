@@ -9,7 +9,7 @@ namespace NowinWebServer
 {
     public class Server : IDisposable
     {
-        static readonly byte[] Status100Continue = Encoding.UTF8.GetBytes("HTTP/1.1 100 Continue\r\n");
+        internal static readonly byte[] Status100Continue = Encoding.UTF8.GetBytes("HTTP/1.1 100 Continue\r\n\r\n");
         internal static readonly byte[] Status500InternalServerError10 = Encoding.UTF8.GetBytes("HTTP/1.0 500 Internal Server Error\r\n\r\n");
         internal static readonly byte[] Status500InternalServerError11 = Encoding.UTF8.GetBytes("HTTP/1.1 500 Internal Server Error\r\n\r\n");
 
@@ -31,9 +31,9 @@ namespace NowinWebServer
             _listenSocket.Bind(localEndPoint);
             _listenSocket.Listen(100);
             var reserveAtEnd = Status100Continue.Length;
-            var constantsOffset = checked (_maxConnections*_receiveBufferSize*3);
-            var buffer = new byte[checked (constantsOffset + reserveAtEnd)];
-
+            var constantsOffset = checked(_maxConnections * _receiveBufferSize * 3);
+            var buffer = new byte[checked(constantsOffset + reserveAtEnd)];
+            Array.Copy(Status100Continue, 0, buffer, constantsOffset, Status100Continue.Length);
             for (var i = 0; i < _maxConnections; i++)
             {
                 var receiveEvent = new SocketAsyncEventArgs();

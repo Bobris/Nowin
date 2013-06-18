@@ -14,12 +14,14 @@ namespace NowinWebServer
         public readonly int ReceiveBufferSize;
         public readonly int ConstantsOffset;
         readonly byte[] _buffer;
-        public int NextBufferOffset;
+        public int ReceiveBufferPos;
+        public int ReceiveBufferFullness;
         public Socket Socket;
         public bool WaitingForRequest;
         public bool IsHttp10;
         public bool IsKeepAlive;
-        public bool Send100Continue;
+        public bool ShouldSend100Continue;
+        public ulong RequestContentLength;
         public bool ResponseHeadersSend;
         public readonly IDictionary<string, object> Environment;
         readonly Dictionary<string, string[]> _reqHeaders;
@@ -34,6 +36,7 @@ namespace NowinWebServer
         CancellationTokenSource _cancellation;
         int _responseHeaderPos;
         public bool LastPacket;
+        bool _sending100Continue;
 
         public ConnectionInfo(int startBufferOffset, int receiveBufferSize, int constantsOffset, SocketAsyncEventArgs receiveSocketAsyncEventArgs, SocketAsyncEventArgs sendSocketAsyncEventArgs, Socket listenSocket, Func<IDictionary<string, object>, Task> app)
         {
@@ -50,6 +53,12 @@ namespace NowinWebServer
             Environment = new Dictionary<string, object>();
             _reqHeaders = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
             _respHeaders = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+            _sending100Continue = false;
+        }
+
+        public int ReceiveBufferDataLength
+        {
+            get { return ReceiveBufferFullness - StartBufferOffset - ReceiveBufferPos; }
         }
 
         public void ParseRequest(byte[] buffer, int startBufferOffset, int posOfReqEnd)
@@ -59,6 +68,7 @@ namespace NowinWebServer
             _reqHeaders.Clear();
             _respHeaders.Clear();
             _cancellation = new CancellationTokenSource();
+            _sending100Continue = false;
             Environment.Add(OwinKeys.Version, "1.0");
             Environment.Add(OwinKeys.CallCancelled, _cancellation.Token);
             Environment.Add(OwinKeys.RequestBody, RequestStream);
@@ -102,13 +112,22 @@ namespace NowinWebServer
                     }
                 }
             }
-            Send100Continue = false;
+            ShouldSend100Continue = false;
             string[] expectValues;
             if (_reqHeaders.TryGetValue("Expect", out expectValues))
             {
                 if (expectValues.Length == 1 && expectValues[0].Equals("100-Continue", StringComparison.OrdinalIgnoreCase))
                 {
-                    Send100Continue = true;
+                    ShouldSend100Continue = true;
+                }
+            }
+            RequestContentLength = 0;
+            string[] contentLengthValues;
+            if (_reqHeaders.TryGetValue("Content-Length", out contentLengthValues))
+            {
+                if (contentLengthValues.Length != 1 || !ulong.TryParse(contentLengthValues[0], out RequestContentLength))
+                {
+                    throw new InvalidDataException("Wrong request content length");
                 }
             }
         }
@@ -234,7 +253,7 @@ namespace NowinWebServer
                         reqPath = ParsePath(buffer, start, p);
                         p++;
                         start = p;
-                        switch(SearchForFirstSpaceOrEndOfLine(buffer, ref p))
+                        switch (SearchForFirstSpaceOrEndOfLine(buffer, ref p))
                         {
                             case (byte)' ':
                                 reqQueryString = StringFromLatin1(buffer, start, p);
@@ -309,7 +328,7 @@ namespace NowinWebServer
             while (true)
             {
                 var ch = buffer[p];
-                if (ch == ' ' ||  ch == 13) return ch;
+                if (ch == ' ' || ch == 13) return ch;
                 p++;
             }
         }
@@ -488,16 +507,17 @@ namespace NowinWebServer
         {
             if (ReceiveSocketAsyncEventArgs.BytesTransferred > 0 && ReceiveSocketAsyncEventArgs.SocketError == SocketError.Success)
             {
-                NextBufferOffset = ReceiveSocketAsyncEventArgs.Offset + ReceiveSocketAsyncEventArgs.BytesTransferred;
+                ReceiveBufferFullness = ReceiveSocketAsyncEventArgs.Offset + ReceiveSocketAsyncEventArgs.BytesTransferred;
                 if (WaitingForRequest)
                 {
-                    var posOfReqEnd = FindRequestEnd(ReceiveSocketAsyncEventArgs.Buffer, StartBufferOffset, NextBufferOffset);
+                    NormalizeReceiveBuffer();
+                    var posOfReqEnd = FindRequestEnd(ReceiveSocketAsyncEventArgs.Buffer, StartBufferOffset, ReceiveBufferFullness);
                     if (posOfReqEnd < 0)
                     {
-                        var count = ReceiveBufferSize - NextBufferOffset + StartBufferOffset;
+                        var count = StartBufferOffset + ReceiveBufferSize - ReceiveBufferFullness;
                         if (count > 0)
                         {
-                            ReceiveSocketAsyncEventArgs.SetBuffer(NextBufferOffset, count);
+                            ReceiveSocketAsyncEventArgs.SetBuffer(ReceiveBufferFullness, count);
                             var willRaiseEvent = Socket.ReceiveAsync(ReceiveSocketAsyncEventArgs);
                             return !willRaiseEvent;
                         }
@@ -506,6 +526,7 @@ namespace NowinWebServer
                     Task task;
                     try
                     {
+                        ReceiveBufferPos = posOfReqEnd - StartBufferOffset;
                         ParseRequest(ReceiveSocketAsyncEventArgs.Buffer, StartBufferOffset, posOfReqEnd);
                         task = _app(Environment);
                     }
@@ -522,12 +543,31 @@ namespace NowinWebServer
                     }
                     task.ContinueWith(AppFinished, this, TaskContinuationOptions.ExecuteSynchronously);
                 }
+                else
+                {
+                    if (RequestStream.ProcessDataAndShouldReadMore())
+                    {
+                        NormalizeReceiveBuffer();
+                        var count = StartBufferOffset + ReceiveBufferSize - ReceiveBufferFullness;
+                        ReceiveSocketAsyncEventArgs.SetBuffer(ReceiveBufferFullness, count);
+                        var willRaiseEvent = Socket.ReceiveAsync(ReceiveSocketAsyncEventArgs);
+                        return !willRaiseEvent;
+                    }
+                }
             }
             else
             {
                 CloseClientSocket(ReceiveSocketAsyncEventArgs);
             }
             return false;
+        }
+
+        void NormalizeReceiveBuffer()
+        {
+            if (ReceiveBufferPos == 0) return;
+            Array.Copy(_buffer, StartBufferOffset + ReceiveBufferPos, _buffer, StartBufferOffset, ReceiveBufferFullness - StartBufferOffset - ReceiveBufferPos);
+            ReceiveBufferFullness -= ReceiveBufferPos;
+            ReceiveBufferPos = 0;
         }
 
         static void AppFinished(Task task, object state)
@@ -611,6 +651,7 @@ namespace NowinWebServer
 
         public void ProcessSend()
         {
+            _sending100Continue = false;
             if (SendSocketAsyncEventArgs.SocketError == SocketError.Success)
             {
                 if (_tcsSend != null)
@@ -634,11 +675,12 @@ namespace NowinWebServer
                 if (IsKeepAlive)
                 {
                     ResetForNextRequest();
-                    ReceiveSocketAsyncEventArgs.SetBuffer(ReceiveSocketAsyncEventArgs.Offset, ReceiveBufferSize);
+                    NormalizeReceiveBuffer();
+                    ReceiveSocketAsyncEventArgs.SetBuffer(ReceiveBufferFullness, StartBufferOffset + ReceiveBufferSize - ReceiveBufferFullness);
                     var willRaiseEvent = Socket.ReceiveAsync(ReceiveSocketAsyncEventArgs);
                     if (!willRaiseEvent)
                     {
-                        ProcessReceive();
+                        while (ProcessReceive()) ;
                     }
                 }
                 else
@@ -677,7 +719,7 @@ namespace NowinWebServer
             ReceiveSocketAsyncEventArgs.AcceptSocket = null;
             ResetForNextRequest();
             LastPacket = false;
-            ProcessReceive();
+            while (ProcessReceive()) ;
         }
 
         public void StartAccept()
@@ -722,6 +764,32 @@ namespace NowinWebServer
                 o2 = o1;
             }
             l2 += l1;
+        }
+
+        public void Send100Continue()
+        {
+            SendSocketAsyncEventArgs.SetBuffer(ConstantsOffset, Server.Status100Continue.Length);
+            _sending100Continue = true;
+            var willRaiseEvent = Socket.SendAsync(SendSocketAsyncEventArgs);
+            if (!willRaiseEvent)
+            {
+                ProcessSend();
+            }
+        }
+
+        public void StartNextReceive()
+        {
+            NormalizeReceiveBuffer();
+            var count = StartBufferOffset + ReceiveBufferSize - ReceiveBufferFullness;
+            if (count > 0)
+            {
+                ReceiveSocketAsyncEventArgs.SetBuffer(ReceiveBufferFullness, count);
+                var willRaiseEvent = Socket.ReceiveAsync(ReceiveSocketAsyncEventArgs);
+                if (!willRaiseEvent)
+                {
+                    while (ProcessReceive()) ;
+                }
+            }
         }
     }
 }
