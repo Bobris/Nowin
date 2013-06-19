@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -33,7 +34,7 @@ namespace NowinTests
         public void EmptyAppRespondOk()
         {
             var listener = CreateServer(env => Task.Delay(0));
-            var response = SendGetRequest(listener, HttpClientAddress).Result;
+            var response = SendGetRequest(listener, HttpClientAddress);
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
             Assert.NotNull(response.Content.Headers.ContentLength);
             Assert.AreEqual(0, response.Content.Headers.ContentLength.Value);
@@ -57,7 +58,7 @@ namespace NowinTests
         public void ThrowAppRespond500()
         {
             var listener = CreateServer(_appThrow);
-            var response = SendGetRequest(listener, HttpClientAddress).Result;
+            var response = SendGetRequest(listener, HttpClientAddress);
             Assert.AreEqual(HttpStatusCode.InternalServerError, response.StatusCode);
             Assert.NotNull(response.Content.Headers.ContentLength);
             Assert.AreEqual(0, response.Content.Headers.ContentLength.Value);
@@ -75,7 +76,7 @@ namespace NowinTests
                     throw new InvalidOperationException();
                 });
 
-            var response = SendGetRequest(listener, HttpClientAddress).Result;
+            var response = SendGetRequest(listener, HttpClientAddress);
             Assert.AreEqual(HttpStatusCode.InternalServerError, response.StatusCode);
             Assert.NotNull(response.Content.Headers.ContentLength);
             Assert.AreEqual(0, response.Content.Headers.ContentLength.Value);
@@ -136,7 +137,7 @@ namespace NowinTests
 
             try
             {
-                Assert.Throws<AggregateException>(() => SendGetRequest(listener, HttpClientAddress).Wait());
+                Assert.Throws<AggregateException>(() => SendGetRequest(listener, HttpClientAddress));
             }
             finally
             {
@@ -167,7 +168,7 @@ namespace NowinTests
 
             try
             {
-                Assert.Throws<AggregateException>(() => SendGetRequest(listener, HttpClientAddress).Wait());
+                Assert.Throws<AggregateException>(() => SendGetRequest(listener, HttpClientAddress));
             }
             finally
             {
@@ -182,12 +183,11 @@ namespace NowinTests
         public void PathAndQueryParsing(string clientString, string expectedPath, string expectedQuery)
         {
             clientString = "http://localhost:8080" + clientString;
-            var listener = CreateServer(env =>
+            var listener = CreateServerSync(env =>
             {
                 Assert.AreEqual("", env["owin.RequestPathBase"]);
                 Assert.AreEqual(expectedPath, env["owin.RequestPath"]);
                 Assert.AreEqual(expectedQuery, env["owin.RequestQueryString"]);
-                return Task.Delay(0);
             });
             using (listener)
             {
@@ -197,12 +197,300 @@ namespace NowinTests
             }
         }
 
+        [Test]
+        public void CallParametersEmptyGetRequest()
+        {
+            var listener = CreateServerSync(
+                env =>
+                {
+                    Assert.NotNull(env);
+                    Assert.NotNull(env.Get<Stream>("owin.RequestBody"));
+                    Assert.NotNull(env.Get<Stream>("owin.ResponseBody"));
+                    Assert.NotNull(env.Get<IDictionary<string, string[]>>("owin.RequestHeaders"));
+                    Assert.NotNull(env.Get<IDictionary<string, string[]>>("owin.ResponseHeaders"));
+                });
+
+            SendGetRequest(listener, HttpClientAddress);
+        }
+
+        [Test]
+        public void EnvironmentEmptyGetRequest()
+        {
+            var listener = CreateServerSync(
+                env =>
+                {
+                    object ignored;
+                    Assert.True(env.TryGetValue("owin.RequestMethod", out ignored));
+                    Assert.AreEqual("GET", env["owin.RequestMethod"]);
+
+                    Assert.True(env.TryGetValue("owin.RequestPath", out ignored));
+                    Assert.AreEqual("/SubPath", env["owin.RequestPath"]);
+
+                    Assert.True(env.TryGetValue("owin.RequestPathBase", out ignored));
+                    Assert.AreEqual("", env["owin.RequestPathBase"]);
+
+                    Assert.True(env.TryGetValue("owin.RequestProtocol", out ignored));
+                    Assert.AreEqual("HTTP/1.1", env["owin.RequestProtocol"]);
+
+                    Assert.True(env.TryGetValue("owin.RequestQueryString", out ignored));
+                    Assert.AreEqual("QueryString", env["owin.RequestQueryString"]);
+
+                    Assert.True(env.TryGetValue("owin.RequestScheme", out ignored));
+                    Assert.AreEqual("http", env["owin.RequestScheme"]);
+
+                    Assert.True(env.TryGetValue("owin.Version", out ignored));
+                    Assert.AreEqual("1.0", env["owin.Version"]);
+                });
+
+            SendGetRequest(listener, HttpClientAddress + "SubPath?QueryString");
+        }
+
+        [Test]
+        public void EnvironmentPost10Request()
+        {
+            var listener = CreateServerSync(
+                env =>
+                {
+                    object ignored;
+                    Assert.True(env.TryGetValue("owin.RequestMethod", out ignored));
+                    Assert.AreEqual("POST", env["owin.RequestMethod"]);
+
+                    Assert.True(env.TryGetValue("owin.RequestPath", out ignored));
+                    Assert.AreEqual("/SubPath", env["owin.RequestPath"]);
+
+                    Assert.True(env.TryGetValue("owin.RequestPathBase", out ignored));
+                    Assert.AreEqual("", env["owin.RequestPathBase"]);
+
+                    Assert.True(env.TryGetValue("owin.RequestProtocol", out ignored));
+                    Assert.AreEqual("HTTP/1.0", env["owin.RequestProtocol"]);
+
+                    Assert.True(env.TryGetValue("owin.RequestQueryString", out ignored));
+                    Assert.AreEqual("QueryString", env["owin.RequestQueryString"]);
+
+                    Assert.True(env.TryGetValue("owin.RequestScheme", out ignored));
+                    Assert.AreEqual("http", env["owin.RequestScheme"]);
+
+                    Assert.True(env.TryGetValue("owin.Version", out ignored));
+                    Assert.AreEqual("1.0", env["owin.Version"]);
+                });
+
+            var request = new HttpRequestMessage(HttpMethod.Post, HttpClientAddress + "SubPath?QueryString")
+                {
+                    Content = new StringContent("Hello World"),
+                    Version = new Version(1, 0)
+                };
+            SendRequest(listener, request);
+        }
+
+        [Test]
+        public void HeadersEmptyGetRequest()
+        {
+            var listener = CreateServerSync(
+                env =>
+                {
+                    var requestHeaders = env.Get<IDictionary<string, string[]>>("owin.RequestHeaders");
+
+                    string[] values;
+                    Assert.True(requestHeaders.TryGetValue("host", out values));
+                    Assert.AreEqual(1, values.Length);
+                    Assert.AreEqual("localhost:8080", values[0]);
+                });
+
+            SendGetRequest(listener, HttpClientAddress);
+        }
+
+        [Test]
+        public void HeadersPostContentLengthRequest()
+        {
+            const string requestBody = "Hello World";
+
+            var listener = CreateServerSync(
+                env =>
+                {
+                    var requestHeaders = env.Get<IDictionary<string, string[]>>("owin.RequestHeaders");
+
+                    string[] values;
+
+                    Assert.True(requestHeaders.TryGetValue("host", out values));
+                    Assert.AreEqual(1, values.Length);
+                    Assert.AreEqual("localhost:8080", values[0]);
+
+                    Assert.True(requestHeaders.TryGetValue("Content-length", out values));
+                    Assert.AreEqual(1, values.Length);
+                    Assert.AreEqual(requestBody.Length.ToString(CultureInfo.InvariantCulture), values[0]);
+
+                    Assert.True(requestHeaders.TryGetValue("exPect", out values));
+                    Assert.AreEqual(1, values.Length);
+                    Assert.AreEqual("100-continue", values[0]);
+
+                    Assert.True(requestHeaders.TryGetValue("Content-Type", out values));
+                    Assert.AreEqual(1, values.Length);
+                    Assert.AreEqual("text/plain; charset=utf-8", values[0]);
+                });
+
+            var request = new HttpRequestMessage(HttpMethod.Post, HttpClientAddress + "SubPath?QueryString")
+                {
+                    Content = new StringContent(requestBody)
+                };
+            SendRequest(listener, request);
+        }
+
+        [Test]
+        public void HeadersPostChunkedRequest()
+        {
+            const string requestBody = "Hello World";
+
+            var listener = CreateServerSync(
+                env =>
+                {
+                    var requestHeaders = env.Get<IDictionary<string, string[]>>("owin.RequestHeaders");
+
+                    string[] values;
+
+                    Assert.True(requestHeaders.TryGetValue("host", out values));
+                    Assert.AreEqual(1, values.Length);
+                    Assert.AreEqual("localhost:8080", values[0]);
+
+                    Assert.True(requestHeaders.TryGetValue("Transfer-encoding", out values));
+                    Assert.AreEqual(1, values.Length);
+                    Assert.AreEqual("chunked", values[0]);
+
+                    Assert.True(requestHeaders.TryGetValue("exPect", out values));
+                    Assert.AreEqual(1, values.Length);
+                    Assert.AreEqual("100-continue", values[0]);
+
+                    Assert.True(requestHeaders.TryGetValue("Content-Type", out values));
+                    Assert.AreEqual(1, values.Length);
+                    Assert.AreEqual("text/plain; charset=utf-8", values[0]);
+                });
+
+            var request = new HttpRequestMessage(HttpMethod.Post, HttpClientAddress + "SubPath?QueryString");
+            request.Headers.TransferEncodingChunked = true;
+            request.Content = new StringContent(requestBody);
+            SendRequest(listener, request);
+        }
+
+        [Test]
+        public void BodyPostContentLengthZero()
+        {
+            var listener = CreateServerSync(
+                env =>
+                {
+                    string[] values;
+                    var requestHeaders = env.Get<IDictionary<string, string[]>>("owin.RequestHeaders");
+
+                    Assert.True(requestHeaders.TryGetValue("Content-length", out values));
+                    Assert.AreEqual(1, values.Length);
+                    Assert.AreEqual("0", values[0]);
+
+                    Assert.NotNull(env.Get<Stream>("owin.RequestBody"));
+                });
+
+            var request = new HttpRequestMessage(HttpMethod.Post, HttpClientAddress)
+                {
+                    Content = new StringContent("")
+                };
+            SendRequest(listener, request);
+        }
+
+        [Test]
+        public void BodyPostContentLengthX()
+        {
+            var listener = CreateServerSync(
+                env =>
+                {
+                    string[] values;
+                    var requestHeaders = env.Get<IDictionary<string, string[]>>("owin.RequestHeaders");
+
+                    Assert.True(requestHeaders.TryGetValue("Content-length", out values));
+                    Assert.AreEqual(1, values.Length);
+                    Assert.AreEqual("11", values[0]);
+
+                    var requestBody = env.Get<Stream>("owin.RequestBody");
+                    Assert.NotNull(requestBody);
+
+                    var buffer = new MemoryStream();
+                    requestBody.CopyTo(buffer);
+                    Assert.AreEqual(11, buffer.Length);
+                });
+
+            var request = new HttpRequestMessage(HttpMethod.Post, HttpClientAddress)
+                {
+                    Content = new StringContent("Hello World")
+                };
+            SendRequest(listener, request);
+        }
+
+        [Test]
+        public void BodyPostChunkedEmpty()
+        {
+            var listener = CreateServerSync(
+                env =>
+                {
+                    string[] values;
+                    var requestHeaders = env.Get<IDictionary<string, string[]>>("owin.RequestHeaders");
+
+                    Assert.True(requestHeaders.TryGetValue("Transfer-Encoding", out values));
+                    Assert.AreEqual(1, values.Length);
+                    Assert.AreEqual("chunked", values[0]);
+
+                    var requestBody = env.Get<Stream>("owin.RequestBody");
+                    Assert.NotNull(requestBody);
+
+                    var buffer = new MemoryStream();
+                    requestBody.CopyTo(buffer);
+                    Assert.AreEqual(0, buffer.Length);
+                });
+
+            var request = new HttpRequestMessage(HttpMethod.Post, HttpClientAddress);
+            request.Headers.TransferEncodingChunked = true;
+            request.Content = new StringContent("");
+            SendRequest(listener, request);
+        }
+
+        [Test]
+        public void BodyPostChunkedX()
+        {
+            var listener = CreateServerSync(
+                env =>
+                {
+                    string[] values;
+                    var requestHeaders = env.Get<IDictionary<string, string[]>>("owin.RequestHeaders");
+
+                    Assert.True(requestHeaders.TryGetValue("Transfer-Encoding", out values));
+                    Assert.AreEqual(1, values.Length);
+                    Assert.AreEqual("chunked", values[0]);
+
+                    var requestBody = env.Get<Stream>("owin.RequestBody");
+                    Assert.NotNull(requestBody);
+
+                    var buffer = new MemoryStream();
+                    requestBody.CopyTo(buffer);
+                    Assert.AreEqual(11, buffer.Length);
+                });
+
+            var request = new HttpRequestMessage(HttpMethod.Post, HttpClientAddress);
+            request.Headers.TransferEncodingChunked = true;
+            request.Content = new StringContent("Hello World");
+            SendRequest(listener, request);
+        }
+
+        void SendRequest(IDisposable listener, HttpRequestMessage request)
+        {
+            using (listener)
+            {
+                var client = new HttpClient();
+                var result = client.SendAsync(request).Result;
+                result.EnsureSuccessStatusCode();
+            }
+        }
+
         static CancellationToken GetCallCancelled(IDictionary<string, object> env)
         {
             return env.Get<CancellationToken>("owin.CallCancelled");
         }
 
-        static async Task<HttpResponseMessage> SendGetRequest(IDisposable listener, string address)
+        static HttpResponseMessage SendGetRequest(IDisposable listener, string address)
         {
             using (listener)
             {
@@ -212,7 +500,7 @@ namespace NowinTests
                         ClientCertificateOptions = ClientCertificateOption.Automatic
                     };
                 var client = new HttpClient(handler);
-                return await client.GetAsync(address);
+                return client.GetAsync(address).Result;
             }
         }
 
@@ -221,6 +509,15 @@ namespace NowinTests
             var server = new Server(10);
             server.Start(new IPEndPoint(IPAddress.Loopback, 8080), app);
             return server;
+        }
+
+        static Server CreateServerSync(Action<IDictionary<string, object>> appSync)
+        {
+            return CreateServer(env =>
+                {
+                    appSync(env);
+                    return Task.Delay(0);
+                });
         }
     }
 }

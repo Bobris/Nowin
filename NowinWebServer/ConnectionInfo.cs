@@ -589,6 +589,24 @@ namespace NowinWebServer
                 }
                 return;
             }
+            if (RequestStream.Position != RequestStream.Length)
+            {
+                DrainRequestStreamAsync().ContinueWith((t, o) =>
+                    {
+                        if (t.IsFaulted || t.IsCanceled)
+                        {
+                            ((ConnectionInfo)o).AppFinished(t);
+                            return;
+                        }
+                        ((ConnectionInfo)o).AppFinishedSuccessfully();
+                    }, this);
+                return;
+            }
+            AppFinishedSuccessfully();
+        }
+
+        void AppFinishedSuccessfully()
+        {
             var offset = ResponseStream.StartOffset;
             var len = ResponseStream.LocalPos;
             if (!ResponseHeadersSend)
@@ -608,6 +626,15 @@ namespace NowinWebServer
             if (!willRaiseEvent)
             {
                 ProcessSend();
+            }
+        }
+
+        async Task DrainRequestStreamAsync()
+        {
+            while (true)
+            {
+                var len = await RequestStream.ReadAsync(_buffer, StartBufferOffset + ReceiveBufferSize, ReceiveBufferSize);
+                if (len < ReceiveBufferSize) return;
             }
         }
 
