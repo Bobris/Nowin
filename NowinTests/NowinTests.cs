@@ -479,9 +479,11 @@ namespace NowinTests
         {
             using (listener)
             {
-                var client = new HttpClient();
-                var result = client.SendAsync(request).Result;
-                result.EnsureSuccessStatusCode();
+                using (var client = new HttpClient())
+                {
+                    var result = client.SendAsync(request, HttpCompletionOption.ResponseContentRead).Result;
+                    result.EnsureSuccessStatusCode();
+                }
             }
         }
 
@@ -499,14 +501,16 @@ namespace NowinTests
                         ServerCertificateValidationCallback = (a, b, c, d) => true,
                         ClientCertificateOptions = ClientCertificateOption.Automatic
                     };
-                var client = new HttpClient(handler);
-                return client.GetAsync(address).Result;
+                using (var client = new HttpClient(handler))
+                {
+                    return client.GetAsync(address, HttpCompletionOption.ResponseContentRead).Result;
+                }
             }
         }
 
         static Server CreateServer(AppFunc app)
         {
-            var server = new Server(10);
+            var server = new Server(1);
             server.Start(new IPEndPoint(IPAddress.Loopback, 8080), app);
             return server;
         }

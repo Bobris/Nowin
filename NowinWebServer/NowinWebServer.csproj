@@ -39,6 +39,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ChunkedDecoder.cs" />
     <Compile Include="ConnectionInfo.cs" />
     <Compile Include="OwinKeys.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

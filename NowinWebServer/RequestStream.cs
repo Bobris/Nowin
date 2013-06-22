@@ -15,11 +15,18 @@ namespace NowinWebServer
         int _asyncCount;
         int _asyncResult;
         long _position;
+        ChunkedDecoder _chunkedDecoder = new ChunkedDecoder();
 
         public RequestStream(ConnectionInfo connectionInfo)
         {
             _connectionInfo = connectionInfo;
             _buf = connectionInfo.ReceiveSocketAsyncEventArgs.Buffer;
+        }
+
+        public void Reset()
+        {
+            _position = 0;
+            _chunkedDecoder.Reset();
         }
 
         public override void Flush()
@@ -58,19 +65,19 @@ namespace NowinWebServer
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            var len = ReadSyncPart(buffer, ref offset, ref count);
-            if (count == 0) return len;
-            return ReadOverflowAsync(buffer, offset, count, len).Result;
+            ReadSyncPart(buffer, offset, count);
+            if (_asyncCount == 0) return _asyncResult;
+            return ReadOverflowAsync().Result;
         }
 
         public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            var len = ReadSyncPart(buffer, ref offset, ref count);
-            if (count == 0) return Task.FromResult(len);
-            return ReadOverflowAsync(buffer, offset, count, len);
+            ReadSyncPart(buffer, offset, count);
+            if (_asyncCount == 0) return Task.FromResult(_asyncResult);
+            return ReadOverflowAsync();
         }
 
-        int ReadSyncPart(byte[] buffer, ref int offset, ref int count)
+        void ReadSyncPart(byte[] buffer, int offset, int count)
         {
             if (Position == 0 && _connectionInfo.ShouldSend100Continue)
             {
@@ -80,33 +87,28 @@ namespace NowinWebServer
             {
                 count = (int)(_connectionInfo.RequestContentLength - (ulong)Position);
             }
-            if (count == 0) return 0;
-            var len = Math.Min(count, _connectionInfo.ReceiveBufferDataLength);
-            if (len > 0)
-            {
-                Array.Copy(_buf, _connectionInfo.StartBufferOffset + _connectionInfo.ReceiveBufferPos, buffer, offset, len);
-                _position += len;
-                _connectionInfo.ReceiveBufferPos += len;
-                offset += len;
-                count -= len;
-                if (count == 0) return len;
-            }
-            return len;
-        }
-
-        Task<int> ReadOverflowAsync(byte[] buffer, int offset, int count, int len)
-        {
-            _tcs = new TaskCompletionSource<int>();
             _asyncBuffer = buffer;
             _asyncOffset = offset;
             _asyncCount = count;
-            _asyncResult = len;
+            _asyncResult = 0;
+            if (count == 0) return;
+            ProcessDataInternal();
+        }
+
+        Task<int> ReadOverflowAsync()
+        {
+            _tcs = new TaskCompletionSource<int>();
             _connectionInfo.StartNextReceive();
             return _tcs.Task;
         }
 
-        public bool ProcessDataAndShouldReadMore()
+        void ProcessDataInternal()
         {
+            if (_connectionInfo.RequestIsChunked)
+            {
+                ProcessChunkedDataInternal();
+                return;
+            }
             var len = Math.Min(_asyncCount, _connectionInfo.ReceiveBufferDataLength);
             if (len > 0)
             {
@@ -116,11 +118,62 @@ namespace NowinWebServer
                 _asyncOffset += len;
                 _asyncCount -= len;
                 _asyncResult += len;
-                if (_asyncCount == 0)
+            }
+        }
+
+        void ProcessChunkedDataInternal()
+        {
+            var encodedDataAvail = _connectionInfo.ReceiveBufferDataLength;
+            var encodedDataOfs = _connectionInfo.StartBufferOffset + _connectionInfo.ReceiveBufferPos;
+            while (encodedDataAvail > 0)
+            {
+                var decodedDataAvail = _chunkedDecoder.DataAvailable;
+                if (decodedDataAvail < 0)
                 {
-                    _tcs.SetResult(_asyncResult);
-                    return false;
+                    _connectionInfo.RequestContentLength = (ulong)_position;
+                    _asyncCount = 0;
+                    break;
                 }
+                if (decodedDataAvail == 0)
+                {
+                    if (_chunkedDecoder.ProcessByte(_buf[encodedDataOfs]))
+                    {
+                        _connectionInfo.RequestContentLength = (ulong)_position;
+                        _asyncCount = 0;
+                    }
+                    encodedDataOfs++;
+                    encodedDataAvail--;
+                }
+                else
+                {
+                    if (decodedDataAvail > encodedDataAvail)
+                    {
+                        decodedDataAvail = encodedDataAvail;
+                    }
+                    if (decodedDataAvail > _asyncCount)
+                    {
+                        decodedDataAvail = _asyncCount;
+                    }
+                    _chunkedDecoder.DataEatten(decodedDataAvail);
+                    Array.Copy(_buf, encodedDataOfs, _asyncBuffer, _asyncOffset, decodedDataAvail);
+                    _asyncOffset += decodedDataAvail;
+                    _asyncCount -= decodedDataAvail;
+                    _asyncResult += decodedDataAvail;
+                    encodedDataAvail -= decodedDataAvail;
+                    encodedDataOfs += decodedDataAvail;
+                    _position += decodedDataAvail;
+                }
+            }
+            _connectionInfo.ReceiveBufferPos = encodedDataOfs - _connectionInfo.StartBufferOffset;
+        }
+
+        public bool ProcessDataAndShouldReadMore()
+        {
+            ProcessDataInternal();
+            if (_asyncCount == 0)
+            {
+                _tcs.SetResult(_asyncResult);
+                return false;
             }
             return true;
         }

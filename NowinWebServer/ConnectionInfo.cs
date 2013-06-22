@@ -22,6 +22,7 @@ namespace NowinWebServer
         public bool IsKeepAlive;
         public bool ShouldSend100Continue;
         public ulong RequestContentLength;
+        public bool RequestIsChunked;
         public bool ResponseHeadersSend;
         public readonly IDictionary<string, object> Environment;
         readonly Dictionary<string, string[]> _reqHeaders;
@@ -128,6 +129,16 @@ namespace NowinWebServer
                 if (contentLengthValues.Length != 1 || !ulong.TryParse(contentLengthValues[0], out RequestContentLength))
                 {
                     throw new InvalidDataException("Wrong request content length");
+                }
+            }
+            RequestIsChunked = false;
+            string[] transferEncodingValues;
+            if (_reqHeaders.TryGetValue("Transfer-Encoding", out transferEncodingValues))
+            {
+                if (transferEncodingValues.Length == 1 && transferEncodingValues[0] == "chunked")
+                {
+                    RequestIsChunked = true;
+                    RequestContentLength = ulong.MaxValue;
                 }
             }
         }
@@ -315,7 +326,7 @@ namespace NowinWebServer
             return new string(chs, 0, used);
         }
 
-        static int ParseHexChar(byte ch)
+        public static int ParseHexChar(byte ch)
         {
             if (ch >= '0' && ch <= '9') return ch - '0';
             if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
@@ -406,7 +417,7 @@ namespace NowinWebServer
         {
             var status = GetStatusFromEnvironment();
             _responseHeaderPos = 0;
-            HeaderAppend(IsHttp10 ? "HTTP/1.0 " : "HTTP/1.1 ");
+            HeaderAppend("HTTP/1.1 ");
             HeaderAppend(status.ToString(CultureInfo.InvariantCulture));
             HeaderAppendCrLf();
             var headers = (IDictionary<string, string[]>)Environment[OwinKeys.ResponseHeaders];
@@ -434,11 +445,11 @@ namespace NowinWebServer
             headers.Remove("Content-Length");
             if (IsHttp10 && IsKeepAlive)
             {
-                HeaderAppend("Connection: Keep-Alive\n\r");
+                HeaderAppend("Connection: Keep-Alive\r\n");
             }
-            if (!IsHttp10 && !IsKeepAlive)
+            if (!IsKeepAlive)
             {
-                HeaderAppend("Connection: Close\n\r");
+                HeaderAppend("Connection: Close\r\n");
             }
             foreach (var header in headers)
             {
@@ -640,9 +651,7 @@ namespace NowinWebServer
 
         void SendInternalServerError()
         {
-            var status500InternalServerError = IsHttp10
-                                                   ? Server.Status500InternalServerError10
-                                                   : Server.Status500InternalServerError11;
+            var status500InternalServerError = Server.Status500InternalServerError;
             Array.Copy(status500InternalServerError, 0, ReceiveSocketAsyncEventArgs.Buffer,
                        StartBufferOffset + ReceiveBufferSize, status500InternalServerError.Length);
             ReceiveSocketAsyncEventArgs.SetBuffer(StartBufferOffset + ReceiveBufferSize, status500InternalServerError.Length);
@@ -722,13 +731,22 @@ namespace NowinWebServer
             WaitingForRequest = true;
             ResponseHeadersSend = false;
             LastPacket = false;
+            RequestStream.Reset();
             ResponseStream.Reset();
         }
 
         void CloseClientSocket(SocketAsyncEventArgs e)
         {
             var token = (ConnectionInfo)e.UserToken;
-            var willRaiseEvent = token.Socket.DisconnectAsync(e);
+            bool willRaiseEvent;
+            try
+            {
+                willRaiseEvent = token.Socket.DisconnectAsync(e);
+            }
+            catch (ObjectDisposedException)
+            {
+                return;
+            }
             if (!willRaiseEvent)
             {
                 ProcessDisconnect(e);
@@ -752,7 +770,15 @@ namespace NowinWebServer
         public void StartAccept()
         {
             ReceiveSocketAsyncEventArgs.SetBuffer(StartBufferOffset, ReceiveBufferSize);
-            var willRaiseEvent = _listenSocket.AcceptAsync(ReceiveSocketAsyncEventArgs);
+            bool willRaiseEvent;
+            try
+            {
+                willRaiseEvent = _listenSocket.AcceptAsync(ReceiveSocketAsyncEventArgs);
+            }
+            catch (ObjectDisposedException)
+            {
+                return;
+            }
             if (!willRaiseEvent)
             {
                 ProcessAccept();

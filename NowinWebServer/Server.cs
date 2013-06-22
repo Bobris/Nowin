@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NowinWebServer
@@ -10,11 +11,11 @@ namespace NowinWebServer
     public class Server : IDisposable
     {
         internal static readonly byte[] Status100Continue = Encoding.UTF8.GetBytes("HTTP/1.1 100 Continue\r\n\r\n");
-        internal static readonly byte[] Status500InternalServerError10 = Encoding.UTF8.GetBytes("HTTP/1.0 500 Internal Server Error\r\n\r\n");
-        internal static readonly byte[] Status500InternalServerError11 = Encoding.UTF8.GetBytes("HTTP/1.1 500 Internal Server Error\r\n\r\n");
+        internal static readonly byte[] Status500InternalServerError = Encoding.UTF8.GetBytes("HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n");
 
         readonly int _maxConnections;
         readonly int _receiveBufferSize;
+        ConnectionInfo[] _connections;
         Socket _listenSocket;
         Func<IDictionary<string, object>, Task> _app;
 
@@ -34,6 +35,7 @@ namespace NowinWebServer
             var constantsOffset = checked(_maxConnections * _receiveBufferSize * 3);
             var buffer = new byte[checked(constantsOffset + reserveAtEnd)];
             Array.Copy(Status100Continue, 0, buffer, constantsOffset, Status100Continue.Length);
+            _connections = new ConnectionInfo[_maxConnections];
             for (var i = 0; i < _maxConnections; i++)
             {
                 var receiveEvent = new SocketAsyncEventArgs();
@@ -48,12 +50,22 @@ namespace NowinWebServer
                 receiveEvent.UserToken = token;
                 sendEvent.UserToken = token;
                 token.StartAccept();
+                _connections[i] = token;
             }
         }
 
         public void Stop()
         {
             _listenSocket.Close();
+            if (_connections != null)
+            {
+                foreach (var connection in _connections)
+                {
+                    if (connection == null) continue;
+                    var s = connection.Socket;
+                    if (s != null) s.Dispose();
+                }
+            }
         }
 
         static void IoCompleted(object sender, SocketAsyncEventArgs e)
