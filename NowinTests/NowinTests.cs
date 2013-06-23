@@ -18,6 +18,9 @@ namespace NowinTests
     public class NowinTests
     {
         const string HttpClientAddress = "http://localhost:8080/";
+        const string HostValue = "localhost:8080";
+        const string SampleContent = "Hello World";
+
         readonly AppFunc _appThrow = env => { throw new InvalidOperationException(); };
 
         [Test]
@@ -107,7 +110,7 @@ namespace NowinTests
             using (listener)
             {
                 var client = new HttpClient();
-                const string dataString = "Hello World";
+                const string dataString = SampleContent;
                 var response = client.PostAsync(HttpClientAddress, new StringContent(dataString)).Result;
                 response.EnsureSuccessStatusCode();
                 Assert.NotNull(response.Content.Headers.ContentLength);
@@ -177,12 +180,12 @@ namespace NowinTests
         }
 
         [Test]
-        [TestCase("/", "/", "")]
-        [TestCase("/path?query", "/path", "query")]
-        [TestCase("/pathBase/path?query", "/pathBase/path", "query")]
+        [TestCase("", "/", "")]
+        [TestCase("path?query", "/path", "query")]
+        [TestCase("pathBase/path?query", "/pathBase/path", "query")]
         public void PathAndQueryParsing(string clientString, string expectedPath, string expectedQuery)
         {
-            clientString = "http://localhost:8080" + clientString;
+            clientString = HttpClientAddress + clientString;
             var listener = CreateServerSync(env =>
             {
                 Assert.AreEqual("", env["owin.RequestPathBase"]);
@@ -276,7 +279,7 @@ namespace NowinTests
 
             var request = new HttpRequestMessage(HttpMethod.Post, HttpClientAddress + "SubPath?QueryString")
                 {
-                    Content = new StringContent("Hello World"),
+                    Content = new StringContent(SampleContent),
                     Version = new Version(1, 0)
                 };
             SendRequest(listener, request);
@@ -293,7 +296,7 @@ namespace NowinTests
                     string[] values;
                     Assert.True(requestHeaders.TryGetValue("host", out values));
                     Assert.AreEqual(1, values.Length);
-                    Assert.AreEqual("localhost:8080", values[0]);
+                    Assert.AreEqual(HostValue, values[0]);
                 });
 
             SendGetRequest(listener, HttpClientAddress);
@@ -302,7 +305,7 @@ namespace NowinTests
         [Test]
         public void HeadersPostContentLengthRequest()
         {
-            const string requestBody = "Hello World";
+            const string requestBody = SampleContent;
 
             var listener = CreateServerSync(
                 env =>
@@ -313,7 +316,7 @@ namespace NowinTests
 
                     Assert.True(requestHeaders.TryGetValue("host", out values));
                     Assert.AreEqual(1, values.Length);
-                    Assert.AreEqual("localhost:8080", values[0]);
+                    Assert.AreEqual(HostValue, values[0]);
 
                     Assert.True(requestHeaders.TryGetValue("Content-length", out values));
                     Assert.AreEqual(1, values.Length);
@@ -338,7 +341,7 @@ namespace NowinTests
         [Test]
         public void HeadersPostChunkedRequest()
         {
-            const string requestBody = "Hello World";
+            const string requestBody = SampleContent;
 
             var listener = CreateServerSync(
                 env =>
@@ -349,7 +352,7 @@ namespace NowinTests
 
                     Assert.True(requestHeaders.TryGetValue("host", out values));
                     Assert.AreEqual(1, values.Length);
-                    Assert.AreEqual("localhost:8080", values[0]);
+                    Assert.AreEqual(HostValue, values[0]);
 
                     Assert.True(requestHeaders.TryGetValue("Transfer-encoding", out values));
                     Assert.AreEqual(1, values.Length);
@@ -404,19 +407,19 @@ namespace NowinTests
 
                     Assert.True(requestHeaders.TryGetValue("Content-length", out values));
                     Assert.AreEqual(1, values.Length);
-                    Assert.AreEqual("11", values[0]);
+                    Assert.AreEqual(SampleContent.Length.ToString(CultureInfo.InvariantCulture), values[0]);
 
                     var requestBody = env.Get<Stream>("owin.RequestBody");
                     Assert.NotNull(requestBody);
 
                     var buffer = new MemoryStream();
                     requestBody.CopyTo(buffer);
-                    Assert.AreEqual(11, buffer.Length);
+                    Assert.AreEqual(SampleContent.Length, buffer.Length);
                 });
 
             var request = new HttpRequestMessage(HttpMethod.Post, HttpClientAddress)
                 {
-                    Content = new StringContent("Hello World")
+                    Content = new StringContent(SampleContent)
                 };
             SendRequest(listener, request);
         }
@@ -466,12 +469,12 @@ namespace NowinTests
 
                     var buffer = new MemoryStream();
                     requestBody.CopyTo(buffer);
-                    Assert.AreEqual(11, buffer.Length);
+                    Assert.AreEqual(SampleContent.Length, buffer.Length);
                 });
 
             var request = new HttpRequestMessage(HttpMethod.Post, HttpClientAddress);
             request.Headers.TransferEncodingChunked = true;
-            request.Content = new StringContent("Hello World");
+            request.Content = new StringContent(SampleContent);
             SendRequest(listener, request);
         }
 
