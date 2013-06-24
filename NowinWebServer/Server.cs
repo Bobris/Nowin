@@ -32,7 +32,7 @@ namespace NowinWebServer
             _listenSocket.Bind(localEndPoint);
             _listenSocket.Listen(100);
             var reserveAtEnd = Status100Continue.Length;
-            var constantsOffset = checked(_maxConnections * _receiveBufferSize * 3);
+            var constantsOffset = checked(_maxConnections * (_receiveBufferSize * 3 + 16));
             var buffer = new byte[checked(constantsOffset + reserveAtEnd)];
             Array.Copy(Status100Continue, 0, buffer, constantsOffset, Status100Continue.Length);
             _connections = new ConnectionInfo[_maxConnections];

@@ -18,8 +18,8 @@ namespace NowinWebServer
         {
             _connectionInfo = connectionInfo;
             _buf = connectionInfo.SendSocketAsyncEventArgs.Buffer;
-            _maxLen = connectionInfo.ReceiveBufferSize - 2; // Space for CRLF after chunk
-            StartOffset = connectionInfo.StartBufferOffset + connectionInfo.ReceiveBufferSize * 2; // Skip receive buffer and header buffer parts
+            _maxLen = connectionInfo.ReceiveBufferSize;
+            StartOffset = connectionInfo.ResponseBodyBufferOffset;
         }
 
         public override void Flush()

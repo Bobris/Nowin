@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -51,9 +52,9 @@ namespace NowinTests
             {
                 var client = new HttpClient();
                 string result = client.GetStringAsync(HttpClientAddress).Result;
-                Assert.AreEqual(string.Empty, result);
+                Assert.AreEqual("", result);
                 result = client.GetStringAsync(HttpClientAddress).Result;
-                Assert.AreEqual(string.Empty, result);
+                Assert.AreEqual("", result);
             }
         }
 
@@ -478,7 +479,305 @@ namespace NowinTests
             SendRequest(listener, request);
         }
 
-        void SendRequest(IDisposable listener, HttpRequestMessage request)
+        [Test]
+        public void DefaultEmptyResponse()
+        {
+            var listener = CreateServer(call => Task.Delay(0));
+
+            using (listener)
+            {
+                var client = new HttpClient();
+                var response = client.GetAsync(HttpClientAddress).Result;
+                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+                Assert.AreEqual("OK", response.ReasonPhrase);
+                Assert.AreEqual(0, response.Headers.Count());
+                Assert.False(response.Headers.TransferEncodingChunked.HasValue);
+                Assert.False(response.Headers.Date.HasValue);
+                Assert.AreEqual(0, response.Headers.Server.Count);
+                Assert.AreEqual("", response.Content.ReadAsStringAsync().Result);
+            }
+        }
+
+        [Test]
+        public void SurviveNullResponseHeaders()
+        {
+            var listener = CreateServer(
+                env =>
+                {
+                    env["owin.ResponseHeaders"] = null;
+                    return Task.Delay(0);
+                });
+
+            using (listener)
+            {
+                var client = new HttpClient();
+                var response = client.GetAsync(HttpClientAddress).Result;
+                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+            }
+        }
+
+        [Test]
+        public void CustomHeadersArePassedThrough()
+        {
+            var listener = CreateServer(
+                env =>
+                {
+                    var responseHeaders = env.Get<IDictionary<string, string[]>>("owin.ResponseHeaders");
+                    responseHeaders.Add("Custom1", new[] { "value1a", "value1b" });
+                    responseHeaders.Add("Custom2", new[] { "value2a, value2b" });
+                    responseHeaders.Add("Custom3", new[] { "value3a, value3b", "value3c" });
+                    return Task.Delay(0);
+                });
+
+            using (listener)
+            {
+                var client = new HttpClient();
+                var response = client.GetAsync(HttpClientAddress).Result;
+                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+                Assert.AreEqual(3, response.Headers.Count());
+
+                Assert.AreEqual(2, response.Headers.GetValues("Custom1").Count());
+                Assert.AreEqual("value1a", response.Headers.GetValues("Custom1").First());
+                Assert.AreEqual("value1b", response.Headers.GetValues("Custom1").Skip(1).First());
+                Assert.AreEqual(1, response.Headers.GetValues("Custom2").Count());
+                Assert.AreEqual("value2a, value2b", response.Headers.GetValues("Custom2").First());
+                Assert.AreEqual(2, response.Headers.GetValues("Custom3").Count());
+                Assert.AreEqual("value3a, value3b", response.Headers.GetValues("Custom3").First());
+                Assert.AreEqual("value3c", response.Headers.GetValues("Custom3").Skip(1).First());
+            }
+        }
+
+        [Test]
+        public void ReservedHeadersArePassedThrough()
+        {
+            var listener = CreateServer(
+                env =>
+                {
+                    var responseHeaders = env.Get<IDictionary<string, string[]>>("owin.ResponseHeaders");
+                    env.Add("owin.ResponseProtocol", "HTTP/1.0");
+                    responseHeaders.Add("KEEP-alive", new[] { "TRUE" });
+                    responseHeaders.Add("content-length", new[] { "0" });
+                    responseHeaders.Add("www-Authenticate", new[] { "Basic", "NTLM" });
+                    return Task.Delay(0);
+                });
+
+            using (listener)
+            {
+                var client = new HttpClient();
+                var response = client.GetAsync(HttpClientAddress).Result;
+                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+                Assert.AreEqual(2, response.Headers.Count());
+                Assert.AreEqual(0, response.Content.Headers.ContentLength);
+                Assert.AreEqual(2, response.Headers.WwwAuthenticate.Count());
+
+                // The client does not expose KeepAlive
+            }
+        }
+
+        [Test]
+        public void ConnectionHeaderIsHonoredAndTransferEncodingIngnored()
+        {
+            var listener = CreateServer(
+                env =>
+                {
+                    var responseHeaders = env.Get<IDictionary<string, string[]>>("owin.ResponseHeaders");
+                    responseHeaders.Add("Transfer-Encoding", new[] { "ChUnKed" });
+                    responseHeaders.Add("CONNECTION", new[] { "ClOsE" });
+                    return Task.Delay(0);
+                });
+
+            using (listener)
+            {
+                var client = new HttpClient();
+                var response = client.GetAsync(HttpClientAddress).Result;
+                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+                Assert.AreEqual(1, response.Headers.Count());
+                Assert.AreEqual("", response.Headers.TransferEncoding.ToString());
+                Assert.False(response.Headers.TransferEncodingChunked.HasValue);
+                Assert.AreEqual("Close", response.Headers.Connection.First()); // Normalized by server
+                Assert.NotNull(response.Headers.ConnectionClose);
+                Assert.True(response.Headers.ConnectionClose.Value);
+            }
+        }
+
+        [Test]
+        public void BadContentLengthIs500()
+        {
+            var listener = CreateServer(
+                env =>
+                {
+                    var responseHeaders = env.Get<IDictionary<string, string[]>>("owin.ResponseHeaders");
+                    responseHeaders.Add("content-length", new[] { "-10" });
+                    return Task.Delay(0);
+                });
+
+            using (listener)
+            {
+                var client = new HttpClient();
+                var response = client.GetAsync(HttpClientAddress).Result;
+                Assert.AreEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+                Assert.NotNull(response.Content.Headers.ContentLength);
+                Assert.AreEqual(0, response.Content.Headers.ContentLength.Value);
+            }
+        }
+
+        [Test]
+        public void CustomReasonPhraseSupported()
+        {
+            var listener = CreateServer(
+                env =>
+                {
+                    env.Add("owin.ResponseReasonPhrase", SampleContent);
+                    return Task.Delay(0);
+                });
+
+            using (listener)
+            {
+                var client = new HttpClient();
+                var response = client.GetAsync(HttpClientAddress).Result;
+                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+                Assert.AreEqual(SampleContent, response.ReasonPhrase);
+            }
+        }
+
+        [Test]
+        public void BadReasonPhraseIs500()
+        {
+            var listener = CreateServer(
+                env =>
+                {
+                    env.Add("owin.ResponseReasonPhrase", int.MaxValue);
+                    return Task.Delay(0);
+                });
+
+            using (listener)
+            {
+                var client = new HttpClient();
+                var response = client.GetAsync(HttpClientAddress).Result;
+                Assert.AreEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+            }
+        }
+
+        [Test]
+        public void ResponseProtocolIsIgnored()
+        {
+            var listener = CreateServer(
+                env =>
+                {
+                    env.Add("owin.ResponseProtocol", "garbage");
+                    return Task.Delay(0);
+                });
+
+            using (listener)
+            {
+                var client = new HttpClient();
+                var response = client.GetAsync(HttpClientAddress).Result;
+                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+                Assert.AreEqual(new Version(1, 1), response.Version);
+            }
+        }
+
+        [Test]
+        public void SmallResponseBodyWorks()
+        {
+            var listener = CreateServer(
+                env =>
+                {
+                    var responseStream = env.Get<Stream>("owin.ResponseBody");
+                    responseStream.Write(new byte[10], 0, 10);
+                    return Task.Delay(0);
+                });
+
+            using (listener)
+            {
+                var client = new HttpClient();
+                var response = client.GetAsync(HttpClientAddress).Result;
+                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+                Assert.AreEqual(10, response.Content.ReadAsByteArrayAsync().Result.Length);
+            }
+        }
+
+        [Test]
+        public void LargeResponseBodyWorks()
+        {
+            var listener = CreateServer(
+                async env =>
+                {
+                    var responseStream = env.Get<Stream>("owin.ResponseBody");
+                    for (var i = 0; i < 100; i++)
+                    {
+                        await responseStream.WriteAsync(new byte[1000], 0, 1000);
+                    }
+                });
+
+            using (listener)
+            {
+                var client = new HttpClient();
+                var response = client.GetAsync(HttpClientAddress).Result;
+                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+                Assert.AreEqual(100 * 1000, response.Content.ReadAsByteArrayAsync().Result.Length);
+            }
+        }
+
+        [Test]
+        public void BodySmallerThanContentLengthClosesConnection()
+        {
+            var listener = CreateServer(
+                env =>
+                {
+                    var responseHeaders = env.Get<IDictionary<string, string[]>>("owin.ResponseHeaders");
+                    responseHeaders.Add("Content-Length", new[] { "10000" });
+                    var responseStream = env.Get<Stream>("owin.ResponseBody");
+                    responseStream.Write(new byte[9500], 0, 9500);
+                    return Task.Delay(0);
+                });
+
+            using (listener)
+            {
+                var client = new HttpClient();
+                Assert.Throws<AggregateException>(() => client.GetAsync(HttpClientAddress).Wait());
+            }
+        }
+
+        [Test]
+        public void BodyLargerThanContentLengthClosesConnection()
+        {
+            var listener = CreateServer(
+                env =>
+                {
+                    var responseHeaders = env.Get<IDictionary<string, string[]>>("owin.ResponseHeaders");
+                    responseHeaders.Add("Content-Length", new[] { "10000" });
+                    var responseStream = env.Get<Stream>("owin.ResponseBody");
+                    responseStream.Write(new byte[10500], 0, 10500);
+                    return Task.Delay(0);
+                });
+
+            using (listener)
+            {
+                var client = new HttpClient();
+                Assert.Throws<AggregateException>(() => client.GetAsync(HttpClientAddress).Wait());
+            }
+        }
+
+        [Test]
+        public void StatusesLessThan200AreInvalid()
+        {
+            var listener = CreateServer(
+                env =>
+                {
+                    env["owin.ResponseStatusCode"] = 100;
+                    return Task.Delay(0);
+                });
+
+            using (listener)
+            {
+                var client = new HttpClient();
+                var response = client.PostAsync(HttpClientAddress, new StringContent(SampleContent)).Result;
+                Assert.AreEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+            }
+        }
+
+        static void SendRequest(IDisposable listener, HttpRequestMessage request)
         {
             using (listener)
             {
