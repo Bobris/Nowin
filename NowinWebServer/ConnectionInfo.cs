@@ -516,11 +516,11 @@ namespace NowinWebServer
             headers.Remove("Transfer-Encoding");
             if (_isHttp10 && _isKeepAlive)
             {
-                HeaderAppend("Connection: Keep-Alive\r\n");
+                HeaderAppend("Connection: keep-alive\r\n");
             }
             if (!_isKeepAlive)
             {
-                HeaderAppend("Connection: Close\r\n");
+                HeaderAppend("Connection: close\r\n");
             }
             foreach (var header in headers)
             {
@@ -847,7 +847,7 @@ namespace NowinWebServer
             Socket = ReceiveSocketAsyncEventArgs.AcceptSocket;
             ReceiveSocketAsyncEventArgs.AcceptSocket = null;
             ResetForNextRequest();
-            _lastPacket = false;
+            ReceiveBufferPos = 0;
             while (ProcessReceive())
             {
             }
