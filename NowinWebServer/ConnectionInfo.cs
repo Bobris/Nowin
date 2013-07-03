@@ -894,13 +894,14 @@ namespace NowinWebServer
                 throw new ArgumentOutOfRangeException("len", "Cannot send more bytes than specified in Content-Length header");
             }
             SendSocketAsyncEventArgs.SetBuffer(startOffset, len);
-            _tcsSend = new TaskCompletionSource<bool>();
+            var tcs = new TaskCompletionSource<bool>();
+            _tcsSend = tcs;
             var willRaiseEvent = Socket.SendAsync(SendSocketAsyncEventArgs);
             if (!willRaiseEvent)
             {
                 ProcessSend();
             }
-            return _tcsSend.Task;
+            return tcs.Task;
         }
 
         static void WrapInChunk(byte[] buffer, ref int startOffset, ref int len)
