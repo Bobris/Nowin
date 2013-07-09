@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,6 +11,7 @@ namespace NowinWebServer
 {
     class ConnectionInfo
     {
+        readonly Server _server;
         public readonly int StartBufferOffset;
         public readonly int ReceiveBufferSize;
         public readonly int ResponseBodyBufferOffset;
@@ -41,17 +43,18 @@ namespace NowinWebServer
         bool _responseIsChunked;
         ulong _responseContentLength;
 
-        public ConnectionInfo(int startBufferOffset, int receiveBufferSize, int constantsOffset, SocketAsyncEventArgs receiveSocketAsyncEventArgs, SocketAsyncEventArgs sendSocketAsyncEventArgs, Socket listenSocket, Func<IDictionary<string, object>, Task> app)
+        public ConnectionInfo(Server server, int startBufferOffset, int constantsOffset, SocketAsyncEventArgs receiveSocketAsyncEventArgs, SocketAsyncEventArgs sendSocketAsyncEventArgs)
         {
+            _server = server;
             StartBufferOffset = startBufferOffset;
-            ReceiveBufferSize = receiveBufferSize;
-            ResponseBodyBufferOffset = StartBufferOffset + receiveBufferSize * 2 + 8;
+            ReceiveBufferSize = _server.ReceiveBufferSize;
+            ResponseBodyBufferOffset = StartBufferOffset + ReceiveBufferSize * 2 + 8;
             _constantsOffset = constantsOffset;
             ReceiveSocketAsyncEventArgs = receiveSocketAsyncEventArgs;
             SendSocketAsyncEventArgs = sendSocketAsyncEventArgs;
             _buffer = receiveSocketAsyncEventArgs.Buffer;
-            _listenSocket = listenSocket;
-            _app = app;
+            _listenSocket = _server.ListenSocket;
+            _app = _server.App;
             _responseStream = new ResponseStream(this);
             _requestStream = new RequestStream(this);
             _environment = new Dictionary<string, object>();
@@ -575,6 +578,8 @@ namespace NowinWebServer
         {
             if (ReceiveSocketAsyncEventArgs.BytesTransferred > 0 && ReceiveSocketAsyncEventArgs.SocketError == SocketError.Success)
             {
+                //Console.WriteLine("======= Offset {0}, Length {1}", ReceiveSocketAsyncEventArgs.Offset - StartBufferOffset, ReceiveSocketAsyncEventArgs.BytesTransferred);
+                //Console.WriteLine(Encoding.UTF8.GetString(ReceiveSocketAsyncEventArgs.Buffer, ReceiveSocketAsyncEventArgs.Offset, ReceiveSocketAsyncEventArgs.BytesTransferred));
                 _receiveBufferFullness = ReceiveSocketAsyncEventArgs.Offset + ReceiveSocketAsyncEventArgs.BytesTransferred;
                 if (_waitingForRequest)
                 {
@@ -839,11 +844,13 @@ namespace NowinWebServer
 
         public void ProcessDisconnect(SocketAsyncEventArgs e)
         {
+            _server.ReportDisconnectedClient();
             StartAccept();
         }
 
         public void ProcessAccept()
         {
+            _server.ReportNewConnectedClient();
             Socket = ReceiveSocketAsyncEventArgs.AcceptSocket;
             ReceiveSocketAsyncEventArgs.AcceptSocket = null;
             ResetForNextRequest();

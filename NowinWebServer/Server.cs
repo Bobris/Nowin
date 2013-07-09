@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NowinWebServer
@@ -12,62 +14,77 @@ namespace NowinWebServer
         internal static readonly byte[] Status100Continue = Encoding.UTF8.GetBytes("HTTP/1.1 100 Continue\r\n\r\n");
         internal static readonly byte[] Status500InternalServerError = Encoding.UTF8.GetBytes("HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n");
 
-        readonly int _maxConnections;
-        readonly int _receiveBufferSize;
-        ConnectionInfo[] _connections;
-        Socket _listenSocket;
-        Func<IDictionary<string, object>, Task> _app;
+        readonly IConnectionAllocationStrategy _connectionAllocationStrategy;
+        internal readonly int ReceiveBufferSize;
+        internal readonly int PerConnectionBufferSize;
 
-        public Server(int maxConnections = 1024, int receiveBufferSize = 8192)
+        readonly ConcurrentBag<ConnectionBlock> _blocks = new ConcurrentBag<ConnectionBlock>();
+        internal Socket ListenSocket;
+        internal Func<IDictionary<string, object>, Task> App;
+        internal int _allocatedConnections;
+        internal int _connectedCount;
+        readonly object _newConnectionLock = new object();
+
+        public Server()
+            : this(new ConnectionAllocationStrategy(64, 64, 1024 * 1024, 16))
         {
-            _maxConnections = maxConnections;
-            _receiveBufferSize = receiveBufferSize;
+        }
+
+        public Server(int maxConnections, int receiveBufferSize = 8192)
+            : this(new ConnectionAllocationStrategy(maxConnections, 0, maxConnections, 0), receiveBufferSize)
+        {
+        }
+
+        public Server(IConnectionAllocationStrategy connectionAllocationStrategy, int receiveBufferSize = 8192)
+        {
+            _connectionAllocationStrategy = connectionAllocationStrategy;
+            ReceiveBufferSize = receiveBufferSize;
+            PerConnectionBufferSize = ReceiveBufferSize * 3 + 16;
         }
 
         public void Start(IPEndPoint localEndPoint, Func<IDictionary<string, object>, Task> app)
         {
-            _app = app;
-            _listenSocket = new Socket(localEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-            _listenSocket.Bind(localEndPoint);
-            _listenSocket.Listen(100);
-            var reserveAtEnd = Status100Continue.Length;
-            var constantsOffset = checked(_maxConnections * (_receiveBufferSize * 3 + 16));
-            var buffer = new byte[checked(constantsOffset + reserveAtEnd)];
-            Array.Copy(Status100Continue, 0, buffer, constantsOffset, Status100Continue.Length);
-            _connections = new ConnectionInfo[_maxConnections];
-            for (var i = 0; i < _maxConnections; i++)
-            {
-                var receiveEvent = new SocketAsyncEventArgs();
-                var sendEvent = new SocketAsyncEventArgs();
-                receiveEvent.Completed += IoCompleted;
-                sendEvent.Completed += IoCompleted;
-                receiveEvent.SetBuffer(buffer, 0, 0);
-                sendEvent.SetBuffer(buffer, 0, 0);
-                receiveEvent.DisconnectReuseSocket = true;
-                sendEvent.DisconnectReuseSocket = true;
-                var token = new ConnectionInfo(i * _receiveBufferSize * 3, _receiveBufferSize, constantsOffset, receiveEvent, sendEvent, _listenSocket, _app);
-                receiveEvent.UserToken = token;
-                sendEvent.UserToken = token;
-                token.StartAccept();
-                _connections[i] = token;
-            }
+            App = app;
+            ListenSocket = new Socket(localEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+            ListenSocket.Bind(localEndPoint);
+            ListenSocket.Listen(100);
+            var initialConnectionCount = _connectionAllocationStrategy.CalculateNewConnectionCount(0, 0);
+            _allocatedConnections = initialConnectionCount;
+            _blocks.Add(new ConnectionBlock(this, initialConnectionCount));
+        }
+
+        internal void ReportNewConnectedClient()
+        {
+            var cc = Interlocked.Increment(ref _connectedCount);
+            var add = _connectionAllocationStrategy.CalculateNewConnectionCount(_allocatedConnections, cc);
+            if (add <= 0) return;
+            Task.Run(() =>
+                {
+                    lock (_newConnectionLock)
+                    {
+                        var delta = _connectionAllocationStrategy.CalculateNewConnectionCount(_allocatedConnections, _connectedCount);
+                        if (delta <= 0) return;
+                        _allocatedConnections += delta;
+                        _blocks.Add(new ConnectionBlock(this, delta));
+                    }
+                });
+        }
+
+        internal void ReportDisconnectedClient()
+        {
+            Interlocked.Decrement(ref _connectedCount);
         }
 
         public void Stop()
         {
-            _listenSocket.Close();
-            if (_connections != null)
+            ListenSocket.Close();
+            foreach (var block in _blocks)
             {
-                foreach (var connection in _connections)
-                {
-                    if (connection == null) continue;
-                    var s = connection.Socket;
-                    if (s != null) s.Dispose();
-                }
+                block.Stop();
             }
         }
 
-        static void IoCompleted(object sender, SocketAsyncEventArgs e)
+        internal static void IoCompleted(object sender, SocketAsyncEventArgs e)
         {
             switch (e.LastOperation)
             {
