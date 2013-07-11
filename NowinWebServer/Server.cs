@@ -21,8 +21,8 @@ namespace NowinWebServer
         readonly ConcurrentBag<ConnectionBlock> _blocks = new ConcurrentBag<ConnectionBlock>();
         internal Socket ListenSocket;
         internal Func<IDictionary<string, object>, Task> App;
-        internal int _allocatedConnections;
-        internal int _connectedCount;
+        internal int AllocatedConnections;
+        internal int ConnectedCount;
         readonly object _newConnectionLock = new object();
 
         public Server()
@@ -49,22 +49,22 @@ namespace NowinWebServer
             ListenSocket.Bind(localEndPoint);
             ListenSocket.Listen(100);
             var initialConnectionCount = _connectionAllocationStrategy.CalculateNewConnectionCount(0, 0);
-            _allocatedConnections = initialConnectionCount;
+            AllocatedConnections = initialConnectionCount;
             _blocks.Add(new ConnectionBlock(this, initialConnectionCount));
         }
 
         internal void ReportNewConnectedClient()
         {
-            var cc = Interlocked.Increment(ref _connectedCount);
-            var add = _connectionAllocationStrategy.CalculateNewConnectionCount(_allocatedConnections, cc);
+            var cc = Interlocked.Increment(ref ConnectedCount);
+            var add = _connectionAllocationStrategy.CalculateNewConnectionCount(AllocatedConnections, cc);
             if (add <= 0) return;
             Task.Run(() =>
                 {
                     lock (_newConnectionLock)
                     {
-                        var delta = _connectionAllocationStrategy.CalculateNewConnectionCount(_allocatedConnections, _connectedCount);
+                        var delta = _connectionAllocationStrategy.CalculateNewConnectionCount(AllocatedConnections, ConnectedCount);
                         if (delta <= 0) return;
-                        _allocatedConnections += delta;
+                        AllocatedConnections += delta;
                         _blocks.Add(new ConnectionBlock(this, delta));
                     }
                 });
@@ -72,7 +72,7 @@ namespace NowinWebServer
 
         internal void ReportDisconnectedClient()
         {
-            Interlocked.Decrement(ref _connectedCount);
+            Interlocked.Decrement(ref ConnectedCount);
         }
 
         public void Stop()
