@@ -26,7 +26,7 @@
             Creates a listener wrapper that can be configured by the user before starting.
             </summary>
         </member>
-        <member name="M:Microsoft.Owin.Host.HttpListener.OwinHttpListener.SetPumpLimits(System.Int32,System.Int32)">
+        <member name="M:Microsoft.Owin.Host.HttpListener.OwinHttpListener.SetRequestProcessingLimits(System.Int32,System.Int32)">
             <summary>
             These are merged as one call because they should be swapped out atomically.
             This controls how many requests the server attempts to process concurrently.
@@ -34,7 +34,14 @@
             <param name="maxAccepts">The maximum number of pending request receives.</param>
             <param name="maxRequests">The maximum number of active requests being processed.</param>
         </member>
-        <member name="M:Microsoft.Owin.Host.HttpListener.OwinHttpListener.Start(System.Net.HttpListener,System.Func{System.Collections.Generic.IDictionary{System.String,System.Object},System.Threading.Tasks.Task},System.Collections.Generic.IList{System.Collections.Generic.IDictionary{System.String,System.Object}},System.Collections.Generic.IDictionary{System.String,System.Object})">
+        <member name="M:Microsoft.Owin.Host.HttpListener.OwinHttpListener.GetRequestProcessingLimits(System.Int32@,System.Int32@)">
+            <summary>
+            
+            </summary>
+            <param name="maxAccepts"></param>
+            <param name="maxRequests"></param>
+        </member>
+        <member name="M:Microsoft.Owin.Host.HttpListener.OwinHttpListener.Start(System.Net.HttpListener,System.Func{System.Collections.Generic.IDictionary{System.String,System.Object},System.Threading.Tasks.Task},System.Collections.Generic.IList{System.Collections.Generic.IDictionary{System.String,System.Object}},System.Collections.Generic.IDictionary{System.String,System.Object},System.Func{System.String,System.Func{System.Diagnostics.TraceEventType,System.Int32,System.Object,System.Exception,System.Func{System.Object,System.Exception,System.String},System.Boolean}})">
             <summary>
             Starts the listener and request processing threads.
             </summary>
@@ -89,24 +96,29 @@
               resource lookups using this strongly typed resource class.
             </summary>
         </member>
-        <member name="T:Microsoft.Owin.Host.HttpListener.OwinServerFactoryAttribute">
+        <member name="T:Microsoft.Owin.Host.HttpListener.ServerFactory">
             <summary>
             Implements the Katana setup pattern for the OwinHttpListener server.
             </summary>
         </member>
-        <member name="M:Microsoft.Owin.Host.HttpListener.OwinServerFactoryAttribute.Initialize(System.Collections.Generic.IDictionary{System.String,System.Object})">
+        <member name="M:Microsoft.Owin.Host.HttpListener.ServerFactory.Initialize(System.Collections.Generic.IDictionary{System.String,System.Object})">
             <summary>
             Advertise the capabilities of the server.
             </summary>
             <param name="properties"></param>
         </member>
-        <member name="M:Microsoft.Owin.Host.HttpListener.OwinServerFactoryAttribute.Create(System.Func{System.Collections.Generic.IDictionary{System.String,System.Object},System.Threading.Tasks.Task},System.Collections.Generic.IDictionary{System.String,System.Object})">
+        <member name="M:Microsoft.Owin.Host.HttpListener.ServerFactory.Create(System.Func{System.Collections.Generic.IDictionary{System.String,System.Object},System.Threading.Tasks.Task},System.Collections.Generic.IDictionary{System.String,System.Object})">
             <summary>
             Creates an OwinHttpListener and starts listening on the given URL.
             </summary>
             <param name="app">The application entry point.</param>
             <param name="properties">The addresses to listen on.</param>
             <returns>The OwinHttpListener.  Invoke Dispose to shut down.</returns>
+        </member>
+        <member name="T:Microsoft.Owin.Host.HttpListener.WebSockets.Constants">
+            <summary>
+            Standard keys and values for use within the OWIN interfaces
+            </summary>
         </member>
     </members>
 </doc>

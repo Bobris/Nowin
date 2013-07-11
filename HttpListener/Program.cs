@@ -22,7 +22,7 @@ namespace HttpListener
                             }
                     }
                 };
-            using (Microsoft.Owin.Host.HttpListener.OwinServerFactoryAttribute.Create(SampleOwinApp.Sample.App, props))
+            using (Microsoft.Owin.Host.HttpListener.ServerFactory.Create(SampleOwinApp.Sample.App, props))
             {
                 Console.WriteLine("Listening on 8888. Enter to stop.");
                 Console.ReadLine();
