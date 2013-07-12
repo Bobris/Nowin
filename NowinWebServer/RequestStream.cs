@@ -7,7 +7,7 @@ namespace NowinWebServer
 {
     internal class RequestStream : Stream
     {
-        readonly ConnectionInfo _connectionInfo;
+        readonly Transport2Http2OwinHandler _transport2Http2OwinHandler;
         readonly byte[] _buf;
         TaskCompletionSource<int> _tcs;
         byte[] _asyncBuffer;
@@ -17,10 +17,10 @@ namespace NowinWebServer
         long _position;
         ChunkedDecoder _chunkedDecoder = new ChunkedDecoder();
 
-        public RequestStream(ConnectionInfo connectionInfo)
+        public RequestStream(Transport2Http2OwinHandler transport2Http2OwinHandler)
         {
-            _connectionInfo = connectionInfo;
-            _buf = connectionInfo.ReceiveSocketAsyncEventArgs.Buffer;
+            _transport2Http2OwinHandler = transport2Http2OwinHandler;
+            _buf = transport2Http2OwinHandler.Buffer;
         }
 
         public void Reset()
@@ -79,13 +79,13 @@ namespace NowinWebServer
 
         void ReadSyncPart(byte[] buffer, int offset, int count)
         {
-            if (Position == 0 && _connectionInfo.ShouldSend100Continue)
+            if (Position == 0 && _transport2Http2OwinHandler.ShouldSend100Continue)
             {
-                _connectionInfo.Send100Continue();
+                _transport2Http2OwinHandler.Send100Continue();
             }
-            if ((uint)count > _connectionInfo.RequestContentLength - (ulong)Position)
+            if ((uint)count > _transport2Http2OwinHandler.RequestContentLength - (ulong)Position)
             {
-                count = (int)(_connectionInfo.RequestContentLength - (ulong)Position);
+                count = (int)(_transport2Http2OwinHandler.RequestContentLength - (ulong)Position);
             }
             _asyncBuffer = buffer;
             _asyncOffset = offset;
@@ -98,23 +98,23 @@ namespace NowinWebServer
         Task<int> ReadOverflowAsync()
         {
             _tcs = new TaskCompletionSource<int>();
-            _connectionInfo.StartNextReceive();
+            _transport2Http2OwinHandler.StartNextReceive();
             return _tcs.Task;
         }
 
         void ProcessDataInternal()
         {
-            if (_connectionInfo.RequestIsChunked)
+            if (_transport2Http2OwinHandler.RequestIsChunked)
             {
                 ProcessChunkedDataInternal();
                 return;
             }
-            var len = Math.Min(_asyncCount, _connectionInfo.ReceiveBufferDataLength);
+            var len = Math.Min(_asyncCount, _transport2Http2OwinHandler.ReceiveBufferDataLength);
             if (len > 0)
             {
-                Array.Copy(_buf, _connectionInfo.StartBufferOffset + _connectionInfo.ReceiveBufferPos, _asyncBuffer, _asyncOffset, len);
+                Array.Copy(_buf, _transport2Http2OwinHandler.StartBufferOffset + _transport2Http2OwinHandler.ReceiveBufferPos, _asyncBuffer, _asyncOffset, len);
                 _position += len;
-                _connectionInfo.ReceiveBufferPos += len;
+                _transport2Http2OwinHandler.ReceiveBufferPos += len;
                 _asyncOffset += len;
                 _asyncCount -= len;
                 _asyncResult += len;
@@ -123,14 +123,14 @@ namespace NowinWebServer
 
         void ProcessChunkedDataInternal()
         {
-            var encodedDataAvail = _connectionInfo.ReceiveBufferDataLength;
-            var encodedDataOfs = _connectionInfo.StartBufferOffset + _connectionInfo.ReceiveBufferPos;
+            var encodedDataAvail = _transport2Http2OwinHandler.ReceiveBufferDataLength;
+            var encodedDataOfs = _transport2Http2OwinHandler.StartBufferOffset + _transport2Http2OwinHandler.ReceiveBufferPos;
             while (encodedDataAvail > 0)
             {
                 var decodedDataAvail = _chunkedDecoder.DataAvailable;
                 if (decodedDataAvail < 0)
                 {
-                    _connectionInfo.RequestContentLength = (ulong)_position;
+                    _transport2Http2OwinHandler.RequestContentLength = (ulong)_position;
                     _asyncCount = 0;
                     break;
                 }
@@ -138,7 +138,7 @@ namespace NowinWebServer
                 {
                     if (_chunkedDecoder.ProcessByte(_buf[encodedDataOfs]))
                     {
-                        _connectionInfo.RequestContentLength = (ulong)_position;
+                        _transport2Http2OwinHandler.RequestContentLength = (ulong)_position;
                         _asyncCount = 0;
                     }
                     encodedDataOfs++;
@@ -164,7 +164,7 @@ namespace NowinWebServer
                     _position += decodedDataAvail;
                 }
             }
-            _connectionInfo.ReceiveBufferPos = encodedDataOfs - _connectionInfo.StartBufferOffset;
+            _transport2Http2OwinHandler.ReceiveBufferPos = encodedDataOfs - _transport2Http2OwinHandler.StartBufferOffset;
         }
 
         public bool ProcessDataAndShouldReadMore()
@@ -200,7 +200,7 @@ namespace NowinWebServer
 
         public override long Length
         {
-            get { return (long)_connectionInfo.RequestContentLength; }
+            get { return (long)_transport2Http2OwinHandler.RequestContentLength; }
         }
 
         public override long Position

@@ -2,7 +2,6 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Sockets;
-using System.Threading.Tasks;
 
 namespace NowinWebServer
 {
@@ -28,6 +27,7 @@ namespace NowinWebServer
             _sendEvent.DisconnectReuseSocket = true;
             _receiveEvent.UserToken = this;
             _sendEvent.UserToken = this;
+            handler.Callback = this;
         }
 
         static void IoCompleted(object sender, SocketAsyncEventArgs e)

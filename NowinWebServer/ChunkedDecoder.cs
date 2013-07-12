@@ -42,7 +42,7 @@ namespace NowinWebServer
             switch (_state)
             {
                 case State.InHex:
-                    var h = ConnectionInfo.ParseHexChar(b);
+                    var h = Transport2Http2OwinHandler.ParseHexChar(b);
                     if (h < 0)
                     {
                         _state = State.AfterHex;

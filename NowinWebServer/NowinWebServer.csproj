@@ -42,7 +42,8 @@
     <Compile Include="ChunkedDecoder.cs" />
     <Compile Include="ConnectionAllocationStrategy.cs" />
     <Compile Include="ConnectionBlock.cs" />
-    <Compile Include="ConnectionInfo.cs" />
+    <Compile Include="Transport2Http2OwinFactory.cs" />
+    <Compile Include="Transport2Http2OwinHandler.cs" />
     <Compile Include="IConnectionAllocationStrategy.cs" />
     <Compile Include="ILayerCallback.cs" />
     <Compile Include="ILayerFactory.cs" />

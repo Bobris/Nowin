@@ -594,7 +594,7 @@ namespace NowinTests
                 Assert.AreEqual(1, response.Headers.Count());
                 Assert.AreEqual("", response.Headers.TransferEncoding.ToString());
                 Assert.False(response.Headers.TransferEncodingChunked.HasValue);
-                Assert.AreEqual("Close", response.Headers.Connection.First()); // Normalized by server
+                Assert.AreEqual("close", response.Headers.Connection.First()); // Normalized by server
                 Assert.NotNull(response.Headers.ConnectionClose);
                 Assert.True(response.Headers.ConnectionClose.Value);
             }

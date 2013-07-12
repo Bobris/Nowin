@@ -7,19 +7,19 @@ namespace NowinWebServer
 {
     class ResponseStream : Stream
     {
-        readonly ConnectionInfo _connectionInfo;
+        readonly Transport2Http2OwinHandler _transport2Http2OwinHandler;
         readonly byte[] _buf;
         internal readonly int StartOffset;
         internal int LocalPos;
         readonly int _maxLen;
         long _pos;
 
-        public ResponseStream(ConnectionInfo connectionInfo)
+        public ResponseStream(Transport2Http2OwinHandler transport2Http2OwinHandler)
         {
-            _connectionInfo = connectionInfo;
-            _buf = connectionInfo.SendSocketAsyncEventArgs.Buffer;
-            _maxLen = connectionInfo.ReceiveBufferSize;
-            StartOffset = connectionInfo.ResponseBodyBufferOffset;
+            _transport2Http2OwinHandler = transport2Http2OwinHandler;
+            _buf = transport2Http2OwinHandler.Buffer;
+            _maxLen = transport2Http2OwinHandler.ReceiveBufferSize;
+            StartOffset = transport2Http2OwinHandler.ResponseBodyBufferOffset;
         }
 
         public override void Flush()
@@ -31,7 +31,7 @@ namespace NowinWebServer
         {
             var len = LocalPos;
             LocalPos = 0;
-            return _connectionInfo.WriteAsync(StartOffset, len);
+            return _transport2Http2OwinHandler.WriteAsync(StartOffset, len);
         }
 
         public override long Seek(long offset, SeekOrigin origin)
