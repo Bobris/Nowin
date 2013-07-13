@@ -25,7 +25,7 @@ namespace NowinWebServer
         ILayerFactory _layerFactory;
 
         public Server()
-            : this(new ConnectionAllocationStrategy(64, 64, 1024 * 1024, 16))
+            : this(new ConnectionAllocationStrategy(256, 256, 1024 * 1024, 32))
         {
         }
 
