@@ -8,7 +8,7 @@ namespace NowinSample
     {
         static void Main(string[] args)
         {
-            var server = new Server(maxConnections: 10);
+            var server = new Server();
             server.Start(new IPEndPoint(IPAddress.Any, 8888), SampleOwinApp.Sample.App);
             Console.WriteLine("Listening on port 8888. Enter to exit.");
             Console.ReadLine();
