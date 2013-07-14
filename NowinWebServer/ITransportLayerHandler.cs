@@ -8,7 +8,7 @@ namespace NowinWebServer
         void PrepareAccept();
         void FinishAccept(int offset, int length);
         void FinishReceive(int offset, int length);
+        void FinishReceiveWithAbort();
         void FinishSend(Exception exception);
-        void StartAbort();
     }
 }

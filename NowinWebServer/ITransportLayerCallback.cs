@@ -6,6 +6,5 @@ namespace NowinWebServer
         void StartReceive(int offset, int length);
         void StartSend(int offset, int length);
         void StartDisconnect();
-        void FinishAbort();
     }
 }

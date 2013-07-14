@@ -172,10 +172,19 @@ namespace NowinWebServer
             ProcessDataInternal();
             if (_asyncCount == 0)
             {
-                _tcs.SetResult(_asyncResult);
+                _tcs.TrySetResult(_asyncResult);
                 return false;
             }
             return true;
+        }
+
+        public void ConnectionClosed()
+        {
+            var tcs = _tcs;
+            if (tcs!=null)
+            {
+                tcs.TrySetCanceled();
+            }
         }
 
         public override void Write(byte[] buffer, int offset, int count)

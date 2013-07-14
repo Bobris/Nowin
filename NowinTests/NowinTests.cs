@@ -480,6 +480,95 @@ namespace NowinTests
         }
 
         [Test]
+        public void BodyPostChunkedXClientCloseConnection()
+        {
+            var listener = CreateServerSync(
+                env =>
+                {
+                    var requestBody = env.Get<Stream>("owin.RequestBody");
+                    var buffer = new MemoryStream();
+                    Assert.Throws<AggregateException>(() => requestBody.CopyTo(buffer));
+                    Assert.True(GetCallCancelled(env).IsCancellationRequested);
+                });
+
+            var request = new HttpRequestMessage(HttpMethod.Post, HttpClientAddress);
+            request.Headers.TransferEncodingChunked = true;
+            request.Content = new StreamContent(new ReadZerosAndThrowAfter(100000));
+            using (listener)
+            {
+                using (var client = new HttpClient())
+                {
+                    Assert.Throws<AggregateException>(() => client.SendAsync(request, HttpCompletionOption.ResponseContentRead).Wait());
+                }
+            }
+        }
+
+        class ReadZerosAndThrowAfter : Stream
+        {
+            readonly int _length;
+            int _pos;
+
+            public ReadZerosAndThrowAfter(int length)
+            {
+                _length = length;
+            }
+
+            public override void Flush()
+            {
+                throw new InvalidOperationException();
+            }
+
+            public override long Seek(long offset, SeekOrigin origin)
+            {
+                throw new InvalidOperationException();
+            }
+
+            public override void SetLength(long value)
+            {
+                throw new InvalidOperationException();
+            }
+
+            public override int Read(byte[] buffer, int offset, int count)
+            {
+                if (_pos + count >= _length) throw new EndOfStreamException();
+                Array.Clear(buffer, offset, count);
+                _pos += count;
+                return count;
+            }
+
+            public override void Write(byte[] buffer, int offset, int count)
+            {
+                throw new InvalidOperationException();
+            }
+
+            public override bool CanRead
+            {
+                get { return true; }
+            }
+
+            public override bool CanSeek
+            {
+                get { return false; }
+            }
+
+            public override bool CanWrite
+            {
+                get { return false; }
+            }
+
+            public override long Length
+            {
+                get { return _length * 2; }
+            }
+
+            public override long Position
+            {
+                get { return _pos; }
+                set { throw new InvalidOperationException(); }
+            }
+        }
+
+        [Test]
         public void DefaultEmptyResponse()
         {
             var listener = CreateServer(call => Task.Delay(0));

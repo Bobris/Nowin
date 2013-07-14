@@ -578,7 +578,7 @@ namespace NowinWebServer
 
         void AppFinished(Task task)
         {
-            if (task.IsFaulted || task.IsCanceled)
+            if (task.IsFaulted || task.IsCanceled || _cancellation.IsCancellationRequested)
             {
                 _cancellation.Cancel();
                 if (!_responseHeadersSend)
@@ -844,6 +844,12 @@ namespace NowinWebServer
             }
         }
 
+        public void FinishReceiveWithAbort()
+        {
+            _cancellation.Cancel();
+            _requestStream.ConnectionClosed();
+        }
+
         public void FinishSend(Exception exception)
         {
             if (exception == null)
@@ -878,11 +884,6 @@ namespace NowinWebServer
                     Callback.StartDisconnect();
                 }
             }
-        }
-
-        public void StartAbort()
-        {
-            Callback.FinishAbort();
         }
     }
 }
