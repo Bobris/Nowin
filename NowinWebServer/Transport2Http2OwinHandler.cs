@@ -846,8 +846,15 @@ namespace NowinWebServer
 
         public void FinishReceiveWithAbort()
         {
-            _cancellation.Cancel();
-            _requestStream.ConnectionClosed();
+            if (_waitingForRequest)
+            {
+                Callback.StartDisconnect();
+            }
+            else
+            {
+                _cancellation.Cancel();
+                _requestStream.ConnectionClosed();
+            }
         }
 
         public void FinishSend(Exception exception)
