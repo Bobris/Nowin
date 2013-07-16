@@ -1,7 +1,9 @@
 using System;
 using System.IO;
 using System.Net.Security;
+using System.Runtime.ExceptionServices;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NowinWebServer
@@ -12,9 +14,9 @@ namespace NowinWebServer
         readonly X509Certificate _serverCertificate;
         readonly byte[] _buffer;
         readonly int _bufferSize;
-        SslStream _ssl;
-        readonly int EncryptedReceiveBufferOffset;
-        readonly int EncryptedSendBufferOffset;
+        readonly SslStream _ssl;
+        readonly int _encryptedReceiveBufferOffset;
+        readonly int _encryptedSendBufferOffset;
         Task _authenticateTask;
         int _recvOffset;
         int _recvLength;
@@ -25,8 +27,8 @@ namespace NowinWebServer
             _next = next;
             _serverCertificate = serverCertificate;
             _buffer = buffer;
-            EncryptedReceiveBufferOffset = startBufferOffset;
-            EncryptedSendBufferOffset = startBufferOffset + bufferSize;
+            _encryptedReceiveBufferOffset = startBufferOffset;
+            _encryptedSendBufferOffset = startBufferOffset + bufferSize;
             _bufferSize = bufferSize;
             _inputStream = new InputStream(this);
             _ssl = new SslStream(_inputStream, true);
@@ -36,12 +38,15 @@ namespace NowinWebServer
         {
             readonly SslTransportHandler _owner;
             readonly byte[] _buf;
-            TaskCompletionSource<int> _tcs;
+            TaskCompletionSource<int> _tcsReceive;
+            AsyncCallback _callbackReceive;
             int _receivePos;
             int _receiveLen;
             byte[] _asyncBuffer;
             int _asyncOffset;
             int _asyncCount;
+            TaskCompletionSource<object> _tcsSend;
+            AsyncCallback _callbackSend;
 
             public InputStream(SslTransportHandler owner)
             {
@@ -73,12 +78,20 @@ namespace NowinWebServer
                 Array.Copy(_buf, _receivePos, _asyncBuffer, _asyncOffset, l);
                 _receivePos += l;
                 _receiveLen -= l;
-                _tcs.TrySetResult(l);
+                _tcsReceive.SetResult(l);
+                if (_callbackReceive != null)
+                {
+                    _callbackReceive(_tcsReceive.Task);
+                }
             }
 
             public void FinishReceiveWithAbort()
             {
-                _tcs.TrySetCanceled();
+                _tcsReceive.SetCanceled();
+                if (_callbackReceive != null)
+                {
+                    _callbackReceive(_tcsReceive.Task);
+                }
             }
 
             public override int Read(byte[] buffer, int offset, int count)
@@ -91,10 +104,11 @@ namespace NowinWebServer
                     _receiveLen -= l;
                     return l;
                 }
-                return ReadOverflowAsync(buffer, offset, count).Result;
+                _callbackReceive = null;
+                return ReadOverflowAsync(buffer, offset, count, null, null).Result;
             }
 
-            public override Task<int> ReadAsync(byte[] buffer, int offset, int count, System.Threading.CancellationToken cancellationToken)
+            public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
             {
                 if (_receiveLen > 0)
                 {
@@ -104,32 +118,132 @@ namespace NowinWebServer
                     _receiveLen -= l;
                     return Task.FromResult(l);
                 }
-                return ReadOverflowAsync(buffer, offset, count);
+                return ReadOverflowAsync(buffer, offset, count, null, null);
             }
 
-            Task<int> ReadOverflowAsync(byte[] buffer, int offset, int count)
+            public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
+            {
+                if (_receiveLen > 0)
+                {
+                    var l = Math.Min(count, _receiveLen);
+                    Array.Copy(_buf, _receivePos, buffer, offset, l);
+                    _receivePos += l;
+                    _receiveLen -= l;
+                    var res = new SyncAsyncResult(l, state);
+                    if (callback != null)
+                    {
+                        callback(res);
+                    }
+                    return res;
+                }
+                return ReadOverflowAsync(buffer, offset, count, callback, state);
+            }
+
+            Task<int> ReadOverflowAsync(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
             {
                 _asyncBuffer = buffer;
                 _asyncOffset = offset;
                 _asyncCount = count;
-                _tcs = new TaskCompletionSource<int>();
-                _owner.Callback.StartReceive(_owner.EncryptedReceiveBufferOffset, _owner._bufferSize);
-                return _tcs.Task;
+                _tcsReceive = new TaskCompletionSource<int>(state);
+                _callbackReceive = callback;
+                _owner.Callback.StartReceive(_owner._encryptedReceiveBufferOffset, _owner._bufferSize);
+                return _tcsReceive.Task;
+            }
+
+            class SyncAsyncResult : IAsyncResult
+            {
+                internal readonly int Result;
+                readonly object _state;
+                ManualResetEvent _waitHandle;
+
+                public SyncAsyncResult(int result, object state)
+                {
+                    Result = result;
+                    _state = state;
+                }
+
+                public bool IsCompleted { get { return true; } }
+                public WaitHandle AsyncWaitHandle
+                {
+                    get { return LazyInitializer.EnsureInitialized(ref _waitHandle, () => new ManualResetEvent(true)); }
+                }
+                public object AsyncState { get { return _state; } }
+                public bool CompletedSynchronously { get { return true; } }
+            }
+
+            public override int EndRead(IAsyncResult asyncResult)
+            {
+                var syncAsyncResult = asyncResult as SyncAsyncResult;
+                if (syncAsyncResult != null)
+                {
+                    return syncAsyncResult.Result;
+                }
+                try
+                {
+                    return ((Task<int>)asyncResult).Result;
+                }
+                catch (AggregateException ex)
+                {
+                    ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+                    throw;
+                }
             }
 
             public void FinishSend(Exception exception)
             {
-                throw new NotImplementedException();
+                if (exception == null)
+                {
+                    _tcsSend.SetResult(null);
+                }
+                else
+                {
+                    _tcsSend.SetException(exception);
+                }
+                if (_callbackSend != null)
+                {
+                    _callbackSend(_tcsSend.Task);
+                }
             }
 
             public override void Flush()
             {
-                throw new NotImplementedException();
             }
 
             public override void Write(byte[] buffer, int offset, int count)
             {
-                throw new NotImplementedException();
+                WriteAsync(buffer, offset, count, CancellationToken.None).Wait();
+            }
+
+            public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+            {
+                if (count > _owner._bufferSize) throw new ArgumentOutOfRangeException("count", "Buffer size overflow");
+                Array.Copy(buffer, offset, _buf, _owner._encryptedSendBufferOffset, count);
+                _tcsSend = new TaskCompletionSource<object>();
+                _owner.Callback.StartSend(_owner._encryptedSendBufferOffset, count);
+                return _tcsSend.Task;
+            }
+
+            public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
+            {
+                if (count > _owner._bufferSize) throw new ArgumentOutOfRangeException("count", "Buffer size overflow");
+                Array.Copy(buffer, offset, _buf, _owner._encryptedSendBufferOffset, count);
+                _tcsSend = new TaskCompletionSource<object>(state);
+                _callbackSend = callback;
+                _owner.Callback.StartSend(_owner._encryptedSendBufferOffset, count);
+                return _tcsSend.Task;
+            }
+
+            public override void EndWrite(IAsyncResult asyncResult)
+            {
+                try
+                {
+                    ((Task<object>)asyncResult).Wait();
+                }
+                catch (AggregateException ex)
+                {
+                    ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+                    throw;
+                }
             }
 
             public override bool CanRead
@@ -213,7 +327,7 @@ namespace NowinWebServer
         {
             _recvOffset = offset;
             _recvLength = length;
-            Callback.StartAccept(EncryptedReceiveBufferOffset, _bufferSize);
+            Callback.StartAccept(_encryptedReceiveBufferOffset, _bufferSize);
         }
 
         public void StartReceive(int offset, int length)
@@ -256,7 +370,7 @@ namespace NowinWebServer
             _authenticateTask = null;
             if (t != null)
             {
-                t.ContinueWith((t2, callback) => ((ITransportLayerCallback) callback).StartDisconnect(), Callback);
+                t.ContinueWith((t2, callback) => ((ITransportLayerCallback)callback).StartDisconnect(), Callback);
             }
             else
             {

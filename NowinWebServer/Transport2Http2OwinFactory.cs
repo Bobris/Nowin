@@ -14,7 +14,8 @@ namespace NowinWebServer
 
         public int PerConnectionBufferSize { get; private set; }
 
-        public int CommonBufferSize { 
+        public int CommonBufferSize
+        {
             get { return Server.Status100Continue.Length; }
         }
 
