@@ -11,20 +11,21 @@ Other Owin .Net server samples also included. Some parts of these samples source
 
 Sample: (uses Owin.Types nuget)
 
-    var server = new Server();
-    server.Start(new IPEndPoint(IPAddress.Any, 8080), env => {
-        var req = new Owin.Types.OwinRequest(env);
-        var resp = new Owin.Types.OwinResponse(req);
-        if (req.Path == "/")
-        {
-            resp.StatusCode = 200;
-            resp.AddHeader("Content-Type", "text/plain");
-            resp.Write("Hello World!");
+    using (ServerBuilder.New().SetPort(8888).SetOwinApp(
+        env => {
+            var req = new Owin.Types.OwinRequest(env);
+            var resp = new Owin.Types.OwinResponse(req);
+            if (req.Path == "/")
+            {
+                resp.StatusCode = 200;
+                resp.AddHeader("Content-Type", "text/plain");
+                resp.Write("Hello World!");
+                return Task.Delay(0);
+            }
+            resp.StatusCode = 404;
             return Task.Delay(0);
+        }).Start())
+        {
+            Console.WriteLine("Listening on port 8888. Enter to exit.");
+            Console.ReadLine();
         }
-        resp.StatusCode = 404;
-        return Task.Delay(0);
-    });
-    Console.WriteLine("Listening on port 8080. Enter to exit.");
-    Console.ReadLine();
-    server.Stop();

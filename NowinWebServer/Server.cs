@@ -9,46 +9,24 @@ using System.Threading.Tasks;
 
 namespace NowinWebServer
 {
-    public class Server : IDisposable
+    public class Server : INowinServer
     {
         internal static readonly byte[] Status100Continue = Encoding.UTF8.GetBytes("HTTP/1.1 100 Continue\r\n\r\n");
         internal static readonly byte[] Status500InternalServerError = Encoding.UTF8.GetBytes("HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n");
 
-        IConnectionAllocationStrategy _connectionAllocationStrategy;
+        readonly IServerParameters _parameters;
 
         readonly ConcurrentBag<ConnectionBlock> _blocks = new ConcurrentBag<ConnectionBlock>();
         internal Socket ListenSocket;
-        internal Func<IDictionary<string, object>, Task> App;
         internal int AllocatedConnections;
         internal int ConnectedCount;
         readonly object _newConnectionLock = new object();
         ILayerFactory _layerFactory;
+        IConnectionAllocationStrategy _connectionAllocationStrategy;
 
-        public Server()
-            : this(new ConnectionAllocationStrategy(256, 256, 1024 * 1024, 32))
+        internal Server(IServerParameters parameters)
         {
-        }
-
-        public Server(int maxConnections, int receiveBufferSize = 8192)
-            : this(new ConnectionAllocationStrategy(maxConnections, 0, maxConnections, 0), receiveBufferSize)
-        {
-        }
-
-        public Server(IConnectionAllocationStrategy connectionAllocationStrategy, int receiveBufferSize = 8192)
-        {
-            _connectionAllocationStrategy = connectionAllocationStrategy;
-            _layerFactory = new Transport2Http2OwinFactory(receiveBufferSize);
-        }
-
-        public void Start(IPEndPoint localEndPoint, Func<IDictionary<string, object>, Task> app)
-        {
-            App = app;
-            ListenSocket = new Socket(localEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-            ListenSocket.Bind(localEndPoint);
-            ListenSocket.Listen(100);
-            var initialConnectionCount = _connectionAllocationStrategy.CalculateNewConnectionCount(0, 0);
-            AllocatedConnections = initialConnectionCount;
-            _blocks.Add(new ConnectionBlock(this, _layerFactory, initialConnectionCount));
+            _parameters = parameters;
         }
 
         internal void ReportNewConnectedClient()
@@ -73,7 +51,23 @@ namespace NowinWebServer
             Interlocked.Decrement(ref ConnectedCount);
         }
 
-        public void Stop()
+        public void Start()
+        {
+            _connectionAllocationStrategy = _parameters.ConnectionAllocationStrategy;
+            _layerFactory = new Transport2Http2OwinFactory(_parameters.BufferSize, _parameters.OwinApp);
+            if (_parameters.Certificate != null)
+            {
+                _layerFactory = new SslTransportFactory(_parameters.BufferSize, _parameters.Certificate, _layerFactory);
+            }
+            ListenSocket = new Socket(_parameters.EndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+            ListenSocket.Bind(_parameters.EndPoint);
+            ListenSocket.Listen(100);
+            var initialConnectionCount = _connectionAllocationStrategy.CalculateNewConnectionCount(0, 0);
+            AllocatedConnections = initialConnectionCount;
+            _blocks.Add(new ConnectionBlock(this, _layerFactory, initialConnectionCount));
+        }
+
+        public void Dispose()
         {
             lock (_newConnectionLock)
             {
@@ -92,11 +86,6 @@ namespace NowinWebServer
             {
                 return 0;
             }
-        }
-
-        public void Dispose()
-        {
-            Stop();
         }
     }
 }

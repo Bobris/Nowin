@@ -5,11 +5,13 @@ namespace NowinWebServer
     public class SslTransportFactory : ILayerFactory
     {
         readonly int _bufferSize;
+        readonly X509Certificate _certificate;
         readonly ILayerFactory _next;
 
-        public SslTransportFactory(int bufferSize, ILayerFactory next)
+        public SslTransportFactory(int bufferSize, X509Certificate certificate, ILayerFactory next)
         {
             _bufferSize = bufferSize;
+            _certificate = certificate;
             _next = next;
         }
 
@@ -28,10 +30,10 @@ namespace NowinWebServer
             _next.InitCommonBuffer(buffer, offset);
         }
 
-        public ILayerHandler Create(Server server, byte[] buffer, int offset, int commonOffset)
+        public ILayerHandler Create(byte[] buffer, int offset, int commonOffset)
         {
-            var nextHandler = (ITransportLayerHandler) _next.Create(server, buffer, offset, commonOffset);
-            var handler = new SslTransportHandler(nextHandler, new X509Certificate(), buffer,
+            var nextHandler = (ITransportLayerHandler) _next.Create(buffer, offset, commonOffset);
+            var handler = new SslTransportHandler(nextHandler, _certificate, buffer,
                                                   offset + _next.PerConnectionBufferSize, _bufferSize);
             return handler;
         }

@@ -27,10 +27,8 @@ namespace NowinTests
         [Test]
         public void NowinTrivial()
         {
-            var listener = CreateServer(_appThrow);
-            using (listener)
+            using (CreateServer(_appThrow))
             {
-                listener.Stop();
             }
         }
 
@@ -899,14 +897,17 @@ namespace NowinTests
             }
         }
 
-        static Server CreateServer(AppFunc app)
+        static IDisposable CreateServer(AppFunc app)
         {
-            var server = new Server(1);
-            server.Start(new IPEndPoint(IPAddress.Loopback, 8080), app);
+            var server = ServerBuilder.New()
+                .SetEndPoint(new IPEndPoint(IPAddress.Loopback, 8080))
+                .SetOwinApp(app)
+                .SetConnectionAllocationStrategy(new ConnectionAllocationStrategy(1, 0, 1, 0))
+                .Start();
             return server;
         }
 
-        static Server CreateServerSync(Action<IDictionary<string, object>> appSync)
+        static IDisposable CreateServerSync(Action<IDictionary<string, object>> appSync)
         {
             return CreateServer(env =>
                 {

@@ -38,6 +38,10 @@
     <Compile Include="ChunkedDecoder.cs" />
     <Compile Include="ConnectionAllocationStrategy.cs" />
     <Compile Include="ConnectionBlock.cs" />
+    <Compile Include="INowinServer.cs" />
+    <Compile Include="IServerParameters.cs" />
+    <Compile Include="ServerBuilder.cs" />
+    <Compile Include="SslTransportFactory.cs" />
     <Compile Include="SslTransportHandler.cs" />
     <Compile Include="Transport2Http2OwinFactory.cs" />
     <Compile Include="Transport2Http2OwinHandler.cs" />

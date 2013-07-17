@@ -32,6 +32,7 @@ namespace NowinWebServer
             _bufferSize = bufferSize;
             _inputStream = new InputStream(this);
             _ssl = new SslStream(_inputStream, true);
+            next.Callback = this;
         }
 
         class InputStream : Stream

@@ -36,14 +36,14 @@ namespace NowinWebServer
         bool _responseIsChunked;
         ulong _responseContentLength;
 
-        public Transport2Http2OwinHandler(Server server, byte[] buffer, int startBufferOffset, int receiveBufferSize, int constantsOffset)
+        public Transport2Http2OwinHandler(Func<IDictionary<string, object>, Task> app, byte[] buffer, int startBufferOffset, int receiveBufferSize, int constantsOffset)
         {
             StartBufferOffset = startBufferOffset;
             ReceiveBufferSize = receiveBufferSize;
             ResponseBodyBufferOffset = StartBufferOffset + ReceiveBufferSize * 2 + 8;
             _constantsOffset = constantsOffset;
             Buffer = buffer;
-            _app = server.App;
+            _app = app;
             _responseStream = new ResponseStream(this);
             _requestStream = new RequestStream(this);
             _environment = new Dictionary<string, object>();

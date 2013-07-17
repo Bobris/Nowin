@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Net;
 using NowinWebServer;
 
 namespace NowinSample
@@ -8,11 +7,11 @@ namespace NowinSample
     {
         static void Main(string[] args)
         {
-            var server = new Server();
-            server.Start(new IPEndPoint(IPAddress.Any, 8888), SampleOwinApp.Sample.App);
-            Console.WriteLine("Listening on port 8888. Enter to exit.");
-            Console.ReadLine();
-            server.Stop();
+            using (ServerBuilder.New().SetPort(8888).SetOwinApp(SampleOwinApp.Sample.App).Start())
+            {
+                Console.WriteLine("Listening on port 8888. Enter to exit.");
+                Console.ReadLine();
+            }
         }
     }
 
