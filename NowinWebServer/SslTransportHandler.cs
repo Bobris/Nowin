@@ -10,11 +10,14 @@ namespace NowinWebServer
 {
     class SslTransportHandler : ITransportLayerHandler, ITransportLayerCallback
     {
+        internal const int SendBufferExtendedBySslSize = 128; // 102 could be enough probably so to have some reserve making it 128
+
         readonly ITransportLayerHandler _next;
         readonly X509Certificate _serverCertificate;
         readonly byte[] _buffer;
         readonly int _bufferSize;
-        readonly SslStream _ssl;
+        readonly int _sendBufferSize;
+        SslStream _ssl;
         readonly int _encryptedReceiveBufferOffset;
         readonly int _encryptedSendBufferOffset;
         Task _authenticateTask;
@@ -30,8 +33,8 @@ namespace NowinWebServer
             _encryptedReceiveBufferOffset = startBufferOffset;
             _encryptedSendBufferOffset = startBufferOffset + bufferSize;
             _bufferSize = bufferSize;
+            _sendBufferSize = bufferSize + SendBufferExtendedBySslSize;
             _inputStream = new InputStream(this);
-            _ssl = new SslStream(_inputStream, true);
             next.Callback = this;
         }
 
@@ -179,6 +182,10 @@ namespace NowinWebServer
                 {
                     return syncAsyncResult.Result;
                 }
+                if (((Task<int>)asyncResult).IsCanceled)
+                {
+                    return 0;
+                }
                 try
                 {
                     return ((Task<int>)asyncResult).Result;
@@ -217,7 +224,7 @@ namespace NowinWebServer
 
             public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
             {
-                if (count > _owner._bufferSize) throw new ArgumentOutOfRangeException("count", "Buffer size overflow");
+                if (count > _owner._sendBufferSize) throw new ArgumentOutOfRangeException("count", "Buffer size overflow");
                 Array.Copy(buffer, offset, _buf, _owner._encryptedSendBufferOffset, count);
                 _tcsSend = new TaskCompletionSource<object>();
                 _owner.Callback.StartSend(_owner._encryptedSendBufferOffset, count);
@@ -226,7 +233,7 @@ namespace NowinWebServer
 
             public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
             {
-                if (count > _owner._bufferSize) throw new ArgumentOutOfRangeException("count", "Buffer size overflow");
+                if (count > _owner._sendBufferSize) throw new ArgumentOutOfRangeException("count", "Buffer size overflow");
                 Array.Copy(buffer, offset, _buf, _owner._encryptedSendBufferOffset, count);
                 _tcsSend = new TaskCompletionSource<object>(state);
                 _callbackSend = callback;
@@ -279,6 +286,7 @@ namespace NowinWebServer
 
         public void PrepareAccept()
         {
+            _ssl = null;
             _next.PrepareAccept();
         }
 
@@ -287,6 +295,7 @@ namespace NowinWebServer
             _inputStream.FinishAccept(offset, length);
             try
             {
+                _ssl = new SslStream(_inputStream, true);
                 _authenticateTask = _ssl.AuthenticateAsServerAsync(_serverCertificate).ContinueWith((t, selfObject) =>
                 {
                     var self = (SslTransportHandler)selfObject;

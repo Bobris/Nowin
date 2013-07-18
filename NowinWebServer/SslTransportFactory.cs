@@ -17,7 +17,7 @@ namespace NowinWebServer
 
         public int PerConnectionBufferSize
         {
-            get { return _next.PerConnectionBufferSize + _bufferSize * 2; }
+            get { return _next.PerConnectionBufferSize + _bufferSize * 2 + SslTransportHandler.SendBufferExtendedBySslSize; }
         }
 
         public int CommonBufferSize
@@ -32,7 +32,7 @@ namespace NowinWebServer
 
         public ILayerHandler Create(byte[] buffer, int offset, int commonOffset)
         {
-            var nextHandler = (ITransportLayerHandler) _next.Create(buffer, offset, commonOffset);
+            var nextHandler = (ITransportLayerHandler)_next.Create(buffer, offset, commonOffset);
             var handler = new SslTransportHandler(nextHandler, _certificate, buffer,
                                                   offset + _next.PerConnectionBufferSize, _bufferSize);
             return handler;
