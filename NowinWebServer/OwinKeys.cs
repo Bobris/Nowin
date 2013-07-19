@@ -19,5 +19,9 @@ namespace NowinWebServer
 
         public const string CallCancelled = "owin.CallCancelled";
         public const string Version = "owin.Version";
+
+        public const string ServerCapabilitiesKey = "server.Capabilities";
+        public const string ServerNameKey = "server.Name";
+
     }
 }

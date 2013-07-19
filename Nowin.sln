@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NowinWebServer", "NowinWebS
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NowinTests", "NowinTests\NowinTests.csproj", "{84E1BFBD-2EB0-44C8-A7F7-54E4AB152C13}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OwinHostingSample", "OwinHostingSample\OwinHostingSample.csproj", "{F94CD73D-F902-4A36-BF6E-DF9233D60397}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -51,6 +53,10 @@ Global
 		{84E1BFBD-2EB0-44C8-A7F7-54E4AB152C13}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{84E1BFBD-2EB0-44C8-A7F7-54E4AB152C13}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{84E1BFBD-2EB0-44C8-A7F7-54E4AB152C13}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F94CD73D-F902-4A36-BF6E-DF9233D60397}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F94CD73D-F902-4A36-BF6E-DF9233D60397}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F94CD73D-F902-4A36-BF6E-DF9233D60397}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F94CD73D-F902-4A36-BF6E-DF9233D60397}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

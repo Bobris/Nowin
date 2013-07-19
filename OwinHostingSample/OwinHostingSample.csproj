@@ -4,15 +4,16 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{EFF3B76F-E9E4-4DA6-B46D-E2DEA456545E}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <ProjectGuid>{F94CD73D-F902-4A36-BF6E-DF9233D60397}</ProjectGuid>
+    <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>NowinWebServer</RootNamespace>
-    <AssemblyName>NowinWebServer</AssemblyName>
+    <RootNamespace>OwinHostingSample</RootNamespace>
+    <AssemblyName>OwinHostingSample</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -22,6 +23,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
@@ -30,35 +32,36 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Microsoft.Owin">
+      <HintPath>..\packages\Microsoft.Owin.1.1.0-beta2\lib\net45\Microsoft.Owin.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Owin.Hosting">
+      <HintPath>..\packages\Microsoft.Owin.Hosting.1.1.0-beta2\lib\net40\Microsoft.Owin.Hosting.dll</HintPath>
+    </Reference>
+    <Reference Include="Owin">
+      <HintPath>..\packages\Owin.1.0\lib\net40\Owin.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ChunkedDecoder.cs" />
-    <Compile Include="ConnectionAllocationStrategy.cs" />
-    <Compile Include="ConnectionBlock.cs" />
-    <Compile Include="DictionaryExtensions.cs" />
-    <Compile Include="INowinServer.cs" />
-    <Compile Include="IServerParameters.cs" />
-    <Compile Include="ServerBuilder.cs" />
-    <Compile Include="ServerFactory.cs" />
-    <Compile Include="SslTransportFactory.cs" />
-    <Compile Include="SslTransportHandler.cs" />
-    <Compile Include="Transport2Http2OwinFactory.cs" />
-    <Compile Include="Transport2Http2OwinHandler.cs" />
-    <Compile Include="IConnectionAllocationStrategy.cs" />
-    <Compile Include="ILayerCallback.cs" />
-    <Compile Include="ILayerFactory.cs" />
-    <Compile Include="ILayerHandler.cs" />
-    <Compile Include="ITransportLayerCallback.cs" />
-    <Compile Include="ITransportLayerHandler.cs" />
-    <Compile Include="OwinKeys.cs" />
+    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RequestStream.cs" />
-    <Compile Include="ResponseStream.cs" />
-    <Compile Include="SaeaLayerCallback.cs" />
-    <Compile Include="Server.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SampleOwinApp\SampleOwinApp.csproj">
+      <Project>{5897faee-8b03-405a-9661-099cbfb2a162}</Project>
+      <Name>SampleOwinApp</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
