@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Owin.Hosting;
 using Owin;
 
 namespace OwinHostingSample
 {
-    using App = Func<IDictionary<string, object>, Task>;
-
     static class Program
     {
         static void Main(string[] args)
@@ -29,7 +26,16 @@ namespace OwinHostingSample
     {
         public void Configuration(IAppBuilder app)
         {
-            app.Run((App)SampleOwinApp.Sample.App);
+            app.UseHandlerAsync((req, res) =>
+            {
+                if (req.Path == "/")
+                {
+                    res.ContentType = "text/plain";
+                    return res.WriteAsync("Hello World!");
+                }
+                res.StatusCode = 404;
+                return Task.Delay(0);
+            });
         }
     }
 }
