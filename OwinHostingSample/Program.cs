@@ -11,12 +11,13 @@ namespace OwinHostingSample
         {
             var options = new StartOptions
             {
-                ServerFactory = "NowinWebServer"
+                ServerFactory = "NowinWebServer",
+                Port = 8080
             };
 
             using (WebApp.Start<Startup>(options))
             {
-                Console.WriteLine("Running a http server");
+                Console.WriteLine("Running a http server on port 8080");
                 Console.ReadKey();
             }
         }

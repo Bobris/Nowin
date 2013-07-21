@@ -1,31 +1,58 @@
 Nowin
 =====
 
-Fast Owin Web Server in pure .Net 4.5
+Fast Owin Web Server in pure .Net 4.5 (it does not use HttpListener)
 
-Current status is more proof of concept. But in keep-alive case with Hello World response is 3 times faster than NodeJs 0.10.7 or HttpListener.
+Current status is usable for testing, not for production. But in keep-alive case with Hello World response is 3 times faster than NodeJs 0.10.7 or HttpListener.
 
 SSL is also supported!
 
 Other Owin .Net server samples also included. Some parts of these samples source code are modified from Katana project.
 
-Sample: (uses Owin.Types nuget)
+Sample: (uses Microsoft.Owin.Hosting nuget from http://www.myget.org/f/aspnetwebstacknightly/)
 
-    using (ServerBuilder.New().SetPort(8888).SetOwinApp(
-        env => {
-            var req = new Owin.Types.OwinRequest(env);
-            var resp = new Owin.Types.OwinResponse(req);
-            if (req.Path == "/")
-            {
-                resp.StatusCode = 200;
-                resp.AddHeader("Content-Type", "text/plain");
-                resp.Write("Hello World!");
-                return Task.Delay(0);
-            }
-            resp.StatusCode = 404;
-            return Task.Delay(0);
-        }).Start())
+    static class Program
+    {
+        static void Main(string[] args)
         {
-            Console.WriteLine("Listening on port 8888. Enter to exit.");
-            Console.ReadLine();
+            var options = new StartOptions
+            {
+                ServerFactory = "NowinWebServer",
+                Port = 8080
+            };
+
+            using (WebApp.Start<Startup>(options))
+            {
+                Console.WriteLine("Running a http server on port 8080");
+                Console.ReadKey();
+            }
         }
+    }
+
+    public class Startup
+    {
+        public void Configuration(IAppBuilder app)
+        {
+            app.Use(context =>
+            {
+                if (context.Request.Path == "/")
+                {
+                    context.Response.ContentType = "text/plain";
+                    return context.Response.WriteAsync("Hello World!");
+                }
+
+                context.Response.StatusCode = 404;
+                return Task.Delay(0);
+            });
+        }
+    }
+
+Https sample using builder:
+
+    var builder = ServerBuilder.New().SetPort(8888).SetOwinApp(SomeOwinApp);
+    builder.SetCertificate(new X509Certificate2("certificate.pfx", "password"));
+    using (builder.Start())
+    {
+        Console.WriteLine("Listening on port 8888. Enter to exit.");
+        Console.ReadLine();
+    }
