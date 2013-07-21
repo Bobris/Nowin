@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
     <id>Nowin</id>
-    <version>0.5.0</version>
+    <version>$version$</version>
     <authors>Boris Letocha</authors>
     <owners>Boris Letocha</owners>
     <copyright>Boris Letocha</copyright>
