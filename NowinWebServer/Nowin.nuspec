@@ -15,8 +15,4 @@
     <dependencies>
     </dependencies>
   </metadata>
-  <files>
-    <file src="bin\Release\NowinWebServer.dll" target="lib\net45" />
-    <file src="bin\Release\NowinWebServer.pdb" target="lib\net45" />
-  </files>
 </package>
