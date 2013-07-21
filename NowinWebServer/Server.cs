@@ -57,7 +57,7 @@ namespace NowinWebServer
             _layerFactory = new Transport2Http2OwinFactory(_parameters.BufferSize, _parameters.OwinApp);
             if (_parameters.Certificate != null)
             {
-                _layerFactory = new SslTransportFactory(_parameters.BufferSize, _parameters.Certificate, _layerFactory);
+                _layerFactory = new SslTransportFactory(_parameters.Certificate, _layerFactory);
             }
             ListenSocket = new Socket(_parameters.EndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
             ListenSocket.Bind(_parameters.EndPoint);

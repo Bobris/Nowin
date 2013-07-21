@@ -6,8 +6,8 @@ namespace NowinWebServer
     {
         ITransportLayerCallback Callback { set; }
         void PrepareAccept();
-        void FinishAccept(int offset, int length);
-        void FinishReceive(int offset, int length);
+        void FinishAccept(byte[] buffer, int offset, int length);
+        void FinishReceive(byte[] buffer, int offset, int length);
         void FinishReceiveWithAbort();
         void FinishSend(Exception exception);
     }

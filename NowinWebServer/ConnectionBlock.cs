@@ -19,7 +19,7 @@ namespace NowinWebServer
             for (var i = 0; i < _connectionCount; i++)
             {
                 var handler = (ITransportLayerHandler)layerFactory.Create(buffer, i * perConnectionBufferSize, constantsOffset);
-                var callback = new SaeaLayerCallback(handler, buffer, _server.ListenSocket, _server);
+                var callback = new SaeaLayerCallback(handler, _server.ListenSocket, _server);
                 _connections[i] = callback;
                 handler.PrepareAccept();
             }

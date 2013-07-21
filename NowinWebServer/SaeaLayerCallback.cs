@@ -26,7 +26,7 @@ namespace NowinWebServer
 #pragma warning disable 420
         volatile int _state;
 
-        public SaeaLayerCallback(ITransportLayerHandler handler, byte[] buffer, Socket listenSocket, Server server)
+        public SaeaLayerCallback(ITransportLayerHandler handler, Socket listenSocket, Server server)
         {
             _handler = handler;
             _listenSocket = listenSocket;
@@ -34,8 +34,6 @@ namespace NowinWebServer
             _receiveEvent.Completed += IoCompleted;
             _sendEvent.Completed += IoCompleted;
             _disconnectEvent.Completed += IoCompleted;
-            _receiveEvent.SetBuffer(buffer, 0, 0);
-            _sendEvent.SetBuffer(buffer, 0, 0);
             _receiveEvent.DisconnectReuseSocket = true;
             _sendEvent.DisconnectReuseSocket = true;
             _disconnectEvent.DisconnectReuseSocket = true;
@@ -83,15 +81,15 @@ namespace NowinWebServer
             _server.ReportNewConnectedClient();
             _socket = _receiveEvent.AcceptSocket;
             _receiveEvent.AcceptSocket = null;
-            if (_receiveEvent.BytesTransferred > 0 && _receiveEvent.SocketError == SocketError.Success)
+            if (_receiveEvent.BytesTransferred >= 0 && _receiveEvent.SocketError == SocketError.Success)
             {
-                _handler.FinishAccept(_receiveEvent.Offset, _receiveEvent.BytesTransferred);
+                _handler.FinishAccept(_receiveEvent.Buffer, _receiveEvent.Offset, _receiveEvent.BytesTransferred);
             }
         }
 
         void ProcessReceive()
         {
-            if (_receiveEvent.BytesTransferred > 0 && _receiveEvent.SocketError == SocketError.Success)
+            if (_receiveEvent.BytesTransferred >= 0 && _receiveEvent.SocketError == SocketError.Success)
             {
                 int oldState, newState;
                 do
@@ -99,7 +97,7 @@ namespace NowinWebServer
                     oldState = _state;
                     newState = oldState & ~(int)State.Receive;
                 } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
-                _handler.FinishReceive(_receiveEvent.Offset, _receiveEvent.BytesTransferred);
+                _handler.FinishReceive(_receiveEvent.Buffer, _receiveEvent.Offset, _receiveEvent.BytesTransferred);
             }
             else
             {
@@ -142,7 +140,7 @@ namespace NowinWebServer
             _handler.PrepareAccept();
         }
 
-        public void StartAccept(int offset, int length)
+        public void StartAccept(byte[] buffer, int offset, int length)
         {
             int oldState, newState;
             do
@@ -152,7 +150,7 @@ namespace NowinWebServer
                     throw new InvalidOperationException("Already receiving or accepting");
                 newState = oldState | (int)State.Receive;
             } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
-            _receiveEvent.SetBuffer(offset, length);
+            _receiveEvent.SetBuffer(buffer, offset, length);
             bool willRaiseEvent;
             try
             {
@@ -168,7 +166,7 @@ namespace NowinWebServer
             }
         }
 
-        public void StartReceive(int offset, int length)
+        public void StartReceive(byte[] buffer, int offset, int length)
         {
             int oldState, newState;
             do
@@ -178,7 +176,7 @@ namespace NowinWebServer
                     throw new InvalidOperationException("Already receiving or accepting");
                 newState = oldState | (int)State.Receive;
             } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
-            _receiveEvent.SetBuffer(offset, length);
+            _receiveEvent.SetBuffer(buffer, offset, length);
             bool willRaiseEvent;
             try
             {
@@ -194,7 +192,7 @@ namespace NowinWebServer
             }
         }
 
-        public void StartSend(int offset, int length)
+        public void StartSend(byte[] buffer, int offset, int length)
         {
             int oldState, newState;
             do
@@ -204,7 +202,7 @@ namespace NowinWebServer
                     throw new InvalidOperationException("Already sending");
                 newState = oldState | (int)State.Send;
             } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
-            _sendEvent.SetBuffer(offset, length);
+            _sendEvent.SetBuffer(buffer, offset, length);
             bool willRaiseEvent;
             try
             {

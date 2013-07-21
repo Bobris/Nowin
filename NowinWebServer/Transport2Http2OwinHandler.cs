@@ -635,7 +635,7 @@ namespace NowinWebServer
                 }
             }
             _lastPacket = true;
-            Callback.StartSend(offset, len);
+            Callback.StartSend(Buffer, offset, len);
         }
 
         static void AppendZeroChunk(byte[] buffer, int offset, ref int len)
@@ -660,12 +660,9 @@ namespace NowinWebServer
 
         void SendInternalServerError()
         {
-            var status500InternalServerError = Server.Status500InternalServerError;
-            Array.Copy(status500InternalServerError, 0, Buffer,
-                       StartBufferOffset + ReceiveBufferSize, status500InternalServerError.Length);
             _isKeepAlive = false;
             _lastPacket = true;
-            Callback.StartSend(StartBufferOffset + ReceiveBufferSize, status500InternalServerError.Length);
+            Callback.StartSend(Server.Status500InternalServerError, 0, Server.Status500InternalServerError.Length);
         }
 
         static int FindRequestEnd(byte[] buffer, int start, int end)
@@ -722,7 +719,7 @@ namespace NowinWebServer
             }
             var tcs = new TaskCompletionSource<bool>();
             _tcsSend = tcs;
-            Callback.StartSend(startOffset, len);
+            Callback.StartSend(Buffer, startOffset, len);
             return tcs.Task;
         }
 
@@ -763,7 +760,7 @@ namespace NowinWebServer
 
         public void Send100Continue()
         {
-            Callback.StartSend(_constantsOffset, Server.Status100Continue.Length);
+            Callback.StartSend(Buffer, _constantsOffset, Server.Status100Continue.Length);
         }
 
         public void StartNextReceive()
@@ -772,7 +769,7 @@ namespace NowinWebServer
             var count = StartBufferOffset + ReceiveBufferSize - _receiveBufferFullness;
             if (count > 0)
             {
-                Callback.StartReceive(_receiveBufferFullness, count);
+                Callback.StartReceive(Buffer, _receiveBufferFullness, count);
             }
         }
 
@@ -784,17 +781,22 @@ namespace NowinWebServer
 
         public void PrepareAccept()
         {
-            Callback.StartAccept(StartBufferOffset, ReceiveBufferSize);
+            Callback.StartAccept(Buffer, StartBufferOffset, ReceiveBufferSize);
         }
 
-        public void FinishAccept(int offset, int length)
+        public void FinishAccept(byte[] buffer, int offset, int length)
         {
             ResetForNextRequest();
             ReceiveBufferPos = 0;
-            FinishReceive(offset, length);
+            if (length==0)
+            {
+                StartNextReceive();
+                return;
+            }
+            FinishReceive(buffer, offset, length);
         }
 
-        public void FinishReceive(int offset, int length)
+        public void FinishReceive(byte[] buffer, int offset, int length)
         {
             //Console.WriteLine("======= Offset {0}, Length {1}", ReceiveSocketAsyncEventArgs.Offset - StartBufferOffset, ReceiveSocketAsyncEventArgs.BytesTransferred);
             //Console.WriteLine(Encoding.UTF8.GetString(ReceiveSocketAsyncEventArgs.Buffer, ReceiveSocketAsyncEventArgs.Offset, ReceiveSocketAsyncEventArgs.BytesTransferred));
