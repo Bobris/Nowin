@@ -26,14 +26,15 @@ namespace OwinHostingSample
     {
         public void Configuration(IAppBuilder app)
         {
-            app.UseHandlerAsync((req, res) =>
+            app.Use(context =>
             {
-                if (req.Path == "/")
+                if (context.Request.Path == "/")
                 {
-                    res.ContentType = "text/plain";
-                    return res.WriteAsync("Hello World!");
+                    context.Response.ContentType = "text/plain";
+                    return context.Response.WriteAsync("Hello World!");
                 }
-                res.StatusCode = 404;
+
+                context.Response.StatusCode = 404;
                 return Task.Delay(0);
             });
         }

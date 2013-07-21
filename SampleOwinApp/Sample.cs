@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Microsoft.Owin;
 
 namespace SampleOwinApp
 {
@@ -8,12 +9,12 @@ namespace SampleOwinApp
     {
         public static Task App(IDictionary<string, object> arg)
         {
-            var req = new Owin.Types.OwinRequest(arg);
-            var resp = new Owin.Types.OwinResponse(req);
+            var req = new OwinRequest(arg);
+            var resp = new OwinResponse(arg);
             if (req.Path == "/")
             {
                 resp.StatusCode = 200;
-                resp.AddHeader("Content-Type", "text/plain");
+                resp.ContentType = "text/plain";
                 resp.Write("Hello World!");
                 return Task.Delay(0);
             }
@@ -21,7 +22,7 @@ namespace SampleOwinApp
             if (File.Exists(p))
             {
                 resp.StatusCode = 200;
-                resp.AddHeader("Content-Type", "text/html");
+                resp.ContentType = "text/html";
                 return resp.WriteAsync(File.ReadAllBytes(p));
             }
             resp.StatusCode = 500;

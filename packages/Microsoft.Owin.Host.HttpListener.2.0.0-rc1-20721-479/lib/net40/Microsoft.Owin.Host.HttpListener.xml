@@ -4,6 +4,12 @@
         <name>Microsoft.Owin.Host.HttpListener</name>
     </assembly>
     <members>
+        <member name="T:System.Reflection.AssemblyMetadataAttribute">
+            <summary>
+            Provided as a down-level stub for the 4.5 AssemblyMetaDataAttribute class.
+            All released assemblies should define [AssemblyMetadata(“Servicing”,”true”)].
+            </summary>
+        </member>
         <member name="T:Microsoft.Owin.Host.HttpListener.RequestProcessing.ExceptionFilterStream">
             <summary>
             This class is used to wrap other streams and convert some exception types.
@@ -96,18 +102,43 @@
               resource lookups using this strongly typed resource class.
             </summary>
         </member>
-        <member name="T:Microsoft.Owin.Host.HttpListener.ServerFactory">
+        <member name="P:Microsoft.Owin.Host.HttpListener.Resources.Exception_DuplicateKey">
+            <summary>
+              Looks up a localized string similar to The key &apos;{0}&apos; is already present in the dictionary..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Host.HttpListener.Resources.Log_AppDisonnectErrors">
+            <summary>
+              Looks up a localized string similar to App errors on disconnect notification..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Host.HttpListener.Resources.Log_RequestProcessingException">
+            <summary>
+              Looks up a localized string similar to Exception during request processing..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Host.HttpListener.Resources.Log_UnableToSetup">
+            <summary>
+              Looks up a localized string similar to Unable to resolve handles. Disconnect notifications will be ignored..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Host.HttpListener.Resources.Log_UnexpectedException">
+            <summary>
+              Looks up a localized string similar to Unexpected exception..
+            </summary>
+        </member>
+        <member name="T:Microsoft.Owin.Host.HttpListener.OwinServerFactory">
             <summary>
             Implements the Katana setup pattern for the OwinHttpListener server.
             </summary>
         </member>
-        <member name="M:Microsoft.Owin.Host.HttpListener.ServerFactory.Initialize(System.Collections.Generic.IDictionary{System.String,System.Object})">
+        <member name="M:Microsoft.Owin.Host.HttpListener.OwinServerFactory.Initialize(System.Collections.Generic.IDictionary{System.String,System.Object})">
             <summary>
             Advertise the capabilities of the server.
             </summary>
             <param name="properties"></param>
         </member>
-        <member name="M:Microsoft.Owin.Host.HttpListener.ServerFactory.Create(System.Func{System.Collections.Generic.IDictionary{System.String,System.Object},System.Threading.Tasks.Task},System.Collections.Generic.IDictionary{System.String,System.Object})">
+        <member name="M:Microsoft.Owin.Host.HttpListener.OwinServerFactory.Create(System.Func{System.Collections.Generic.IDictionary{System.String,System.Object},System.Threading.Tasks.Task},System.Collections.Generic.IDictionary{System.String,System.Object})">
             <summary>
             Creates an OwinHttpListener and starts listening on the given URL.
             </summary>

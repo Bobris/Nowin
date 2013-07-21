@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace NowinWebServer
 {
-    public static class ServerFactory
+    public static class OwinServerFactory
     {
         public static void Initialize(IDictionary<string, object> properties)
         {
