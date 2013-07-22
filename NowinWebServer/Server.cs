@@ -68,6 +68,16 @@ namespace NowinWebServer
             _blocks.Add(new ConnectionBlock(this, _layerFactory, initialConnectionCount));
         }
 
+        public int ConnectionCount
+        {
+            get { return ConnectedCount; }
+        }
+
+        public int CurrentMaxConnectionCount
+        {
+            get { return AllocatedConnections; }
+        }
+
         public void Dispose()
         {
             lock (_newConnectionLock)

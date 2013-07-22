@@ -93,7 +93,8 @@ namespace NowinWebServer
 
         void ProcessReceive()
         {
-            if (_receiveEvent.BytesTransferred >= 0 && _receiveEvent.SocketError == SocketError.Success)
+            var bytesTransferred = _receiveEvent.BytesTransferred;
+            if (bytesTransferred > 0 && _receiveEvent.SocketError == SocketError.Success)
             {
                 int oldState, newState;
                 do
@@ -101,7 +102,7 @@ namespace NowinWebServer
                     oldState = _state;
                     newState = oldState & ~(int)State.Receive;
                 } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
-                _handler.FinishReceive(_receiveEvent.Buffer, _receiveEvent.Offset, _receiveEvent.BytesTransferred);
+                _handler.FinishReceive(_receiveEvent.Buffer, _receiveEvent.Offset, bytesTransferred);
             }
             else
             {
