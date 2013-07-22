@@ -27,6 +27,7 @@ namespace NowinWebServer
         readonly Dictionary<string, string[]> _reqHeaders;
         readonly Dictionary<string, string[]> _respHeaders;
         readonly Func<IDictionary<string, object>, Task> _app;
+        readonly bool _isSsl;
         readonly ResponseStream _responseStream;
         readonly RequestStream _requestStream;
         TaskCompletionSource<bool> _tcsSend;
@@ -36,7 +37,7 @@ namespace NowinWebServer
         bool _responseIsChunked;
         ulong _responseContentLength;
 
-        public Transport2Http2OwinHandler(Func<IDictionary<string, object>, Task> app, byte[] buffer, int startBufferOffset, int receiveBufferSize, int constantsOffset)
+        public Transport2Http2OwinHandler(Func<IDictionary<string, object>, Task> app, bool isSsl, byte[] buffer, int startBufferOffset, int receiveBufferSize, int constantsOffset)
         {
             StartBufferOffset = startBufferOffset;
             ReceiveBufferSize = receiveBufferSize;
@@ -44,6 +45,7 @@ namespace NowinWebServer
             _constantsOffset = constantsOffset;
             Buffer = buffer;
             _app = app;
+            _isSsl = isSsl;
             _responseStream = new ResponseStream(this);
             _requestStream = new RequestStream(this);
             _environment = new Dictionary<string, object>();
@@ -73,7 +75,10 @@ namespace NowinWebServer
             _environment.Add(OwinKeys.ResponseHeaders, _respHeaders);
             var pos = startBufferOffset;
             _environment.Add(OwinKeys.RequestMethod, ParseHttpMethod(buffer, ref pos));
-            string reqPath, reqQueryString, reqScheme = "http", reqHost;
+            string reqPath;
+            string reqQueryString;
+            string reqScheme = _isSsl ? "https" : "http";
+            string reqHost;
             ParseHttpPath(buffer, ref pos, out reqPath, out reqQueryString, ref reqScheme, out reqHost);
             _environment.Add(OwinKeys.RequestPath, reqPath);
             _environment.Add(OwinKeys.RequestScheme, reqScheme);
@@ -788,7 +793,7 @@ namespace NowinWebServer
         {
             ResetForNextRequest();
             ReceiveBufferPos = 0;
-            if (length==0)
+            if (length == 0)
             {
                 StartNextReceive();
                 return;

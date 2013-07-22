@@ -7,11 +7,13 @@ namespace NowinWebServer
     public class Transport2Http2OwinFactory : ILayerFactory
     {
         readonly int _receiveBufferSize;
+        readonly bool _isSsl;
         readonly Func<IDictionary<string, object>, Task> _app;
 
-        public Transport2Http2OwinFactory(int receiveBufferSize, Func<IDictionary<string, object>, Task> app)
+        public Transport2Http2OwinFactory(int receiveBufferSize, bool isSsl, Func<IDictionary<string, object>, Task> app)
         {
             _receiveBufferSize = receiveBufferSize;
+            _isSsl = isSsl;
             _app = app;
             PerConnectionBufferSize = receiveBufferSize * 3 + 16;
         }
@@ -30,7 +32,7 @@ namespace NowinWebServer
 
         public ILayerHandler Create(byte[] buffer, int offset, int commonOffset)
         {
-            return new Transport2Http2OwinHandler(_app, buffer, offset, _receiveBufferSize, commonOffset);
+            return new Transport2Http2OwinHandler(_app, _isSsl, buffer, offset, _receiveBufferSize, commonOffset);
         }
     }
 }

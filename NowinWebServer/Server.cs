@@ -54,8 +54,9 @@ namespace NowinWebServer
         public void Start()
         {
             _connectionAllocationStrategy = _parameters.ConnectionAllocationStrategy;
-            _layerFactory = new Transport2Http2OwinFactory(_parameters.BufferSize, _parameters.OwinApp);
-            if (_parameters.Certificate != null)
+            var isSsl = _parameters.Certificate != null;
+            _layerFactory = new Transport2Http2OwinFactory(_parameters.BufferSize, isSsl, _parameters.OwinApp);
+            if (isSsl)
             {
                 _layerFactory = new SslTransportFactory(_parameters.Certificate, _layerFactory);
             }

@@ -18,6 +18,7 @@ namespace NowinTests
         const string SampleContent = "Hello World";
 
         protected abstract string HttpClientAddress { get; }
+        protected abstract string ExpectedRequestScheme { get; }
 
         readonly Func<IDictionary<string, object>, Task> _appThrow = env => { throw new InvalidOperationException(); };
 
@@ -235,13 +236,13 @@ namespace NowinTests
                         Assert.AreEqual("QueryString", env["owin.RequestQueryString"]);
 
                         Assert.True(env.TryGetValue("owin.RequestScheme", out ignored));
-                        Assert.AreEqual("http", env["owin.RequestScheme"]);
+                        Assert.AreEqual(ExpectedRequestScheme, env["owin.RequestScheme"]);
 
                         Assert.True(env.TryGetValue("owin.Version", out ignored));
                         Assert.AreEqual("1.0", env["owin.Version"]);
                     });
 
-            SendGetRequest(listener, HttpClientAddress + "SubPath?QueryString");
+             Assert.AreEqual(HttpStatusCode.OK, SendGetRequest(listener, HttpClientAddress + "SubPath?QueryString").StatusCode);
         }
 
         [Test]
@@ -267,7 +268,7 @@ namespace NowinTests
                         Assert.AreEqual("QueryString", env["owin.RequestQueryString"]);
 
                         Assert.True(env.TryGetValue("owin.RequestScheme", out ignored));
-                        Assert.AreEqual("http", env["owin.RequestScheme"]);
+                        Assert.AreEqual(ExpectedRequestScheme, env["owin.RequestScheme"]);
 
                         Assert.True(env.TryGetValue("owin.Version", out ignored));
                         Assert.AreEqual("1.0", env["owin.Version"]);

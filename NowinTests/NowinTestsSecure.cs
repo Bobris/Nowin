@@ -26,6 +26,11 @@ namespace NowinTests
             get { return "https://localhost:8080/"; }
         }
 
+        protected override string ExpectedRequestScheme
+        {
+            get { return "https"; }
+        }
+
         protected override IDisposable CreateServer(Func<IDictionary<string, object>, Task> app)
         {
             var server = ServerBuilder.New()
