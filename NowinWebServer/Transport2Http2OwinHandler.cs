@@ -803,8 +803,20 @@ namespace NowinWebServer
 
         public void FinishReceive(byte[] buffer, int offset, int length)
         {
-            //Console.WriteLine("======= Offset {0}, Length {1}", ReceiveSocketAsyncEventArgs.Offset - StartBufferOffset, ReceiveSocketAsyncEventArgs.BytesTransferred);
-            //Console.WriteLine(Encoding.UTF8.GetString(ReceiveSocketAsyncEventArgs.Buffer, ReceiveSocketAsyncEventArgs.Offset, ReceiveSocketAsyncEventArgs.BytesTransferred));
+            if (length==-1)
+            {
+                if (_waitingForRequest)
+                {
+                    Callback.StartDisconnect();
+                }
+                else
+                {
+                    _cancellation.Cancel();
+                    _requestStream.ConnectionClosed();
+                }
+            }
+            //Console.WriteLine("======= Offset {0}, Length {1}", offset - StartBufferOffset, length);
+            //Console.WriteLine(Encoding.UTF8.GetString(buffer, offset, length));
             _receiveBufferFullness = offset + length;
             if (_waitingForRequest)
             {
@@ -848,19 +860,6 @@ namespace NowinWebServer
                 {
                     StartNextReceive();
                 }
-            }
-        }
-
-        public void FinishReceiveWithAbort()
-        {
-            if (_waitingForRequest)
-            {
-                Callback.StartDisconnect();
-            }
-            else
-            {
-                _cancellation.Cancel();
-                _requestStream.ConnectionClosed();
             }
         }
 

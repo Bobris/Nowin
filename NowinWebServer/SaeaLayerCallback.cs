@@ -107,7 +107,7 @@ namespace NowinWebServer
                     oldState = _state;
                     newState = (oldState & ~(int)State.Receive) | (int)State.Aborting;
                 } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
-                _handler.FinishReceiveWithAbort();
+                _handler.FinishReceive(null, 0, -1);
             }
         }
 
@@ -133,7 +133,7 @@ namespace NowinWebServer
             do
             {
                 oldState = _state;
-                newState = (oldState & ~(int)(State.Disconnect|State.Aborting));
+                newState = (oldState & ~(int)(State.Disconnect | State.Aborting));
             } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
             _socket = null;
             _server.ReportDisconnectedClient();

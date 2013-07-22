@@ -53,16 +53,10 @@ namespace NowinWebServer
 
             public void FinishReceive(int length)
             {
-                _tcsReceive.SetResult(length);
-                if (_callbackReceive != null)
-                {
-                    _callbackReceive(_tcsReceive.Task);
-                }
-            }
-
-            public void FinishReceiveWithAbort()
-            {
-                _tcsReceive.SetCanceled();
+                if (length==-1)
+                    _tcsReceive.SetCanceled();
+                else
+                    _tcsReceive.SetResult(length);
                 if (_callbackReceive != null)
                 {
                     _callbackReceive(_tcsReceive.Task);
@@ -231,11 +225,6 @@ namespace NowinWebServer
             _inputStream.FinishReceive(length);
         }
 
-        public void FinishReceiveWithAbort()
-        {
-            _inputStream.FinishReceiveWithAbort();
-        }
-
         public void FinishSend(Exception exception)
         {
             _inputStream.FinishSend(exception);
@@ -258,7 +247,7 @@ namespace NowinWebServer
             {
                 var self = (SslTransportHandler)selfObject;
                 if (t.IsFaulted || t.IsCanceled)
-                    self._next.FinishReceiveWithAbort();
+                    self._next.FinishReceive(null, 0, -1);
                 else
                     self._next.FinishReceive(self._recvBuffer, self._recvOffset, t.Result);
             }, this);
