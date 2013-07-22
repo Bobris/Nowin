@@ -45,12 +45,16 @@ namespace NowinWebServer
 
         static void IoCompleted(object sender, SocketAsyncEventArgs e)
         {
+            //Console.WriteLine("IoCompleted {0} {1} {2} {3}", e.LastOperation, e.Offset, e.BytesTransferred, e.SocketError);
             var self = (SaeaLayerCallback)e.UserToken;
             switch (e.LastOperation)
             {
                 case SocketAsyncOperation.Accept:
                     Debug.Assert(e == self._receiveEvent);
-                    if (e.SocketError == SocketError.OperationAborted) return;
+                    if (e.SocketError != SocketError.Success)
+                    {
+                        return;
+                    }
                     self.ProcessAccept();
                     break;
                 case SocketAsyncOperation.Receive:
@@ -142,6 +146,7 @@ namespace NowinWebServer
 
         public void StartAccept(byte[] buffer, int offset, int length)
         {
+            //Console.WriteLine("start accept {0} {1}",offset,length);
             int oldState, newState;
             do
             {
@@ -168,6 +173,7 @@ namespace NowinWebServer
 
         public void StartReceive(byte[] buffer, int offset, int length)
         {
+            //Console.WriteLine("start receive {0} {1}", offset, length);
             int oldState, newState;
             do
             {
@@ -194,6 +200,7 @@ namespace NowinWebServer
 
         public void StartSend(byte[] buffer, int offset, int length)
         {
+            //Console.WriteLine("start send {0} {1}", offset, length);
             int oldState, newState;
             do
             {

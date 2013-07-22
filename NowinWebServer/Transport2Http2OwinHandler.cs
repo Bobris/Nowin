@@ -793,6 +793,7 @@ namespace NowinWebServer
         {
             ResetForNextRequest();
             ReceiveBufferPos = 0;
+            _receiveBufferFullness = StartBufferOffset;
             if (length == 0)
             {
                 StartNextReceive();
@@ -814,6 +815,7 @@ namespace NowinWebServer
                     _cancellation.Cancel();
                     _requestStream.ConnectionClosed();
                 }
+                return;
             }
             //Console.WriteLine("======= Offset {0}, Length {1}", offset - StartBufferOffset, length);
             //Console.WriteLine(Encoding.UTF8.GetString(buffer, offset, length));
