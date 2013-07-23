@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
+using System.Threading.Tasks;
 using NowinWebServer;
 
 namespace NowinSample
@@ -11,9 +12,11 @@ namespace NowinSample
         {
             var builder = ServerBuilder.New().SetPort(8888).SetOwinApp(SampleOwinApp.Sample.App);
             //builder.SetCertificate(new X509Certificate2("../../../sslcert/test.pfx", "nowin"));
-            using (var server=builder.Build())
+            using (var server = builder.Build())
             {
-                server.Start();
+                // Workaround for bug in Windows Server 2012 when ReadLine is called directly after AcceptAsync
+                // By starting it in another thread and probably even later than calling readline it works
+                Task.Run(() => server.Start());
                 //using (new Timer(o =>
                 //    {
                 //        var s = (INowinServer)o;
