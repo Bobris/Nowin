@@ -23,6 +23,7 @@ namespace NowinWebServer
         readonly object _newConnectionLock = new object();
         ILayerFactory _layerFactory;
         IConnectionAllocationStrategy _connectionAllocationStrategy;
+        IIpIsLocalChecker _ipIsLocalChecker;
 
         internal Server(IServerParameters parameters)
         {
@@ -53,9 +54,10 @@ namespace NowinWebServer
 
         public void Start()
         {
+            _ipIsLocalChecker = new IpIsLocalChecker();
             _connectionAllocationStrategy = _parameters.ConnectionAllocationStrategy;
             var isSsl = _parameters.Certificate != null;
-            _layerFactory = new Transport2Http2OwinFactory(_parameters.BufferSize, isSsl, _parameters.OwinApp);
+            _layerFactory = new Transport2Http2OwinFactory(_parameters.BufferSize, isSsl, _ipIsLocalChecker, _parameters.OwinApp);
             if (isSsl)
             {
                 _layerFactory = new SslTransportFactory(_parameters.Certificate, _layerFactory);

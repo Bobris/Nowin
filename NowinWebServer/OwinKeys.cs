@@ -20,6 +20,10 @@ namespace NowinWebServer
         public const string CallCancelled = "owin.CallCancelled";
         public const string Version = "owin.Version";
 
+        public const string RemoteIpAddress = "server.RemoteIpAddress";
+        public const string RemotePort = "server.RemotePort";
+        public const string IsLocal = "server.IsLocal";
+
         public const string ServerCapabilitiesKey = "server.Capabilities";
         public const string ServerNameKey = "server.Name";
 

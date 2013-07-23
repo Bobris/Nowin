@@ -8,12 +8,14 @@ namespace NowinWebServer
     {
         readonly int _receiveBufferSize;
         readonly bool _isSsl;
+        readonly IIpIsLocalChecker _ipIsLocalChecker;
         readonly Func<IDictionary<string, object>, Task> _app;
 
-        public Transport2Http2OwinFactory(int receiveBufferSize, bool isSsl, Func<IDictionary<string, object>, Task> app)
+        public Transport2Http2OwinFactory(int receiveBufferSize, bool isSsl, IIpIsLocalChecker ipIsLocalChecker, Func<IDictionary<string, object>, Task> app)
         {
             _receiveBufferSize = receiveBufferSize;
             _isSsl = isSsl;
+            _ipIsLocalChecker = ipIsLocalChecker;
             _app = app;
             PerConnectionBufferSize = receiveBufferSize * 3 + 16;
         }
@@ -32,7 +34,7 @@ namespace NowinWebServer
 
         public ILayerHandler Create(byte[] buffer, int offset, int commonOffset)
         {
-            return new Transport2Http2OwinHandler(_app, _isSsl, buffer, offset, _receiveBufferSize, commonOffset);
+            return new Transport2Http2OwinHandler(_app, _isSsl, _ipIsLocalChecker, buffer, offset, _receiveBufferSize, commonOffset);
         }
     }
 }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -28,6 +29,7 @@ namespace NowinWebServer
         readonly Dictionary<string, string[]> _respHeaders;
         readonly Func<IDictionary<string, object>, Task> _app;
         readonly bool _isSsl;
+        readonly IIpIsLocalChecker _ipIsLocalChecker;
         readonly ResponseStream _responseStream;
         readonly RequestStream _requestStream;
         TaskCompletionSource<bool> _tcsSend;
@@ -36,8 +38,9 @@ namespace NowinWebServer
         bool _lastPacket;
         bool _responseIsChunked;
         ulong _responseContentLength;
+        IPEndPoint _remoteEndPoint;
 
-        public Transport2Http2OwinHandler(Func<IDictionary<string, object>, Task> app, bool isSsl, byte[] buffer, int startBufferOffset, int receiveBufferSize, int constantsOffset)
+        public Transport2Http2OwinHandler(Func<IDictionary<string, object>, Task> app, bool isSsl, IIpIsLocalChecker ipIsLocalChecker, byte[] buffer, int startBufferOffset, int receiveBufferSize, int constantsOffset)
         {
             StartBufferOffset = startBufferOffset;
             ReceiveBufferSize = receiveBufferSize;
@@ -46,6 +49,7 @@ namespace NowinWebServer
             Buffer = buffer;
             _app = app;
             _isSsl = isSsl;
+            _ipIsLocalChecker = ipIsLocalChecker;
             _responseStream = new ResponseStream(this);
             _requestStream = new RequestStream(this);
             _environment = new Dictionary<string, object>();
@@ -89,6 +93,16 @@ namespace NowinWebServer
             if (!SkipCrLf(buffer, ref pos)) throw new Exception("Request line does not end with CRLF");
             if (!ParseHttpHeaders(buffer, pos, posOfReqEnd)) throw new Exception("Request headers cannot be parsed");
             _environment.Add(OwinKeys.ResponseBody, _responseStream);
+            if (_remoteEndPoint != null)
+            {
+                _environment.Add(OwinKeys.RemoteIpAddress, _remoteEndPoint.Address.ToString());
+                _environment.Add(OwinKeys.RemotePort, _remoteEndPoint.Port.ToString(CultureInfo.InvariantCulture));
+                _environment.Add(OwinKeys.IsLocal, _ipIsLocalChecker.IsLocal(_remoteEndPoint.Address));
+            }
+            else
+            {
+                _environment.Add(OwinKeys.IsLocal, false);
+            }
             if (_isHttp10)
             {
                 _isKeepAlive = false;
@@ -789,10 +803,11 @@ namespace NowinWebServer
             Callback.StartAccept(Buffer, StartBufferOffset, ReceiveBufferSize);
         }
 
-        public void FinishAccept(byte[] buffer, int offset, int length)
+        public void FinishAccept(byte[] buffer, int offset, int length, IPEndPoint remoteEndPoint)
         {
             ResetForNextRequest();
             ReceiveBufferPos = 0;
+            _remoteEndPoint = remoteEndPoint;
             _receiveBufferFullness = StartBufferOffset;
             if (length == 0)
             {

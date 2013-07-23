@@ -240,6 +240,10 @@ namespace NowinTests
 
                         Assert.True(env.TryGetValue("owin.Version", out ignored));
                         Assert.AreEqual("1.0", env["owin.Version"]);
+
+                        Assert.True(env.TryGetValue("server.IsLocal", out ignored));
+                        Assert.AreEqual(true, env["server.IsLocal"]);
+
                     });
 
              Assert.AreEqual(HttpStatusCode.OK, SendGetRequest(listener, HttpClientAddress + "SubPath?QueryString").StatusCode);

@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Net.Security;
 using System.Runtime.ExceptionServices;
 using System.Security.Cryptography.X509Certificates;
@@ -19,6 +20,7 @@ namespace NowinWebServer
         int _recvOffset;
         int _recvLength;
         readonly InputStream _inputStream;
+        IPEndPoint _remoteEndPoint;
 
         public SslTransportHandler(ITransportLayerHandler next, X509Certificate serverCertificate)
         {
@@ -192,8 +194,9 @@ namespace NowinWebServer
             _next.PrepareAccept();
         }
 
-        public void FinishAccept(byte[] buffer, int offset, int length)
+        public void FinishAccept(byte[] buffer, int offset, int length, IPEndPoint remoteEndPoint)
         {
+            _remoteEndPoint = remoteEndPoint;
             Debug.Assert(length == 0);
             try
             {
@@ -202,15 +205,15 @@ namespace NowinWebServer
                 {
                     var self = (SslTransportHandler)selfObject;
                     if (t.IsFaulted || t.IsCanceled)
-                        self._next.FinishAccept(null, 0, 0);
+                        self._next.FinishAccept(null, 0, 0, null);
                     else
                         self._ssl.ReadAsync(self._recvBuffer, self._recvOffset, self._recvLength).ContinueWith((t2, selfObject2) =>
                         {
                             var self2 = (SslTransportHandler)selfObject2;
                             if (t2.IsFaulted || t2.IsCanceled)
-                                self2._next.FinishAccept(self2._recvBuffer, self2._recvOffset, 0);
+                                self2._next.FinishAccept(null, 0, 0, null);
                             else
-                                self2._next.FinishAccept(self2._recvBuffer, self2._recvOffset, t2.Result);
+                                self2._next.FinishAccept(self2._recvBuffer, self2._recvOffset, t2.Result, self2._remoteEndPoint);
                         }, self);
                 }, this);
             }

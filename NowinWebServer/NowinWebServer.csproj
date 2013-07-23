@@ -46,7 +46,9 @@
     <Compile Include="ConnectionAllocationStrategy.cs" />
     <Compile Include="ConnectionBlock.cs" />
     <Compile Include="DictionaryExtensions.cs" />
+    <Compile Include="IIpIsLocalChecker.cs" />
     <Compile Include="INowinServer.cs" />
+    <Compile Include="IpIsLocalChecker.cs" />
     <Compile Include="IServerParameters.cs" />
     <Compile Include="ServerBuilder.cs" />
     <Compile Include="OwinServerFactory.cs" />
