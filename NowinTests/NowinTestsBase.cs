@@ -8,10 +8,10 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
-using NowinWebServer;
 
 namespace NowinTests
 {
+    using OwinApp = Func<IDictionary<string, object>, Task>;
     public abstract class NowinTestsBase
     {
         const string HostValue = "localhost:8080";
@@ -20,7 +20,7 @@ namespace NowinTests
         protected abstract string HttpClientAddress { get; }
         protected abstract string ExpectedRequestScheme { get; }
 
-        readonly Func<IDictionary<string, object>, Task> _appThrow = env => { throw new InvalidOperationException(); };
+        readonly OwinApp _appThrow = env => { throw new InvalidOperationException(); };
 
         [Test]
         public void NowinTrivial()
@@ -70,11 +70,11 @@ namespace NowinTests
             var callCancelled = false;
             var listener = CreateServer(
                 async env =>
-                    {
-                        GetCallCancelled(env).Register(() => callCancelled = true);
-                        await Task.Delay(1);
-                        throw new InvalidOperationException();
-                    });
+                {
+                    GetCallCancelled(env).Register(() => callCancelled = true);
+                    await Task.Delay(1);
+                    throw new InvalidOperationException();
+                });
 
             var response = SendGetRequest(listener, HttpClientAddress);
             Assert.AreEqual(HttpStatusCode.InternalServerError, response.StatusCode);
@@ -89,20 +89,20 @@ namespace NowinTests
             var callCancelled = false;
             var listener = CreateServer(
                 async env =>
-                    {
-                        GetCallCancelled(env).Register(() => callCancelled = true);
-                        var requestHeaders = env.Get<IDictionary<string, string[]>>("owin.RequestHeaders");
-                        var responseHeaders = env.Get<IDictionary<string, string[]>>("owin.ResponseHeaders");
-                        responseHeaders.Add("Content-Length", requestHeaders["Content-Length"]);
+                {
+                    GetCallCancelled(env).Register(() => callCancelled = true);
+                    var requestHeaders = env.Get<IDictionary<string, string[]>>("owin.RequestHeaders");
+                    var responseHeaders = env.Get<IDictionary<string, string[]>>("owin.ResponseHeaders");
+                    responseHeaders.Add("Content-Length", requestHeaders["Content-Length"]);
 
-                        var requestStream = env.Get<Stream>("owin.RequestBody");
-                        var responseStream = env.Get<Stream>("owin.ResponseBody");
+                    var requestStream = env.Get<Stream>("owin.RequestBody");
+                    var responseStream = env.Get<Stream>("owin.ResponseBody");
 
-                        var buffer = new MemoryStream();
-                        await requestStream.CopyToAsync(buffer, 1024);
-                        buffer.Seek(0, SeekOrigin.Begin);
-                        await buffer.CopyToAsync(responseStream, 1024);
-                    });
+                    var buffer = new MemoryStream();
+                    await requestStream.CopyToAsync(buffer, 1024);
+                    buffer.Seek(0, SeekOrigin.Begin);
+                    await buffer.CopyToAsync(responseStream, 1024);
+                });
 
             using (listener)
             {
@@ -123,17 +123,17 @@ namespace NowinTests
             bool callCancelled = false;
             var listener = CreateServer(
                 env =>
-                    {
-                        GetCallCancelled(env).Register(() => callCancelled = true);
-                        var responseHeaders = env.Get<IDictionary<string, string[]>>("owin.ResponseHeaders");
-                        responseHeaders.Add("Content-Length", new[] { "10" });
+                {
+                    GetCallCancelled(env).Register(() => callCancelled = true);
+                    var responseHeaders = env.Get<IDictionary<string, string[]>>("owin.ResponseHeaders");
+                    responseHeaders.Add("Content-Length", new[] { "10" });
 
-                        var responseStream = env.Get<Stream>("owin.ResponseBody");
-                        responseStream.WriteByte(0xFF);
-                        responseStream.Flush();
+                    var responseStream = env.Get<Stream>("owin.ResponseBody");
+                    responseStream.WriteByte(0xFF);
+                    responseStream.Flush();
 
-                        throw new InvalidOperationException();
-                    });
+                    throw new InvalidOperationException();
+                });
 
             try
             {
@@ -152,19 +152,19 @@ namespace NowinTests
 
             var listener = CreateServer(
                 env =>
-                    {
-                        GetCallCancelled(env).Register(() => callCancelled = true);
-                        var responseHeaders = env.Get<IDictionary<string, string[]>>("owin.ResponseHeaders");
-                        responseHeaders.Add("Content-Length", new[] { "10" });
+                {
+                    GetCallCancelled(env).Register(() => callCancelled = true);
+                    var responseHeaders = env.Get<IDictionary<string, string[]>>("owin.ResponseHeaders");
+                    responseHeaders.Add("Content-Length", new[] { "10" });
 
-                        var responseStream = env.Get<Stream>("owin.ResponseBody");
-                        responseStream.WriteByte(0xFF);
-                        responseStream.Flush();
+                    var responseStream = env.Get<Stream>("owin.ResponseBody");
+                    responseStream.WriteByte(0xFF);
+                    responseStream.Flush();
 
-                        var tcs = new TaskCompletionSource<bool>();
-                        tcs.SetException(new InvalidOperationException());
-                        return tcs.Task;
-                    });
+                    var tcs = new TaskCompletionSource<bool>();
+                    tcs.SetException(new InvalidOperationException());
+                    return tcs.Task;
+                });
 
             try
             {
@@ -202,13 +202,13 @@ namespace NowinTests
         {
             var listener = CreateServerSync(
                 env =>
-                    {
-                        Assert.NotNull(env);
-                        Assert.NotNull(env.Get<Stream>("owin.RequestBody"));
-                        Assert.NotNull(env.Get<Stream>("owin.ResponseBody"));
-                        Assert.NotNull(env.Get<IDictionary<string, string[]>>("owin.RequestHeaders"));
-                        Assert.NotNull(env.Get<IDictionary<string, string[]>>("owin.ResponseHeaders"));
-                    });
+                {
+                    Assert.NotNull(env);
+                    Assert.NotNull(env.Get<Stream>("owin.RequestBody"));
+                    Assert.NotNull(env.Get<Stream>("owin.ResponseBody"));
+                    Assert.NotNull(env.Get<IDictionary<string, string[]>>("owin.RequestHeaders"));
+                    Assert.NotNull(env.Get<IDictionary<string, string[]>>("owin.ResponseHeaders"));
+                });
 
             SendGetRequest(listener, HttpClientAddress);
         }
@@ -218,35 +218,43 @@ namespace NowinTests
         {
             var listener = CreateServerSync(
                 env =>
-                    {
-                        object ignored;
-                        Assert.True(env.TryGetValue("owin.RequestMethod", out ignored));
-                        Assert.AreEqual("GET", env["owin.RequestMethod"]);
+                {
+                    object ignored;
+                    Assert.True(env.TryGetValue("owin.RequestMethod", out ignored));
+                    Assert.AreEqual("GET", env["owin.RequestMethod"]);
 
-                        Assert.True(env.TryGetValue("owin.RequestPath", out ignored));
-                        Assert.AreEqual("/SubPath", env["owin.RequestPath"]);
+                    Assert.True(env.TryGetValue("owin.RequestPath", out ignored));
+                    Assert.AreEqual("/SubPath", env["owin.RequestPath"]);
 
-                        Assert.True(env.TryGetValue("owin.RequestPathBase", out ignored));
-                        Assert.AreEqual("", env["owin.RequestPathBase"]);
+                    Assert.True(env.TryGetValue("owin.RequestPathBase", out ignored));
+                    Assert.AreEqual("", env["owin.RequestPathBase"]);
 
-                        Assert.True(env.TryGetValue("owin.RequestProtocol", out ignored));
-                        Assert.AreEqual("HTTP/1.1", env["owin.RequestProtocol"]);
+                    Assert.True(env.TryGetValue("owin.RequestProtocol", out ignored));
+                    Assert.AreEqual("HTTP/1.1", env["owin.RequestProtocol"]);
 
-                        Assert.True(env.TryGetValue("owin.RequestQueryString", out ignored));
-                        Assert.AreEqual("QueryString", env["owin.RequestQueryString"]);
+                    Assert.True(env.TryGetValue("owin.RequestQueryString", out ignored));
+                    Assert.AreEqual("QueryString", env["owin.RequestQueryString"]);
 
-                        Assert.True(env.TryGetValue("owin.RequestScheme", out ignored));
-                        Assert.AreEqual(ExpectedRequestScheme, env["owin.RequestScheme"]);
+                    Assert.True(env.TryGetValue("owin.RequestScheme", out ignored));
+                    Assert.AreEqual(ExpectedRequestScheme, env["owin.RequestScheme"]);
 
-                        Assert.True(env.TryGetValue("owin.Version", out ignored));
-                        Assert.AreEqual("1.0", env["owin.Version"]);
+                    Assert.True(env.TryGetValue("owin.Version", out ignored));
+                    Assert.AreEqual("1.0", env["owin.Version"]);
 
-                        Assert.True(env.TryGetValue("server.IsLocal", out ignored));
-                        Assert.AreEqual(true, env["server.IsLocal"]);
+                    Assert.True(env.TryGetValue("server.IsLocal", out ignored));
+                    Assert.AreEqual(true, env["server.IsLocal"]);
 
-                    });
+                    Assert.True(env.TryGetValue("server.RemoteIpAddress", out ignored));
+                    Assert.AreEqual("127.0.0.1", env["server.RemoteIpAddress"]);
 
-             Assert.AreEqual(HttpStatusCode.OK, SendGetRequest(listener, HttpClientAddress + "SubPath?QueryString").StatusCode);
+                    Assert.True(env.TryGetValue("server.LocalIpAddress", out ignored));
+                    Assert.AreEqual("127.0.0.1", env["server.LocalIpAddress"]);
+
+                    Assert.True(env.TryGetValue("server.RemotePort", out ignored));
+                    Assert.True(env.TryGetValue("server.LocalPort", out ignored));
+                });
+
+            Assert.AreEqual(HttpStatusCode.OK, SendGetRequest(listener, HttpClientAddress + "SubPath?QueryString").StatusCode);
         }
 
         [Test]
@@ -254,29 +262,29 @@ namespace NowinTests
         {
             var listener = CreateServerSync(
                 env =>
-                    {
-                        object ignored;
-                        Assert.True(env.TryGetValue("owin.RequestMethod", out ignored));
-                        Assert.AreEqual("POST", env["owin.RequestMethod"]);
+                {
+                    object ignored;
+                    Assert.True(env.TryGetValue("owin.RequestMethod", out ignored));
+                    Assert.AreEqual("POST", env["owin.RequestMethod"]);
 
-                        Assert.True(env.TryGetValue("owin.RequestPath", out ignored));
-                        Assert.AreEqual("/SubPath", env["owin.RequestPath"]);
+                    Assert.True(env.TryGetValue("owin.RequestPath", out ignored));
+                    Assert.AreEqual("/SubPath", env["owin.RequestPath"]);
 
-                        Assert.True(env.TryGetValue("owin.RequestPathBase", out ignored));
-                        Assert.AreEqual("", env["owin.RequestPathBase"]);
+                    Assert.True(env.TryGetValue("owin.RequestPathBase", out ignored));
+                    Assert.AreEqual("", env["owin.RequestPathBase"]);
 
-                        Assert.True(env.TryGetValue("owin.RequestProtocol", out ignored));
-                        Assert.AreEqual("HTTP/1.0", env["owin.RequestProtocol"]);
+                    Assert.True(env.TryGetValue("owin.RequestProtocol", out ignored));
+                    Assert.AreEqual("HTTP/1.0", env["owin.RequestProtocol"]);
 
-                        Assert.True(env.TryGetValue("owin.RequestQueryString", out ignored));
-                        Assert.AreEqual("QueryString", env["owin.RequestQueryString"]);
+                    Assert.True(env.TryGetValue("owin.RequestQueryString", out ignored));
+                    Assert.AreEqual("QueryString", env["owin.RequestQueryString"]);
 
-                        Assert.True(env.TryGetValue("owin.RequestScheme", out ignored));
-                        Assert.AreEqual(ExpectedRequestScheme, env["owin.RequestScheme"]);
+                    Assert.True(env.TryGetValue("owin.RequestScheme", out ignored));
+                    Assert.AreEqual(ExpectedRequestScheme, env["owin.RequestScheme"]);
 
-                        Assert.True(env.TryGetValue("owin.Version", out ignored));
-                        Assert.AreEqual("1.0", env["owin.Version"]);
-                    });
+                    Assert.True(env.TryGetValue("owin.Version", out ignored));
+                    Assert.AreEqual("1.0", env["owin.Version"]);
+                });
 
             var request = new HttpRequestMessage(HttpMethod.Post, HttpClientAddress + "SubPath?QueryString")
                 {
@@ -291,14 +299,14 @@ namespace NowinTests
         {
             var listener = CreateServerSync(
                 env =>
-                    {
-                        var requestHeaders = env.Get<IDictionary<string, string[]>>("owin.RequestHeaders");
+                {
+                    var requestHeaders = env.Get<IDictionary<string, string[]>>("owin.RequestHeaders");
 
-                        string[] values;
-                        Assert.True(requestHeaders.TryGetValue("host", out values));
-                        Assert.AreEqual(1, values.Length);
-                        Assert.AreEqual(HostValue, values[0]);
-                    });
+                    string[] values;
+                    Assert.True(requestHeaders.TryGetValue("host", out values));
+                    Assert.AreEqual(1, values.Length);
+                    Assert.AreEqual(HostValue, values[0]);
+                });
 
             SendGetRequest(listener, HttpClientAddress);
         }
@@ -310,27 +318,27 @@ namespace NowinTests
 
             var listener = CreateServerSync(
                 env =>
-                    {
-                        var requestHeaders = env.Get<IDictionary<string, string[]>>("owin.RequestHeaders");
+                {
+                    var requestHeaders = env.Get<IDictionary<string, string[]>>("owin.RequestHeaders");
 
-                        string[] values;
+                    string[] values;
 
-                        Assert.True(requestHeaders.TryGetValue("host", out values));
-                        Assert.AreEqual(1, values.Length);
-                        Assert.AreEqual(HostValue, values[0]);
+                    Assert.True(requestHeaders.TryGetValue("host", out values));
+                    Assert.AreEqual(1, values.Length);
+                    Assert.AreEqual(HostValue, values[0]);
 
-                        Assert.True(requestHeaders.TryGetValue("Content-length", out values));
-                        Assert.AreEqual(1, values.Length);
-                        Assert.AreEqual(requestBody.Length.ToString(CultureInfo.InvariantCulture), values[0]);
+                    Assert.True(requestHeaders.TryGetValue("Content-length", out values));
+                    Assert.AreEqual(1, values.Length);
+                    Assert.AreEqual(requestBody.Length.ToString(CultureInfo.InvariantCulture), values[0]);
 
-                        Assert.True(requestHeaders.TryGetValue("exPect", out values));
-                        Assert.AreEqual(1, values.Length);
-                        Assert.AreEqual("100-continue", values[0]);
+                    Assert.True(requestHeaders.TryGetValue("exPect", out values));
+                    Assert.AreEqual(1, values.Length);
+                    Assert.AreEqual("100-continue", values[0]);
 
-                        Assert.True(requestHeaders.TryGetValue("Content-Type", out values));
-                        Assert.AreEqual(1, values.Length);
-                        Assert.AreEqual("text/plain; charset=utf-8", values[0]);
-                    });
+                    Assert.True(requestHeaders.TryGetValue("Content-Type", out values));
+                    Assert.AreEqual(1, values.Length);
+                    Assert.AreEqual("text/plain; charset=utf-8", values[0]);
+                });
 
             var request = new HttpRequestMessage(HttpMethod.Post, HttpClientAddress + "SubPath?QueryString")
                 {
@@ -346,27 +354,27 @@ namespace NowinTests
 
             var listener = CreateServerSync(
                 env =>
-                    {
-                        var requestHeaders = env.Get<IDictionary<string, string[]>>("owin.RequestHeaders");
+                {
+                    var requestHeaders = env.Get<IDictionary<string, string[]>>("owin.RequestHeaders");
 
-                        string[] values;
+                    string[] values;
 
-                        Assert.True(requestHeaders.TryGetValue("host", out values));
-                        Assert.AreEqual(1, values.Length);
-                        Assert.AreEqual(HostValue, values[0]);
+                    Assert.True(requestHeaders.TryGetValue("host", out values));
+                    Assert.AreEqual(1, values.Length);
+                    Assert.AreEqual(HostValue, values[0]);
 
-                        Assert.True(requestHeaders.TryGetValue("Transfer-encoding", out values));
-                        Assert.AreEqual(1, values.Length);
-                        Assert.AreEqual("chunked", values[0]);
+                    Assert.True(requestHeaders.TryGetValue("Transfer-encoding", out values));
+                    Assert.AreEqual(1, values.Length);
+                    Assert.AreEqual("chunked", values[0]);
 
-                        Assert.True(requestHeaders.TryGetValue("exPect", out values));
-                        Assert.AreEqual(1, values.Length);
-                        Assert.AreEqual("100-continue", values[0]);
+                    Assert.True(requestHeaders.TryGetValue("exPect", out values));
+                    Assert.AreEqual(1, values.Length);
+                    Assert.AreEqual("100-continue", values[0]);
 
-                        Assert.True(requestHeaders.TryGetValue("Content-Type", out values));
-                        Assert.AreEqual(1, values.Length);
-                        Assert.AreEqual("text/plain; charset=utf-8", values[0]);
-                    });
+                    Assert.True(requestHeaders.TryGetValue("Content-Type", out values));
+                    Assert.AreEqual(1, values.Length);
+                    Assert.AreEqual("text/plain; charset=utf-8", values[0]);
+                });
 
             var request = new HttpRequestMessage(HttpMethod.Post, HttpClientAddress + "SubPath?QueryString");
             request.Headers.TransferEncodingChunked = true;
@@ -379,16 +387,16 @@ namespace NowinTests
         {
             var listener = CreateServerSync(
                 env =>
-                    {
-                        string[] values;
-                        var requestHeaders = env.Get<IDictionary<string, string[]>>("owin.RequestHeaders");
+                {
+                    string[] values;
+                    var requestHeaders = env.Get<IDictionary<string, string[]>>("owin.RequestHeaders");
 
-                        Assert.True(requestHeaders.TryGetValue("Content-length", out values));
-                        Assert.AreEqual(1, values.Length);
-                        Assert.AreEqual("0", values[0]);
+                    Assert.True(requestHeaders.TryGetValue("Content-length", out values));
+                    Assert.AreEqual(1, values.Length);
+                    Assert.AreEqual("0", values[0]);
 
-                        Assert.NotNull(env.Get<Stream>("owin.RequestBody"));
-                    });
+                    Assert.NotNull(env.Get<Stream>("owin.RequestBody"));
+                });
 
             var request = new HttpRequestMessage(HttpMethod.Post, HttpClientAddress)
                 {
@@ -402,21 +410,21 @@ namespace NowinTests
         {
             var listener = CreateServerSync(
                 env =>
-                    {
-                        string[] values;
-                        var requestHeaders = env.Get<IDictionary<string, string[]>>("owin.RequestHeaders");
+                {
+                    string[] values;
+                    var requestHeaders = env.Get<IDictionary<string, string[]>>("owin.RequestHeaders");
 
-                        Assert.True(requestHeaders.TryGetValue("Content-length", out values));
-                        Assert.AreEqual(1, values.Length);
-                        Assert.AreEqual(SampleContent.Length.ToString(CultureInfo.InvariantCulture), values[0]);
+                    Assert.True(requestHeaders.TryGetValue("Content-length", out values));
+                    Assert.AreEqual(1, values.Length);
+                    Assert.AreEqual(SampleContent.Length.ToString(CultureInfo.InvariantCulture), values[0]);
 
-                        var requestBody = env.Get<Stream>("owin.RequestBody");
-                        Assert.NotNull(requestBody);
+                    var requestBody = env.Get<Stream>("owin.RequestBody");
+                    Assert.NotNull(requestBody);
 
-                        var buffer = new MemoryStream();
-                        requestBody.CopyTo(buffer);
-                        Assert.AreEqual(SampleContent.Length, buffer.Length);
-                    });
+                    var buffer = new MemoryStream();
+                    requestBody.CopyTo(buffer);
+                    Assert.AreEqual(SampleContent.Length, buffer.Length);
+                });
 
             var request = new HttpRequestMessage(HttpMethod.Post, HttpClientAddress)
                 {
@@ -430,21 +438,21 @@ namespace NowinTests
         {
             var listener = CreateServerSync(
                 env =>
-                    {
-                        string[] values;
-                        var requestHeaders = env.Get<IDictionary<string, string[]>>("owin.RequestHeaders");
+                {
+                    string[] values;
+                    var requestHeaders = env.Get<IDictionary<string, string[]>>("owin.RequestHeaders");
 
-                        Assert.True(requestHeaders.TryGetValue("Transfer-Encoding", out values));
-                        Assert.AreEqual(1, values.Length);
-                        Assert.AreEqual("chunked", values[0]);
+                    Assert.True(requestHeaders.TryGetValue("Transfer-Encoding", out values));
+                    Assert.AreEqual(1, values.Length);
+                    Assert.AreEqual("chunked", values[0]);
 
-                        var requestBody = env.Get<Stream>("owin.RequestBody");
-                        Assert.NotNull(requestBody);
+                    var requestBody = env.Get<Stream>("owin.RequestBody");
+                    Assert.NotNull(requestBody);
 
-                        var buffer = new MemoryStream();
-                        requestBody.CopyTo(buffer);
-                        Assert.AreEqual(0, buffer.Length);
-                    });
+                    var buffer = new MemoryStream();
+                    requestBody.CopyTo(buffer);
+                    Assert.AreEqual(0, buffer.Length);
+                });
 
             var request = new HttpRequestMessage(HttpMethod.Post, HttpClientAddress);
             request.Headers.TransferEncodingChunked = true;
@@ -457,21 +465,21 @@ namespace NowinTests
         {
             var listener = CreateServerSync(
                 env =>
-                    {
-                        string[] values;
-                        var requestHeaders = env.Get<IDictionary<string, string[]>>("owin.RequestHeaders");
+                {
+                    string[] values;
+                    var requestHeaders = env.Get<IDictionary<string, string[]>>("owin.RequestHeaders");
 
-                        Assert.True(requestHeaders.TryGetValue("Transfer-Encoding", out values));
-                        Assert.AreEqual(1, values.Length);
-                        Assert.AreEqual("chunked", values[0]);
+                    Assert.True(requestHeaders.TryGetValue("Transfer-Encoding", out values));
+                    Assert.AreEqual(1, values.Length);
+                    Assert.AreEqual("chunked", values[0]);
 
-                        var requestBody = env.Get<Stream>("owin.RequestBody");
-                        Assert.NotNull(requestBody);
+                    var requestBody = env.Get<Stream>("owin.RequestBody");
+                    Assert.NotNull(requestBody);
 
-                        var buffer = new MemoryStream();
-                        requestBody.CopyTo(buffer);
-                        Assert.AreEqual(SampleContent.Length, buffer.Length);
-                    });
+                    var buffer = new MemoryStream();
+                    requestBody.CopyTo(buffer);
+                    Assert.AreEqual(SampleContent.Length, buffer.Length);
+                });
 
             var request = new HttpRequestMessage(HttpMethod.Post, HttpClientAddress);
             request.Headers.TransferEncodingChunked = true;
@@ -484,12 +492,12 @@ namespace NowinTests
         {
             var listener = CreateServerSync(
                 env =>
-                    {
-                        var requestBody = env.Get<Stream>("owin.RequestBody");
-                        var buffer = new MemoryStream();
-                        Assert.Throws<AggregateException>(() => requestBody.CopyTo(buffer));
-                        Assert.True(GetCallCancelled(env).IsCancellationRequested);
-                    });
+                {
+                    var requestBody = env.Get<Stream>("owin.RequestBody");
+                    var buffer = new MemoryStream();
+                    Assert.Throws<AggregateException>(() => requestBody.CopyTo(buffer));
+                    Assert.True(GetCallCancelled(env).IsCancellationRequested);
+                });
 
             var request = new HttpRequestMessage(HttpMethod.Post, HttpClientAddress);
             request.Headers.TransferEncodingChunked = true;
@@ -592,10 +600,10 @@ namespace NowinTests
         {
             var listener = CreateServer(
                 env =>
-                    {
-                        env["owin.ResponseHeaders"] = null;
-                        return Task.Delay(0);
-                    });
+                {
+                    env["owin.ResponseHeaders"] = null;
+                    return Task.Delay(0);
+                });
 
             using (listener)
             {
@@ -610,13 +618,13 @@ namespace NowinTests
         {
             var listener = CreateServer(
                 env =>
-                    {
-                        var responseHeaders = env.Get<IDictionary<string, string[]>>("owin.ResponseHeaders");
-                        responseHeaders.Add("Custom1", new[] { "value1a", "value1b" });
-                        responseHeaders.Add("Custom2", new[] { "value2a, value2b" });
-                        responseHeaders.Add("Custom3", new[] { "value3a, value3b", "value3c" });
-                        return Task.Delay(0);
-                    });
+                {
+                    var responseHeaders = env.Get<IDictionary<string, string[]>>("owin.ResponseHeaders");
+                    responseHeaders.Add("Custom1", new[] { "value1a", "value1b" });
+                    responseHeaders.Add("Custom2", new[] { "value2a, value2b" });
+                    responseHeaders.Add("Custom3", new[] { "value3a, value3b", "value3c" });
+                    return Task.Delay(0);
+                });
 
             using (listener)
             {
@@ -641,14 +649,14 @@ namespace NowinTests
         {
             var listener = CreateServer(
                 env =>
-                    {
-                        var responseHeaders = env.Get<IDictionary<string, string[]>>("owin.ResponseHeaders");
-                        env.Add("owin.ResponseProtocol", "HTTP/1.0");
-                        responseHeaders.Add("KEEP-alive", new[] { "TRUE" });
-                        responseHeaders.Add("content-length", new[] { "0" });
-                        responseHeaders.Add("www-Authenticate", new[] { "Basic", "NTLM" });
-                        return Task.Delay(0);
-                    });
+                {
+                    var responseHeaders = env.Get<IDictionary<string, string[]>>("owin.ResponseHeaders");
+                    env.Add("owin.ResponseProtocol", "HTTP/1.0");
+                    responseHeaders.Add("KEEP-alive", new[] { "TRUE" });
+                    responseHeaders.Add("content-length", new[] { "0" });
+                    responseHeaders.Add("www-Authenticate", new[] { "Basic", "NTLM" });
+                    return Task.Delay(0);
+                });
 
             using (listener)
             {
@@ -668,12 +676,12 @@ namespace NowinTests
         {
             var listener = CreateServer(
                 env =>
-                    {
-                        var responseHeaders = env.Get<IDictionary<string, string[]>>("owin.ResponseHeaders");
-                        responseHeaders.Add("Transfer-Encoding", new[] { "ChUnKed" });
-                        responseHeaders.Add("CONNECTION", new[] { "ClOsE" });
-                        return Task.Delay(0);
-                    });
+                {
+                    var responseHeaders = env.Get<IDictionary<string, string[]>>("owin.ResponseHeaders");
+                    responseHeaders.Add("Transfer-Encoding", new[] { "ChUnKed" });
+                    responseHeaders.Add("CONNECTION", new[] { "ClOsE" });
+                    return Task.Delay(0);
+                });
 
             using (listener)
             {
@@ -694,11 +702,11 @@ namespace NowinTests
         {
             var listener = CreateServer(
                 env =>
-                    {
-                        var responseHeaders = env.Get<IDictionary<string, string[]>>("owin.ResponseHeaders");
-                        responseHeaders.Add("content-length", new[] { "-10" });
-                        return Task.Delay(0);
-                    });
+                {
+                    var responseHeaders = env.Get<IDictionary<string, string[]>>("owin.ResponseHeaders");
+                    responseHeaders.Add("content-length", new[] { "-10" });
+                    return Task.Delay(0);
+                });
 
             using (listener)
             {
@@ -715,10 +723,10 @@ namespace NowinTests
         {
             var listener = CreateServer(
                 env =>
-                    {
-                        env.Add("owin.ResponseReasonPhrase", SampleContent);
-                        return Task.Delay(0);
-                    });
+                {
+                    env.Add("owin.ResponseReasonPhrase", SampleContent);
+                    return Task.Delay(0);
+                });
 
             using (listener)
             {
@@ -734,10 +742,10 @@ namespace NowinTests
         {
             var listener = CreateServer(
                 env =>
-                    {
-                        env.Add("owin.ResponseReasonPhrase", int.MaxValue);
-                        return Task.Delay(0);
-                    });
+                {
+                    env.Add("owin.ResponseReasonPhrase", int.MaxValue);
+                    return Task.Delay(0);
+                });
 
             using (listener)
             {
@@ -752,10 +760,10 @@ namespace NowinTests
         {
             var listener = CreateServer(
                 env =>
-                    {
-                        env.Add("owin.ResponseProtocol", "garbage");
-                        return Task.Delay(0);
-                    });
+                {
+                    env.Add("owin.ResponseProtocol", "garbage");
+                    return Task.Delay(0);
+                });
 
             using (listener)
             {
@@ -771,11 +779,11 @@ namespace NowinTests
         {
             var listener = CreateServer(
                 env =>
-                    {
-                        var responseStream = env.Get<Stream>("owin.ResponseBody");
-                        responseStream.Write(new byte[10], 0, 10);
-                        return Task.Delay(0);
-                    });
+                {
+                    var responseStream = env.Get<Stream>("owin.ResponseBody");
+                    responseStream.Write(new byte[10], 0, 10);
+                    return Task.Delay(0);
+                });
 
             using (listener)
             {
@@ -787,39 +795,148 @@ namespace NowinTests
         }
 
         [Test]
-        public void LargeResponseBodyWorks()
+        public void LargeResponseBodyWith100AsyncWritesWorks()
         {
-            var listener = CreateServer(
-                async env =>
+            OwinApp app = async env =>
+                {
+                    var responseStream = env.Get<Stream>("owin.ResponseBody");
+                    var pos = 0;
+                    for (var i = 0; i < 100; i++)
                     {
-                        var responseStream = env.Get<Stream>("owin.ResponseBody");
-                        for (var i = 0; i < 100; i++)
-                        {
-                            await responseStream.WriteAsync(new byte[1000], 0, 1000);
-                        }
-                    });
+                        var buffer = PrepareLargeResponseBuffer(ref pos, 1000);
+                        await responseStream.WriteAsync(buffer, 0, buffer.Length);
+                    }
+                };
+            CheckLargeBody(app);
+        }
 
+        [Test]
+        public void LargeResponseBodyWith1AsyncWriteWorks()
+        {
+            OwinApp app = async env =>
+                {
+                    var responseStream = env.Get<Stream>("owin.ResponseBody");
+                    var pos = 0;
+                    var buffer = PrepareLargeResponseBuffer(ref pos, 100000);
+                    await responseStream.WriteAsync(buffer, 0, buffer.Length);
+                };
+            CheckLargeBody(app);
+        }
+
+        [Test]
+        public void LargeResponseBodyWith100WritesWorks()
+        {
+            OwinApp app = async env =>
+            {
+                await Task.Delay(1);
+                var responseStream = env.Get<Stream>("owin.ResponseBody");
+                var pos = 0;
+                for (var i = 0; i < 100; i++)
+                {
+                    var buffer = PrepareLargeResponseBuffer(ref pos, 1000);
+                    responseStream.Write(buffer, 0, buffer.Length);
+                }
+            };
+            CheckLargeBody(app);
+        }
+
+        [Test]
+        public void LargeResponseBodyWith1WriteWorks()
+        {
+            OwinApp app = async env =>
+            {
+                await Task.Delay(1);
+                var responseStream = env.Get<Stream>("owin.ResponseBody");
+                var pos = 0;
+                var buffer = PrepareLargeResponseBuffer(ref pos, 100000);
+                responseStream.Write(buffer, 0, buffer.Length);
+            };
+            CheckLargeBody(app);
+        }
+
+        [Test]
+        public void LargeResponseBodyWithFlushAsyncAnd1WriteWorks()
+        {
+            OwinApp app = async env =>
+            {
+                var responseStream = env.Get<Stream>("owin.ResponseBody");
+                await responseStream.FlushAsync();
+                var pos = 0;
+                var buffer = PrepareLargeResponseBuffer(ref pos, 100000);
+                responseStream.Write(buffer, 0, buffer.Length);
+            };
+            CheckLargeBody(app);
+        }
+
+        [Test]
+        public void LargeResponseBodyWithFlushAnd1WriteWorks()
+        {
+            OwinApp app = async env =>
+            {
+                var responseStream = env.Get<Stream>("owin.ResponseBody");
+                responseStream.Flush();
+                var pos = 0;
+                var buffer = PrepareLargeResponseBuffer(ref pos, 100000);
+                responseStream.Write(buffer, 0, buffer.Length);
+            };
+            CheckLargeBody(app);
+        }
+
+        [Test]
+        public void LargeResponseBodyWithFlushAnd1WriteAsyncWorks()
+        {
+            OwinApp app = async env =>
+            {
+                var responseStream = env.Get<Stream>("owin.ResponseBody");
+                responseStream.Flush();
+                var pos = 0;
+                var buffer = PrepareLargeResponseBuffer(ref pos, 100000);
+                await responseStream.WriteAsync(buffer, 0, buffer.Length);
+            };
+            CheckLargeBody(app);
+        }
+
+        static byte[] PrepareLargeResponseBuffer(ref int pos, int len)
+        {
+            var buffer = new byte[len];
+            for (var i = 0; i < buffer.Length; i++)
+            {
+                buffer[i] = (byte)(pos & 0xff);
+                pos++;
+            }
+            return buffer;
+        }
+
+        void CheckLargeBody(OwinApp app)
+        {
+            var listener = CreateServer(app);
             using (listener)
             {
                 var client = new HttpClient();
                 var response = client.GetAsync(HttpClientAddress).Result;
                 Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-                Assert.AreEqual(100 * 1000, response.Content.ReadAsByteArrayAsync().Result.Length);
+                var result = response.Content.ReadAsByteArrayAsync().Result;
+                Assert.AreEqual(100000, result.Length);
+                for (var i = 0; i < result.Length; i++)
+                {
+                    if (result[i] != (i & 0xff)) Assert.Fail("Response is wrong on {0} byte", i);
+                }
             }
         }
+
 
         [Test]
         public void BodySmallerThanContentLengthClosesConnection()
         {
             var listener = CreateServer(
                 env =>
-                    {
-                        var responseHeaders = env.Get<IDictionary<string, string[]>>("owin.ResponseHeaders");
-                        responseHeaders.Add("Content-Length", new[] { "10000" });
-                        var responseStream = env.Get<Stream>("owin.ResponseBody");
-                        responseStream.Write(new byte[9500], 0, 9500);
-                        return Task.Delay(0);
-                    });
+                {
+                    var responseHeaders = env.Get<IDictionary<string, string[]>>("owin.ResponseHeaders");
+                    responseHeaders.Add("Content-Length", new[] { "10000" });
+                    var responseStream = env.Get<Stream>("owin.ResponseBody");
+                    responseStream.Write(new byte[9500], 0, 9500);
+                    return Task.Delay(0);
+                });
 
             using (listener)
             {
@@ -833,13 +950,13 @@ namespace NowinTests
         {
             var listener = CreateServer(
                 env =>
-                    {
-                        var responseHeaders = env.Get<IDictionary<string, string[]>>("owin.ResponseHeaders");
-                        responseHeaders.Add("Content-Length", new[] { "10000" });
-                        var responseStream = env.Get<Stream>("owin.ResponseBody");
-                        responseStream.Write(new byte[10500], 0, 10500);
-                        return Task.Delay(0);
-                    });
+                {
+                    var responseHeaders = env.Get<IDictionary<string, string[]>>("owin.ResponseHeaders");
+                    responseHeaders.Add("Content-Length", new[] { "10000" });
+                    var responseStream = env.Get<Stream>("owin.ResponseBody");
+                    responseStream.Write(new byte[10500], 0, 10500);
+                    return Task.Delay(0);
+                });
 
             using (listener)
             {
@@ -853,10 +970,10 @@ namespace NowinTests
         {
             var listener = CreateServer(
                 env =>
-                    {
-                        env["owin.ResponseStatusCode"] = 100;
-                        return Task.Delay(0);
-                    });
+                {
+                    env["owin.ResponseStatusCode"] = 100;
+                    return Task.Delay(0);
+                });
 
             using (listener)
             {

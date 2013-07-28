@@ -7,50 +7,44 @@ namespace NowinWebServer
 {
     class ResponseStream : Stream
     {
-        readonly Transport2Http2OwinHandler _transport2Http2OwinHandler;
+        readonly Transport2HttpHandler _transport2HttpHandler;
         readonly byte[] _buf;
         internal readonly int StartOffset;
         internal int LocalPos;
         readonly int _maxLen;
         long _pos;
+        bool _responseWriteIsFlushAndFlushIsNoOp;
 
-        public ResponseStream(Transport2Http2OwinHandler transport2Http2OwinHandler)
+        public ResponseStream(Transport2HttpHandler transport2HttpHandler)
         {
-            _transport2Http2OwinHandler = transport2Http2OwinHandler;
-            _buf = transport2Http2OwinHandler.Buffer;
-            _maxLen = transport2Http2OwinHandler.ReceiveBufferSize;
-            StartOffset = transport2Http2OwinHandler.ResponseBodyBufferOffset;
+            _transport2HttpHandler = transport2HttpHandler;
+            _buf = transport2HttpHandler.Buffer;
+            _maxLen = transport2HttpHandler.ReceiveBufferSize;
+            StartOffset = transport2HttpHandler.ResponseBodyBufferOffset;
         }
 
         public override void Flush()
         {
+            if (_responseWriteIsFlushAndFlushIsNoOp) return;
             FlushAsync(CancellationToken.None).Wait();
         }
 
         public override Task FlushAsync(CancellationToken cancellationToken)
         {
+            if (_responseWriteIsFlushAndFlushIsNoOp) return Task.Delay(0);
+            return FlushAsyncCore();
+        }
+
+        Task FlushAsyncCore()
+        {
             var len = LocalPos;
             LocalPos = 0;
-            return _transport2Http2OwinHandler.WriteAsync(StartOffset, len);
+            return _transport2HttpHandler.WriteAsync(_buf, StartOffset, len);
         }
 
         public override long Seek(long offset, SeekOrigin origin)
         {
-            switch (origin)
-            {
-                case SeekOrigin.Begin:
-                    Position = offset;
-                    break;
-                case SeekOrigin.Current:
-                    Position = Position + offset;
-                    break;
-                case SeekOrigin.End:
-                    Position = Length + offset;
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException("origin");
-            }
-            return Position;
+            throw new InvalidOperationException();
         }
 
         public override void SetLength(long value)
@@ -65,7 +59,7 @@ namespace NowinWebServer
 
         public override void Write(byte[] buffer, int offset, int count)
         {
-            if (count <= _maxLen - LocalPos)
+            if (count <= _maxLen - LocalPos && !_responseWriteIsFlushAndFlushIsNoOp)
             {
                 Array.Copy(buffer, offset, _buf, StartOffset + LocalPos, count);
                 LocalPos += count;
@@ -77,7 +71,7 @@ namespace NowinWebServer
 
         public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            if (count <= _maxLen - LocalPos)
+            if (count <= _maxLen - LocalPos && !_responseWriteIsFlushAndFlushIsNoOp)
             {
                 Array.Copy(buffer, offset, _buf, StartOffset + LocalPos, count);
                 LocalPos += count;
@@ -89,10 +83,26 @@ namespace NowinWebServer
 
         async Task WriteOverflowAsync(byte[] buffer, int offset, int count)
         {
+            if (_responseWriteIsFlushAndFlushIsNoOp && _transport2HttpHandler.CanUseDirectWrite())
+            {
+                if (LocalPos != 0)
+                {
+                    await FlushAsyncCore();
+                }
+                await _transport2HttpHandler.WriteAsync(buffer, offset, count);
+                return;
+            }
             do
             {
                 if (LocalPos == _maxLen)
-                    await FlushAsync(CancellationToken.None);
+                {
+                    await FlushAsyncCore();
+                    if ((count >= _maxLen || _responseWriteIsFlushAndFlushIsNoOp) && _transport2HttpHandler.CanUseDirectWrite())
+                    {
+                        await _transport2HttpHandler.WriteAsync(buffer, offset, count);
+                        return;
+                    }
+                }
                 var tillEnd = _maxLen - LocalPos;
                 if (tillEnd > count) tillEnd = count;
                 Array.Copy(buffer, offset, _buf, StartOffset + LocalPos, tillEnd);
@@ -101,6 +111,13 @@ namespace NowinWebServer
                 offset += tillEnd;
                 count -= tillEnd;
             } while (count > 0);
+            if (_responseWriteIsFlushAndFlushIsNoOp)
+            {
+                if (LocalPos != 0)
+                {
+                    await FlushAsyncCore();
+                }
+            }
         }
 
         public override bool CanRead
@@ -142,6 +159,11 @@ namespace NowinWebServer
         {
             LocalPos = 0;
             _pos = 0;
+        }
+
+        public void SetResponseWriteIsFlushAndFlushIsNoOp(bool value)
+        {
+            _responseWriteIsFlushAndFlushIsNoOp = value;
         }
     }
 }

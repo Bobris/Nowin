@@ -8,8 +8,9 @@ using System.Threading.Tasks;
 
 namespace NowinWebServer
 {
-    class Transport2Http2OwinHandler : ITransportLayerHandler
+    class Transport2HttpHandler : ITransportLayerHandler, IHttpLayerCallback
     {
+        readonly IHttpLayerHandler _next;
         public readonly int StartBufferOffset;
         public readonly int ReceiveBufferSize;
         public readonly int ResponseBodyBufferOffset;
@@ -24,10 +25,6 @@ namespace NowinWebServer
         public ulong RequestContentLength;
         public bool RequestIsChunked;
         bool _responseHeadersSend;
-        readonly IDictionary<string, object> _environment;
-        readonly Dictionary<string, string[]> _reqHeaders;
-        readonly Dictionary<string, string[]> _respHeaders;
-        readonly Func<IDictionary<string, object>, Task> _app;
         readonly bool _isSsl;
         readonly IIpIsLocalChecker _ipIsLocalChecker;
         readonly ResponseStream _responseStream;
@@ -39,22 +36,35 @@ namespace NowinWebServer
         bool _responseIsChunked;
         ulong _responseContentLength;
         IPEndPoint _remoteEndPoint;
+        IPEndPoint _localEndPoint;
+        string _requestPath;
+        string _requestQueryString;
+        string _requestMethod;
+        string _requestScheme;
+        string _requestProtocol;
+        string _remoteIpAddress;
+        string _remotePort;
+        bool _isLocal;
+        bool _knownIsLocal;
+        string _localIpAddress;
+        string _localPort;
+        int _statusCode;
+        string _reasonPhase;
+        readonly List<KeyValuePair<string, object>> _responseHeaders = new List<KeyValuePair<string, object>>();
 
-        public Transport2Http2OwinHandler(Func<IDictionary<string, object>, Task> app, bool isSsl, IIpIsLocalChecker ipIsLocalChecker, byte[] buffer, int startBufferOffset, int receiveBufferSize, int constantsOffset)
+        public Transport2HttpHandler(IHttpLayerHandler next, bool isSsl, IIpIsLocalChecker ipIsLocalChecker, byte[] buffer, int startBufferOffset, int receiveBufferSize, int constantsOffset)
         {
+            _next = next;
             StartBufferOffset = startBufferOffset;
             ReceiveBufferSize = receiveBufferSize;
             ResponseBodyBufferOffset = StartBufferOffset + ReceiveBufferSize * 2 + 8;
             _constantsOffset = constantsOffset;
             Buffer = buffer;
-            _app = app;
             _isSsl = isSsl;
             _ipIsLocalChecker = ipIsLocalChecker;
             _responseStream = new ResponseStream(this);
             _requestStream = new RequestStream(this);
-            _environment = new Dictionary<string, object>();
-            _reqHeaders = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
-            _respHeaders = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+            _next.Callback = this;
         }
 
         public int ReceiveBufferDataLength
@@ -64,97 +74,24 @@ namespace NowinWebServer
 
         void ParseRequest(byte[] buffer, int startBufferOffset, int posOfReqEnd)
         {
+            _next.PrepareForRequest();
             posOfReqEnd -= 2;
-            _environment.Clear();
-            _reqHeaders.Clear();
-            _respHeaders.Clear();
+            _responseHeaders.Clear();
             _cancellation = new CancellationTokenSource();
             _responseIsChunked = false;
             _responseContentLength = ulong.MaxValue;
-            _environment.Add(OwinKeys.Version, "1.0");
-            _environment.Add(OwinKeys.CallCancelled, _cancellation.Token);
-            _environment.Add(OwinKeys.RequestBody, _requestStream);
-            _environment.Add(OwinKeys.RequestHeaders, _reqHeaders);
-            _environment.Add(OwinKeys.RequestPathBase, "");
-            _environment.Add(OwinKeys.ResponseHeaders, _respHeaders);
             var pos = startBufferOffset;
-            _environment.Add(OwinKeys.RequestMethod, ParseHttpMethod(buffer, ref pos));
-            string reqPath;
-            string reqQueryString;
-            string reqScheme = _isSsl ? "https" : "http";
+            _requestMethod = ParseHttpMethod(buffer, ref pos);
+            _requestScheme = _isSsl ? "https" : "http";
             string reqHost;
-            ParseHttpPath(buffer, ref pos, out reqPath, out reqQueryString, ref reqScheme, out reqHost);
-            _environment.Add(OwinKeys.RequestPath, reqPath);
-            _environment.Add(OwinKeys.RequestScheme, reqScheme);
-            _environment.Add(OwinKeys.RequestQueryString, reqQueryString);
-            string reqProtocol;
-            ParseHttpProtocol(buffer, ref pos, out reqProtocol);
-            _environment.Add(OwinKeys.RequestProtocol, reqProtocol);
+            ParseHttpPath(buffer, ref pos, out _requestPath, out _requestQueryString, ref _requestScheme, out reqHost);
+            ParseHttpProtocol(buffer, ref pos, out _requestProtocol);
             if (!SkipCrLf(buffer, ref pos)) throw new Exception("Request line does not end with CRLF");
-            if (!ParseHttpHeaders(buffer, pos, posOfReqEnd)) throw new Exception("Request headers cannot be parsed");
-            _environment.Add(OwinKeys.ResponseBody, _responseStream);
-            if (_remoteEndPoint != null)
-            {
-                _environment.Add(OwinKeys.RemoteIpAddress, _remoteEndPoint.Address.ToString());
-                _environment.Add(OwinKeys.RemotePort, _remoteEndPoint.Port.ToString(CultureInfo.InvariantCulture));
-                _environment.Add(OwinKeys.IsLocal, _ipIsLocalChecker.IsLocal(_remoteEndPoint.Address));
-            }
-            else
-            {
-                _environment.Add(OwinKeys.IsLocal, false);
-            }
-            if (_isHttp10)
-            {
-                _isKeepAlive = false;
-                string[] connectionValues;
-                if (_reqHeaders.TryGetValue("Connection", out connectionValues))
-                {
-                    if (connectionValues.Length == 1 && connectionValues[0].Equals("Keep-Alive", StringComparison.OrdinalIgnoreCase))
-                    {
-                        _isKeepAlive = true;
-                    }
-                }
-            }
-            else
-            {
-                _isKeepAlive = true;
-                string[] connectionValues;
-                if (_reqHeaders.TryGetValue("Connection", out connectionValues))
-                {
-                    if (connectionValues.Length == 1 && connectionValues[0].Equals("Close", StringComparison.OrdinalIgnoreCase))
-                    {
-                        _isKeepAlive = false;
-                    }
-                }
-            }
+            _isKeepAlive = !_isHttp10;
             ShouldSend100Continue = false;
-            string[] expectValues;
-            if (_reqHeaders.TryGetValue("Expect", out expectValues))
-            {
-                if (expectValues.Length == 1 && expectValues[0].Equals("100-Continue", StringComparison.OrdinalIgnoreCase))
-                {
-                    ShouldSend100Continue = true;
-                }
-            }
             RequestContentLength = 0;
-            string[] contentLengthValues;
-            if (_reqHeaders.TryGetValue("Content-Length", out contentLengthValues))
-            {
-                if (contentLengthValues.Length != 1 || !ulong.TryParse(contentLengthValues[0], out RequestContentLength))
-                {
-                    throw new InvalidDataException("Wrong request content length");
-                }
-            }
             RequestIsChunked = false;
-            string[] transferEncodingValues;
-            if (_reqHeaders.TryGetValue("Transfer-Encoding", out transferEncodingValues))
-            {
-                if (transferEncodingValues.Length == 1 && transferEncodingValues[0] == "chunked")
-                {
-                    RequestIsChunked = true;
-                    RequestContentLength = ulong.MaxValue;
-                }
-            }
+            if (!ParseHttpHeaders(buffer, pos, posOfReqEnd)) throw new Exception("Request headers cannot be parsed");
         }
 
         bool ParseHttpHeaders(byte[] buffer, int pos, int posOfReqEnd)
@@ -163,32 +100,71 @@ namespace NowinWebServer
             while (pos < posOfReqEnd)
             {
                 int start;
+                var newHeaderKey = false;
                 if (!IsSpaceOrTab(buffer[pos]))
                 {
                     start = pos;
                     SkipTokenChars(buffer, ref pos);
                     if (buffer[pos] != ':') return false;
                     name = StringFromLatin1(buffer, start, pos);
+                    newHeaderKey = true;
                 }
                 pos++;
                 SkipSpacesOrTabs(buffer, ref pos);
                 start = pos;
                 SkipToCR(buffer, ref pos);
                 var value = StringFromLatin1(buffer, start, pos);
-                string[] values;
-                if (_reqHeaders.TryGetValue(name, out values))
-                {
-                    Array.Resize(ref values, values.Length + 1);
-                    values[values.Length - 1] = value;
-                    _reqHeaders[name] = values;
-                }
+                if (newHeaderKey)
+                    ProcessRequestHeader(name, value);
                 else
-                {
-                    _reqHeaders[name] = new[] { value };
-                }
+                    _next.AddRequestHeader(name, value);
                 SkipCrLf(buffer, ref pos);
             }
             return true;
+        }
+
+        void ProcessRequestHeader(string name, string value)
+        {
+            if (name.Equals("Connection", StringComparison.OrdinalIgnoreCase))
+            {
+                if (_isHttp10)
+                {
+                    if (value.Equals("Keep-Alive", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _isKeepAlive = true;
+                    }
+                }
+                else
+                {
+                    if (value.Equals("Close", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _isKeepAlive = false;
+                    }
+                }
+            }
+            else if (name.Equals("Expect", StringComparison.OrdinalIgnoreCase))
+            {
+                if (value.Equals("100-Continue", StringComparison.OrdinalIgnoreCase))
+                {
+                    ShouldSend100Continue = true;
+                }
+            }
+            else if (name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!ulong.TryParse(value, out RequestContentLength))
+                {
+                    throw new InvalidDataException(string.Format("Wrong request content length: {0}", value));
+                }
+            }
+            else if (name.Equals("Transfer-Encoding", StringComparison.OrdinalIgnoreCase))
+            {
+                if (value.Equals("chunked", StringComparison.OrdinalIgnoreCase))
+                {
+                    RequestIsChunked = true;
+                    RequestContentLength = ulong.MaxValue;
+                }
+            }
+            _next.AddRequestHeader(name, value);
         }
 
         void SkipToCR(byte[] buffer, ref int pos)
@@ -253,7 +229,10 @@ namespace NowinWebServer
                 _isHttp10 = false;
                 return;
             }
-            throw new NotImplementedException();
+            var p = pos;
+            SearchForFirstSpaceOrEndOfLine(buffer, ref p);
+            reqProtocol = StringFromLatin1(buffer, pos, p);
+            throw new InvalidDataException(string.Format("Unsupported request protocol: {0}", reqProtocol));
         }
 
         static void ParseHttpPath(byte[] buffer, ref int pos, out string reqPath, out string reqQueryString, ref string reqScheme, out string reqHost)
@@ -431,60 +410,11 @@ namespace NowinWebServer
 
         void FillResponse(bool finished)
         {
-            var status = GetStatusFromEnvironment();
+            _next.PrepareResponseHeaders();
+            var status = _statusCode;
             if (status < 200)
             {
                 status = 500;
-            }
-            string[] connectionValues;
-            var headers = (IDictionary<string, string[]>)_environment[OwinKeys.ResponseHeaders] ?? _respHeaders;
-            object responsePhase;
-            if (_environment.TryGetValue(OwinKeys.ResponseReasonPhrase, out responsePhase))
-            {
-                if (!(responsePhase is String))
-                {
-                    status = 500;
-                    responsePhase = null;
-                }
-            }
-            if (headers.TryGetValue("Connection", out connectionValues))
-            {
-                headers.Remove("Connection");
-                if (connectionValues.Length != 1)
-                {
-                    status = 500;
-                }
-                else
-                {
-                    var v = connectionValues[0];
-                    if (v.Equals("Close", StringComparison.InvariantCultureIgnoreCase))
-                        _isKeepAlive = false;
-                    else if (v.Equals("Keep-alive", StringComparison.InvariantCultureIgnoreCase))
-                        _isKeepAlive = true;
-                }
-            }
-            string[] contentLengthValues;
-            string contentLength = null;
-            if (headers.TryGetValue("Content-Length", out contentLengthValues))
-            {
-                headers.Remove("Content-Length");
-                if (contentLengthValues.Length != 1)
-                {
-                    status = 500;
-                }
-                else
-                {
-                    ulong temp;
-                    if (!ulong.TryParse(contentLengthValues[0], out temp))
-                    {
-                        status = 500;
-                    }
-                    else
-                    {
-                        contentLength = contentLengthValues[0];
-                        _responseContentLength = temp;
-                    }
-                }
             }
             if (finished)
             {
@@ -492,26 +422,26 @@ namespace NowinWebServer
                 {
                     status = 500;
                 }
-                contentLength = _responseStream.Length.ToString(CultureInfo.InvariantCulture);
+                _responseContentLength = (ulong)_responseStream.Length;
             }
             _responseHeaderPos = 0;
             HeaderAppend("HTTP/1.1 ");
             HeaderAppend(status.ToString(CultureInfo.InvariantCulture));
-            if (responsePhase != null)
+            if (_reasonPhase != null)
             {
                 HeaderAppend(" ");
-                HeaderAppend((string)responsePhase);
+                HeaderAppend(_reasonPhase);
             }
             HeaderAppendCrLf();
             if (status == 500)
             {
-                contentLength = "0";
+                _responseContentLength = 0;
                 _isKeepAlive = false;
             }
-            if (contentLength != null)
+            if (_responseContentLength != ulong.MaxValue)
             {
                 HeaderAppend("Content-Length: ");
-                HeaderAppend(contentLength);
+                HeaderAppend(_responseContentLength.ToString(CultureInfo.InvariantCulture));
                 HeaderAppendCrLf();
             }
             else
@@ -524,7 +454,6 @@ namespace NowinWebServer
                     _responseIsChunked = true;
                 }
             }
-            headers.Remove("Transfer-Encoding");
             if (_isHttp10 && _isKeepAlive)
             {
                 HeaderAppend("Connection: keep-alive\r\n");
@@ -533,25 +462,28 @@ namespace NowinWebServer
             {
                 HeaderAppend("Connection: close\r\n");
             }
-            foreach (var header in headers)
+            foreach (var header in _responseHeaders)
             {
-                foreach (var value in header.Value)
+                if (header.Value is String)
                 {
                     HeaderAppend(header.Key);
                     HeaderAppend(": ");
-                    HeaderAppend(value);
+                    HeaderAppend((String)header.Value);
                     HeaderAppendCrLf();
                 }
+                else
+                {
+                    foreach (var value in (IEnumerable<string>)header.Value)
+                    {
+                        HeaderAppend(header.Key);
+                        HeaderAppend(": ");
+                        HeaderAppend(value);
+                        HeaderAppendCrLf();
+                    }
+                }
             }
+            _responseHeaders.Clear();
             HeaderAppendCrLf();
-        }
-
-        int GetStatusFromEnvironment()
-        {
-            object value;
-            if (!_environment.TryGetValue(OwinKeys.ResponseStatusCode, out value))
-                return 200;
-            return (int)value;
         }
 
         void HeaderAppendCrLf()
@@ -590,42 +522,7 @@ namespace NowinWebServer
             ReceiveBufferPos = 0;
         }
 
-        static void AppFinished(Task task, object state)
-        {
-            ((Transport2Http2OwinHandler)state).AppFinished(task);
-        }
-
-        void AppFinished(Task task)
-        {
-            if (task.IsFaulted || task.IsCanceled || _cancellation.IsCancellationRequested)
-            {
-                _cancellation.Cancel();
-                if (!_responseHeadersSend)
-                    SendInternalServerError();
-                else
-                {
-                    _isKeepAlive = false;
-                    Callback.StartDisconnect();
-                }
-                return;
-            }
-            if (_requestStream.Position != _requestStream.Length)
-            {
-                DrainRequestStreamAsync().ContinueWith((t, o) =>
-                    {
-                        if (t.IsFaulted || t.IsCanceled)
-                        {
-                            ((Transport2Http2OwinHandler)o).AppFinished(t);
-                            return;
-                        }
-                        ((Transport2Http2OwinHandler)o).AppFinishedSuccessfully();
-                    }, this);
-                return;
-            }
-            AppFinishedSuccessfully();
-        }
-
-        void AppFinishedSuccessfully()
+        void SendHttpResponseAndPrepareForNext()
         {
             var offset = _responseStream.StartOffset;
             var len = _responseStream.LocalPos;
@@ -681,7 +578,14 @@ namespace NowinWebServer
         {
             _isKeepAlive = false;
             _lastPacket = true;
-            Callback.StartSend(Server.Status500InternalServerError, 0, Server.Status500InternalServerError.Length);
+            try
+            {
+                Callback.StartSend(Server.Status500InternalServerError, 0, Server.Status500InternalServerError.Length);
+            }
+            catch (Exception)
+            {
+                Callback.StartDisconnect();
+            }
         }
 
         static int FindRequestEnd(byte[] buffer, int start, int end)
@@ -714,13 +618,14 @@ namespace NowinWebServer
             _responseStream.Reset();
         }
 
-        public Task WriteAsync(int startOffset, int len)
+        public Task WriteAsync(byte[] buffer, int startOffset, int len)
         {
             if (!_responseHeadersSend)
             {
+                if (Buffer != buffer) throw new InvalidOperationException();
                 FillResponse(false);
                 if (_responseHeaderPos > ReceiveBufferSize) throw new ArgumentException(string.Format("Response headers are longer({0}) than buffer({1})", _responseHeaderPos, ReceiveBufferSize));
-                if (_responseIsChunked)
+                if (_responseIsChunked && len!=0)
                 {
                     WrapInChunk(Buffer, ref startOffset, ref len);
                 }
@@ -729,6 +634,8 @@ namespace NowinWebServer
             }
             else if (_responseIsChunked)
             {
+                if (Buffer != buffer) throw new InvalidOperationException();
+                if (len == 0) return Task.Delay(0);
                 WrapInChunk(Buffer, ref startOffset, ref len);
             }
             if (_responseContentLength != ulong.MaxValue && (ulong)_responseStream.Position > _responseContentLength)
@@ -738,7 +645,7 @@ namespace NowinWebServer
             }
             var tcs = new TaskCompletionSource<bool>();
             _tcsSend = tcs;
-            Callback.StartSend(Buffer, startOffset, len);
+            Callback.StartSend(buffer, startOffset, len);
             return tcs.Task;
         }
 
@@ -803,11 +710,20 @@ namespace NowinWebServer
             Callback.StartAccept(Buffer, StartBufferOffset, ReceiveBufferSize);
         }
 
-        public void FinishAccept(byte[] buffer, int offset, int length, IPEndPoint remoteEndPoint)
+        public void FinishAccept(byte[] buffer, int offset, int length, IPEndPoint remoteEndPoint, IPEndPoint localEndPoint)
         {
             ResetForNextRequest();
             ReceiveBufferPos = 0;
             _remoteEndPoint = remoteEndPoint;
+            _knownIsLocal = false;
+            _remoteIpAddress = null;
+            _remotePort = null;
+            if (!localEndPoint.Equals(_localEndPoint))
+            {
+                _localEndPoint = localEndPoint;
+                _localIpAddress = null;
+                _localPort = null;
+            }
             _receiveBufferFullness = StartBufferOffset;
             if (length == 0)
             {
@@ -819,7 +735,7 @@ namespace NowinWebServer
 
         public void FinishReceive(byte[] buffer, int offset, int length)
         {
-            if (length==-1)
+            if (length == -1)
             {
                 if (_waitingForRequest)
                 {
@@ -851,25 +767,18 @@ namespace NowinWebServer
                     return;
                 }
                 _waitingForRequest = false;
-                Task task;
                 try
                 {
                     ReceiveBufferPos = posOfReqEnd - StartBufferOffset;
                     ParseRequest(Buffer, StartBufferOffset, posOfReqEnd);
-                    task = _app(_environment);
+                    _next.HandleRequest();
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    var tcs = new TaskCompletionSource<bool>();
-                    tcs.SetException(ex);
-                    task = tcs.Task;
+                    ResponseStatusCode = 500;
+                    ResponseReasonPhase = null;
+                    ResponseFinished();
                 }
-                if (task.IsCompleted)
-                {
-                    AppFinished(task);
-                    return;
-                }
-                task.ContinueWith(AppFinished, this, TaskContinuationOptions.ExecuteSynchronously);
             }
             else
             {
@@ -914,6 +823,146 @@ namespace NowinWebServer
                     Callback.StartDisconnect();
                 }
             }
+        }
+
+        public CancellationToken CallCancelled
+        {
+            get { return _cancellation.Token; }
+        }
+
+        public bool ResponseWriteIsFlushAndFlushIsNoOp
+        {
+            set { _responseStream.SetResponseWriteIsFlushAndFlushIsNoOp(value); }
+        }
+
+        public Stream ResponseBody
+        {
+            get { return _responseStream; }
+        }
+
+        public Stream RequestBody
+        {
+            get { return _requestStream; }
+        }
+
+        public string RequestPath
+        {
+            get { return _requestPath; }
+        }
+
+        public string RequestQueryString
+        {
+            get { return _requestQueryString; }
+        }
+
+        public string RequestMethod
+        {
+            get { return _requestMethod; }
+        }
+
+        public string RequestScheme
+        {
+            get { return _requestScheme; }
+        }
+
+        public string RequestProtocol
+        {
+            get { return _requestProtocol; }
+        }
+
+        public string RemoteIpAddress
+        {
+            get { return _remoteIpAddress ?? (_remoteIpAddress = _remoteEndPoint.Address.ToString()); }
+        }
+
+        public string RemotePort
+        {
+            get { return _remotePort ?? (_remotePort = _remoteEndPoint.Port.ToString(CultureInfo.InvariantCulture)); }
+        }
+
+        public string LocalIpAddress
+        {
+            get { return _localIpAddress ?? (_localIpAddress = _localEndPoint.Address.ToString()); }
+        }
+
+        public string LocalPort
+        {
+            get { return _localPort ?? (_localPort = _localEndPoint.Port.ToString(CultureInfo.InvariantCulture)); }
+        }
+
+        public bool IsLocal
+        {
+            get
+            {
+                if (!_knownIsLocal) _isLocal = _ipIsLocalChecker.IsLocal(_remoteEndPoint.Address);
+                return _isLocal;
+            }
+        }
+
+        public int ResponseStatusCode
+        {
+            set { _statusCode = value; }
+        }
+
+        public string ResponseReasonPhase
+        {
+            set { _reasonPhase = value; }
+        }
+
+        public ulong ResponseContentLength
+        {
+            set { _responseContentLength = value; }
+        }
+
+        public bool KeepAlive
+        {
+            set { _isKeepAlive = value; }
+        }
+
+        public void AddResponseHeader(string name, string value)
+        {
+            _responseHeaders.Add(new KeyValuePair<string, object>(name, value));
+        }
+
+        public void AddResponseHeader(string name, IEnumerable<string> values)
+        {
+            _responseHeaders.Add(new KeyValuePair<string, object>(name, values));
+        }
+
+        public void ResponseFinished()
+        {
+            if (_statusCode == 500 || _cancellation.IsCancellationRequested)
+            {
+                _cancellation.Cancel();
+                if (!_responseHeadersSend)
+                    SendInternalServerError();
+                else
+                {
+                    _isKeepAlive = false;
+                    Callback.StartDisconnect();
+                }
+                return;
+            }
+            if (_requestStream.Position != _requestStream.Length)
+            {
+                DrainRequestStreamAsync().ContinueWith((t, o) =>
+                {
+                    if (t.IsFaulted || t.IsCanceled)
+                    {
+                        ResponseStatusCode = 500;
+                        ((Transport2HttpHandler)o).ResponseFinished();
+                        return;
+                    }
+                    ((Transport2HttpHandler)o).SendHttpResponseAndPrepareForNext();
+                }, this);
+                return;
+            }
+            SendHttpResponseAndPrepareForNext();
+        }
+
+        public bool CanUseDirectWrite()
+        {
+            return !_responseIsChunked && _responseHeadersSend;
         }
     }
 }

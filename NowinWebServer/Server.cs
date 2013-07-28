@@ -1,7 +1,4 @@
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -54,10 +51,11 @@ namespace NowinWebServer
 
         public void Start()
         {
+            _layerFactory = new OwinHandlerFactory(_parameters.OwinApp);
             _ipIsLocalChecker = new IpIsLocalChecker();
             _connectionAllocationStrategy = _parameters.ConnectionAllocationStrategy;
             var isSsl = _parameters.Certificate != null;
-            _layerFactory = new Transport2Http2OwinFactory(_parameters.BufferSize, isSsl, _ipIsLocalChecker, _parameters.OwinApp);
+            _layerFactory = new Transport2HttpFactory(_parameters.BufferSize, isSsl, _ipIsLocalChecker, _layerFactory);
             if (isSsl)
             {
                 _layerFactory = new SslTransportFactory(_parameters.Certificate, _layerFactory);
