@@ -5,21 +5,23 @@ using System.Threading.Tasks;
 namespace NowinWebServer
 {
     using OwinApp = Func<IDictionary<string, object>, Task>;
+
     public class OwinHandler : IHttpLayerHandler
     {
         readonly OwinApp _app;
 
-        readonly IDictionary<string, object> _environment;
-        readonly Dictionary<string, string[]> _reqHeaders;
-        readonly Dictionary<string, string[]> _respHeaders;
+        readonly OwinEnvironment _environment;
+        internal readonly Dictionary<string, string[]> ReqHeaders;
+        internal readonly Dictionary<string, string[]> RespHeaders;
 
         public IHttpLayerCallback Callback { set; internal get; }
+
         public OwinHandler(OwinApp app)
         {
             _app = app;
-            _environment = new Dictionary<string, object>();
-            _reqHeaders = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
-            _respHeaders = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+            _environment = new OwinEnvironment(this);
+            ReqHeaders = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+            RespHeaders = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
         }
 
         public void Dispose()
@@ -28,45 +30,28 @@ namespace NowinWebServer
 
         public void PrepareForRequest()
         {
-            _environment.Clear();
-            _reqHeaders.Clear();
-            _respHeaders.Clear();
-            _environment.Add(OwinKeys.Version, "1.0");
-            _environment.Add(OwinKeys.RequestPathBase, "");
-            _environment.Add(OwinKeys.RequestHeaders, _reqHeaders);
-            _environment.Add(OwinKeys.ResponseHeaders, _respHeaders);
+            _environment.Reset();
+            ReqHeaders.Clear();
+            RespHeaders.Clear();
         }
 
         public void AddRequestHeader(string name, string value)
         {
             string[] values;
-            if (_reqHeaders.TryGetValue(name, out values))
+            if (ReqHeaders.TryGetValue(name, out values))
             {
                 Array.Resize(ref values, values.Length + 1);
                 values[values.Length - 1] = value;
-                _reqHeaders[name] = values;
+                ReqHeaders[name] = values;
             }
             else
             {
-                _reqHeaders.Add(name, new[] { value });
+                ReqHeaders.Add(name, new[] { value });
             }
         }
 
         public void HandleRequest()
         {
-            _environment.Add(OwinKeys.RequestMethod, Callback.RequestMethod);
-            _environment.Add(OwinKeys.RequestPath, Callback.RequestPath);
-            _environment.Add(OwinKeys.RequestScheme, Callback.RequestScheme);
-            _environment.Add(OwinKeys.RequestQueryString, Callback.RequestQueryString);
-            _environment.Add(OwinKeys.RequestProtocol, Callback.RequestProtocol);
-            _environment.Add(OwinKeys.RequestBody, Callback.RequestBody);
-            _environment.Add(OwinKeys.ResponseBody, Callback.ResponseBody);
-            _environment.Add(OwinKeys.RemoteIpAddress, Callback.RemoteIpAddress);
-            _environment.Add(OwinKeys.RemotePort, Callback.RemotePort);
-            _environment.Add(OwinKeys.LocalIpAddress, Callback.LocalIpAddress);
-            _environment.Add(OwinKeys.LocalPort, Callback.LocalPort);
-            _environment.Add(OwinKeys.IsLocal, Callback.IsLocal);
-            _environment.Add(OwinKeys.CallCancelled, Callback.CallCancelled);
             Callback.ResponseWriteIsFlushAndFlushIsNoOp = false;
             var task = _app(_environment);
             if (task.IsCompleted)
@@ -88,6 +73,7 @@ namespace NowinWebServer
                         Callback.ResponseReasonPhase = null;
                     }
                     Callback.ResponseFinished();
+                    _environment.Reset();
                 }, this);
         }
 
@@ -106,18 +92,21 @@ namespace NowinWebServer
             var headers = (IDictionary<string, string[]>)_environment[OwinKeys.ResponseHeaders];
             if (headers == null)
             {
-                _respHeaders.Clear();
-                headers = _respHeaders;
+                RespHeaders.Clear();
+                headers = RespHeaders;
             }
             object responsePhase;
             if (_environment.TryGetValue(OwinKeys.ResponseReasonPhrase, out responsePhase))
             {
-                if (!(responsePhase is String))
+                if (responsePhase != null)
                 {
-                    Callback.ResponseStatusCode = 500;
-                    return;
+                    if (!(responsePhase is String))
+                    {
+                        Callback.ResponseStatusCode = 500;
+                        return;
+                    }
+                    Callback.ResponseReasonPhase = (string) responsePhase;
                 }
-                Callback.ResponseReasonPhase = (string)responsePhase;
             }
             if (headers.TryGetValue("Connection", out connectionValues))
             {

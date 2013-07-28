@@ -52,6 +52,12 @@
     <Compile Include="INowinServer.cs" />
     <Compile Include="IpIsLocalChecker.cs" />
     <Compile Include="IServerParameters.cs" />
+    <Compile Include="OwinEnvironment.cs" />
+    <Compile Include="OwinEnvironment.Generated.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>OwinEnvironment.Generated.tt</DependentUpon>
+    </Compile>
     <Compile Include="OwinHandler.cs" />
     <Compile Include="OwinHandlerFactory.cs" />
     <Compile Include="ServerBuilder.cs" />
@@ -75,6 +81,13 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Nowin.nuspec" />
+    <None Include="OwinEnvironment.Generated.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>OwinEnvironment.Generated.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
