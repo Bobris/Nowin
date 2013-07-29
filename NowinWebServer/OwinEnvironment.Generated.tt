@@ -17,9 +17,9 @@ var props = new[]
   new {Key="owin.RequestHeaders", Type="IDictionary<string, string[]>", Name="RequestHeaders", Get="_handler.ReqHeaders", Set="" },
   new {Key="owin.RequestBody", Type="Stream", Name="RequestBody", Get="_callback.RequestBody", Set="" },
 
-  new {Key="owin.ResponseStatusCode", Type="int", Name="ResponseStatusCode", Get="200", Set="" },
-  new {Key="owin.ResponseReasonPhrase", Type="string", Name="ResponseReasonPhrase", Get="null", Set="" },
-  new {Key="owin.ResponseHeaders", Type="IDictionary<string, string[]>", Name="ResponseHeaders", Get="_handler.RespHeaders", Set="" },
+  new {Key="owin.ResponseStatusCode", Type="int", Name="ResponseStatusCode", Get="200", Set="_callback.ResponseStatusCode = (int) VALUE;" },
+  new {Key="owin.ResponseReasonPhrase", Type="string", Name="ResponseReasonPhrase", Get="null", Set="_callback.ResponseReasonPhase = (string) VALUE;" },
+  new {Key="owin.ResponseHeaders", Type="IDictionary<string, string[]>", Name="ResponseHeaders", Get="_handler.RespHeaders", Set="_handler.OverwriteRespHeaders((IDictionary<string, string[]>) VALUE);" },
   new {Key="owin.ResponseBody", Type="Stream", Name="ResponseBody", Get="_callback.ResponseBody", Set="" },
   
 // ServerVariable keys
@@ -90,6 +90,9 @@ namespace NowinWebServer
                 <#=CompleteInit(prop.Index)#>;
                 <#=Set(prop.Index)#>;
                 _<#=prop.Name#> = value;
+<# if (prop.Set!="") { #>
+                <#=prop.Set.Replace("VALUE", "value")#>
+<# } #>
             }
         }
 

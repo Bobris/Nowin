@@ -13,6 +13,7 @@ namespace NowinWebServer
         readonly OwinEnvironment _environment;
         internal readonly Dictionary<string, string[]> ReqHeaders;
         internal readonly Dictionary<string, string[]> RespHeaders;
+        IDictionary<string, string[]> _overwrittenResponseHeaders;
 
         public IHttpLayerCallback Callback { set; internal get; }
 
@@ -52,6 +53,8 @@ namespace NowinWebServer
 
         public void HandleRequest()
         {
+            Callback.ResponseStatusCode = 200; // Default status code
+            _overwrittenResponseHeaders = RespHeaders;
             var task = _app(_environment);
             if (task.IsCompleted)
             {
@@ -75,36 +78,14 @@ namespace NowinWebServer
                 }, this);
         }
 
-        int GetStatusFromEnvironment()
-        {
-            object value;
-            if (!_environment.TryGetValue(OwinKeys.ResponseStatusCode, out value))
-                return 200;
-            return (int)value;
-        }
-
         public void PrepareResponseHeaders()
         {
-            Callback.ResponseStatusCode = GetStatusFromEnvironment();
             string[] connectionValues;
-            var headers = (IDictionary<string, string[]>)_environment[OwinKeys.ResponseHeaders];
+            var headers = _overwrittenResponseHeaders;
             if (headers == null)
             {
                 RespHeaders.Clear();
                 headers = RespHeaders;
-            }
-            object responsePhase;
-            if (_environment.TryGetValue(OwinKeys.ResponseReasonPhrase, out responsePhase))
-            {
-                if (responsePhase != null)
-                {
-                    if (!(responsePhase is String))
-                    {
-                        Callback.ResponseStatusCode = 500;
-                        return;
-                    }
-                    Callback.ResponseReasonPhase = (string) responsePhase;
-                }
             }
             if (headers.TryGetValue("Connection", out connectionValues))
             {
@@ -142,6 +123,11 @@ namespace NowinWebServer
             {
                 Callback.AddResponseHeader(header.Key, header.Value);
             }
+        }
+
+        public void OverwriteRespHeaders(IDictionary<string, string[]> value)
+        {
+            _overwrittenResponseHeaders = value;
         }
     }
 }

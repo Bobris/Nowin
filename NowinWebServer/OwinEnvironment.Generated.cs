@@ -267,6 +267,7 @@ namespace NowinWebServer
                 _initFlag0 &= ~0x400u;
                 _flag0 |= 0x400u;
                 _ResponseStatusCode = value;
+                _callback.ResponseStatusCode = (int) value;
             }
         }
 
@@ -286,6 +287,7 @@ namespace NowinWebServer
                 _initFlag0 &= ~0x800u;
                 _flag0 |= 0x800u;
                 _ResponseReasonPhrase = value;
+                _callback.ResponseReasonPhase = (string) value;
             }
         }
 
@@ -305,6 +307,7 @@ namespace NowinWebServer
                 _initFlag0 &= ~0x1000u;
                 _flag0 |= 0x1000u;
                 _ResponseHeaders = value;
+                _handler.OverwriteRespHeaders((IDictionary<string, string[]>) value);
             }
         }
 
