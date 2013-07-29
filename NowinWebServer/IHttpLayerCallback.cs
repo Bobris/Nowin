@@ -7,7 +7,6 @@ namespace NowinWebServer
     public interface IHttpLayerCallback : ILayerCallback
     {
         CancellationToken CallCancelled { get; }
-        bool ResponseWriteIsFlushAndFlushIsNoOp { set; }
 
         Stream ResponseBody { get; }
         Stream RequestBody { get; }

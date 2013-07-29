@@ -52,7 +52,6 @@ namespace NowinWebServer
 
         public void HandleRequest()
         {
-            Callback.ResponseWriteIsFlushAndFlushIsNoOp = false;
             var task = _app(_environment);
             if (task.IsCompleted)
             {
@@ -64,7 +63,6 @@ namespace NowinWebServer
                 Callback.ResponseFinished();
                 return;
             }
-            Callback.ResponseWriteIsFlushAndFlushIsNoOp = true;
             task.ContinueWith((t, o) =>
                 {
                     if (t.IsFaulted || t.IsCanceled)

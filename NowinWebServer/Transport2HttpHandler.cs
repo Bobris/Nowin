@@ -830,11 +830,6 @@ namespace NowinWebServer
             get { return _cancellation.Token; }
         }
 
-        public bool ResponseWriteIsFlushAndFlushIsNoOp
-        {
-            set { _responseStream.SetResponseWriteIsFlushAndFlushIsNoOp(value); }
-        }
-
         public Stream ResponseBody
         {
             get { return _responseStream; }
