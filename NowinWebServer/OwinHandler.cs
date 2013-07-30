@@ -84,8 +84,7 @@ namespace NowinWebServer
             var headers = _overwrittenResponseHeaders;
             if (headers == null)
             {
-                RespHeaders.Clear();
-                headers = RespHeaders;
+                return;
             }
             if (headers.TryGetValue("Connection", out connectionValues))
             {
@@ -121,7 +120,14 @@ namespace NowinWebServer
             headers.Remove("Transfer-Encoding");
             foreach (var header in headers)
             {
-                Callback.AddResponseHeader(header.Key, header.Value);
+                if (header.Value.Length == 1)
+                {
+                    Callback.AddResponseHeader(header.Key, header.Value[0]);
+                }
+                else
+                {
+                    Callback.AddResponseHeader(header.Key, header.Value);
+                }
             }
         }
 

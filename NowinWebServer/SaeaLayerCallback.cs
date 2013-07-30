@@ -161,6 +161,7 @@ namespace NowinWebServer
             bool willRaiseEvent;
             try
             {
+                StopExecutionContextFlow();
                 willRaiseEvent = _listenSocket.AcceptAsync(_receiveEvent);
             }
             catch (ObjectDisposedException)
@@ -171,6 +172,12 @@ namespace NowinWebServer
             {
                 ProcessAccept();
             }
+        }
+
+        void StopExecutionContextFlow()
+        {
+            if (!ExecutionContext.IsFlowSuppressed())
+                ExecutionContext.SuppressFlow();
         }
 
         public void StartReceive(byte[] buffer, int offset, int length)
@@ -188,6 +195,7 @@ namespace NowinWebServer
             bool willRaiseEvent;
             try
             {
+                StopExecutionContextFlow();
                 willRaiseEvent = _socket.ReceiveAsync(_receiveEvent);
             }
             catch (ObjectDisposedException)
@@ -215,6 +223,7 @@ namespace NowinWebServer
             bool willRaiseEvent;
             try
             {
+                StopExecutionContextFlow();
                 willRaiseEvent = _socket.SendAsync(_sendEvent);
             }
             catch (ObjectDisposedException)
@@ -240,6 +249,7 @@ namespace NowinWebServer
             bool willRaiseEvent;
             try
             {
+                StopExecutionContextFlow();
                 willRaiseEvent = _socket.DisconnectAsync(_disconnectEvent);
             }
             catch (ObjectDisposedException)

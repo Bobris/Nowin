@@ -51,17 +51,20 @@ namespace NowinWebServer
         int _statusCode;
         string _reasonPhase;
         readonly List<KeyValuePair<string, object>> _responseHeaders = new List<KeyValuePair<string, object>>();
+        readonly ThreadLocal<char[]> _charBuffer;
 
-        public Transport2HttpHandler(IHttpLayerHandler next, bool isSsl, IIpIsLocalChecker ipIsLocalChecker, byte[] buffer, int startBufferOffset, int receiveBufferSize, int constantsOffset)
+        public Transport2HttpHandler(IHttpLayerHandler next, bool isSsl, IIpIsLocalChecker ipIsLocalChecker, byte[] buffer, int startBufferOffset, int receiveBufferSize, int constantsOffset, ThreadLocal<char[]> charBuffer)
         {
             _next = next;
             StartBufferOffset = startBufferOffset;
             ReceiveBufferSize = receiveBufferSize;
             ResponseBodyBufferOffset = StartBufferOffset + ReceiveBufferSize * 2 + 8;
             _constantsOffset = constantsOffset;
+            _charBuffer = charBuffer;
             Buffer = buffer;
             _isSsl = isSsl;
             _ipIsLocalChecker = ipIsLocalChecker;
+            _cancellation = new CancellationTokenSource();
             _responseStream = new ResponseStream(this);
             _requestStream = new RequestStream(this);
             _next.Callback = this;
@@ -77,7 +80,8 @@ namespace NowinWebServer
             _next.PrepareForRequest();
             posOfReqEnd -= 2;
             _responseHeaders.Clear();
-            _cancellation = new CancellationTokenSource();
+            if (_cancellation.IsCancellationRequested)
+                _cancellation = new CancellationTokenSource();
             _responseIsChunked = false;
             _responseContentLength = ulong.MaxValue;
             var pos = startBufferOffset;
@@ -235,7 +239,7 @@ namespace NowinWebServer
             throw new InvalidDataException(string.Format("Unsupported request protocol: {0}", reqProtocol));
         }
 
-        static void ParseHttpPath(byte[] buffer, ref int pos, out string reqPath, out string reqQueryString, ref string reqScheme, out string reqHost)
+        void ParseHttpPath(byte[] buffer, ref int pos, out string reqPath, out string reqQueryString, ref string reqScheme, out string reqHost)
         {
             var start = pos;
             var p = start;
@@ -286,9 +290,14 @@ namespace NowinWebServer
             throw new NotImplementedException();
         }
 
-        static string ParsePath(byte[] buffer, int start, int end)
+        char[] GetCharBuffer()
         {
-            var chs = new char[end - start];
+            return _charBuffer.Value;
+        }
+
+        string ParsePath(byte[] buffer, int start, int end)
+        {
+            var chs = GetCharBuffer();
             var used = 0;
             while (start < end)
             {
@@ -349,7 +358,7 @@ namespace NowinWebServer
             }
         }
 
-        static string ParseHttpMethod(byte[] buffer, ref int pos)
+        string ParseHttpMethod(byte[] buffer, ref int pos)
         {
             var p = pos;
             var start = p;
@@ -398,14 +407,15 @@ namespace NowinWebServer
             return StringFromLatin1(buffer, start, p);
         }
 
-        static string StringFromLatin1(byte[] buffer, int start, int end)
+        string StringFromLatin1(byte[] buffer, int start, int end)
         {
-            var chs = new char[end - start];
-            for (var i = 0; i < chs.Length; i++)
+            var len = end - start;
+            var chs = GetCharBuffer();
+            for (var i = 0; i < len; i++)
             {
                 chs[i] = (char)buffer[start + i];
             }
-            return new string(chs);
+            return new string(chs, 0, len);
         }
 
         void FillResponse(bool finished)
@@ -625,7 +635,7 @@ namespace NowinWebServer
                 if (Buffer != buffer) throw new InvalidOperationException();
                 FillResponse(false);
                 if (_responseHeaderPos > ReceiveBufferSize) throw new ArgumentException(string.Format("Response headers are longer({0}) than buffer({1})", _responseHeaderPos, ReceiveBufferSize));
-                if (_responseIsChunked && len!=0)
+                if (_responseIsChunked && len != 0)
                 {
                     WrapInChunk(Buffer, ref startOffset, ref len);
                 }

@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 
 namespace NowinWebServer
 {
@@ -8,13 +9,14 @@ namespace NowinWebServer
         readonly bool _isSsl;
         readonly IIpIsLocalChecker _ipIsLocalChecker;
         readonly ILayerFactory _next;
-
+        readonly ThreadLocal<char[]> _charBuffer;
         public Transport2HttpFactory(int receiveBufferSize, bool isSsl, IIpIsLocalChecker ipIsLocalChecker, ILayerFactory next)
         {
             _receiveBufferSize = receiveBufferSize;
             _isSsl = isSsl;
             _ipIsLocalChecker = ipIsLocalChecker;
             _next = next;
+            _charBuffer = new ThreadLocal<char[]>(()=>new char[receiveBufferSize]);
             PerConnectionBufferSize = MyPerConnectionBufferSize() + _next.PerConnectionBufferSize;
         }
 
@@ -44,7 +46,7 @@ namespace NowinWebServer
         public ILayerHandler Create(byte[] buffer, int offset, int commonOffset)
         {
             var nextHandler = (IHttpLayerHandler)_next.Create(buffer, offset + MyPerConnectionBufferSize(), commonOffset + MyCommonBufferSize());
-            return new Transport2HttpHandler(nextHandler, _isSsl, _ipIsLocalChecker, buffer, offset, _receiveBufferSize, commonOffset);
+            return new Transport2HttpHandler(nextHandler, _isSsl, _ipIsLocalChecker, buffer, offset, _receiveBufferSize, commonOffset, _charBuffer);
         }
     }
 }
