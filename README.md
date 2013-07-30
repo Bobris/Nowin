@@ -3,9 +3,11 @@ Nowin
 
 Fast Owin Web Server in pure .Net 4.5 (it does not use HttpListener)
 
-Current status is usable for testing, not for production. But in keep-alive case with Hello World response is 3 times faster than NodeJs 0.10.7 or HttpListener.
+Current status is usable for testing, not for production, nobody did any security review. But in keep-alive case with Hello World localhost response is 2-3 times faster than NodeJs 0.10.7 or HttpListener. Code is limited by Kernel socket speed, than by its implementation.
 
 SSL is also supported!
+
+Plan for future is to implement WebSockets, and call it a day feature wise.
 
 Other Owin .Net server samples also included. Some parts of these samples source code are modified from Katana project.
 
