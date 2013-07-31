@@ -422,7 +422,7 @@ namespace NowinWebServer
         {
             _next.PrepareResponseHeaders();
             var status = _statusCode;
-            if (status < 200)
+            if (status < 200 || status > 999)
             {
                 status = 500;
             }
@@ -436,7 +436,7 @@ namespace NowinWebServer
             }
             _responseHeaderPos = 0;
             HeaderAppend("HTTP/1.1 ");
-            HeaderAppend(status.ToString(CultureInfo.InvariantCulture));
+            HeaderAppendHttpStatus(status);
             if (_reasonPhase != null)
             {
                 HeaderAppend(" ");
@@ -494,6 +494,16 @@ namespace NowinWebServer
             }
             _responseHeaders.Clear();
             HeaderAppendCrLf();
+        }
+
+        void HeaderAppendHttpStatus(int status)
+        {
+            // It always fits so skip buffer size check
+            var j = StartBufferOffset + ReceiveBufferSize + _responseHeaderPos;
+            Buffer[j++] = (byte)('0' + status / 100);
+            Buffer[j++] = (byte)('0' + status / 10 % 10);
+            Buffer[j] = (byte)('0' + status % 10);
+            _responseHeaderPos += 3;
         }
 
         void HeaderAppendCrLf()
