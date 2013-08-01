@@ -252,6 +252,8 @@ namespace NowinTests
 
                     Assert.True(env.TryGetValue("server.RemotePort", out ignored));
                     Assert.True(env.TryGetValue("server.LocalPort", out ignored));
+
+                    Assert.False(env.TryGetValue("websocket.Accept", out ignored));
                 });
 
             Assert.AreEqual(HttpStatusCode.OK, SendGetRequest(listener, HttpClientAddress + "SubPath?QueryString").StatusCode);

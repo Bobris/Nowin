@@ -223,7 +223,6 @@ namespace NowinWebServer
             }
         }
 
-
         Task WebSocketSendAsyncMethod(ArraySegment<byte> data, int messageType, bool endOfMessage, CancellationToken cancel)
         {
             throw new NotImplementedException();
