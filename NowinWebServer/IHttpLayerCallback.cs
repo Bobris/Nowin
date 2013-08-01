@@ -21,6 +21,7 @@ namespace NowinWebServer
         string LocalIpAddress { get; }
         string LocalPort { get; }
         bool IsLocal { get; }
+        bool IsWebSocketReq { get; }
 
         int ResponseStatusCode { set; }
         string ResponseReasonPhase { set; }
@@ -30,6 +31,7 @@ namespace NowinWebServer
         void AddResponseHeader(string name, string value);
         void AddResponseHeader(string name, IEnumerable<string> values);
 
+        void UpgradeToWebSocket();
         void ResponseFinished();
     }
 }

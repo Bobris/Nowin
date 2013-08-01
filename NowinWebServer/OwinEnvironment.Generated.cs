@@ -11,6 +11,8 @@ using System.Threading.Tasks;
 
 namespace NowinWebServer
 {
+    using WebSocketAccept = Action<IDictionary<string, object>, Func<IDictionary<string, object>, Task>>;
+
     internal partial class OwinEnvironment
     {
         UInt32 _flag0;
@@ -35,11 +37,12 @@ namespace NowinWebServer
         object _ServerLocalIpAddress;
         object _ServerLocalPort;
         object _ServerIsLocal;
+        object _WebSocketAcceptFunc;
 
 		void PropertiesReset()
 		{
-		    _flag0 = 0x7ffffu;
-			_initFlag0 = 0x7ffffu;
+		    _flag0 = 0xfffffu;
+			_initFlag0 = 0xfffffu;
 		     _OwinVersion = null;
 		     _CallCancelled = null;
 		     _RequestProtocol = null;
@@ -59,6 +62,7 @@ namespace NowinWebServer
 		     _ServerLocalIpAddress = null;
 		     _ServerLocalPort = null;
 		     _ServerIsLocal = null;
+		     _WebSocketAcceptFunc = null;
 		}
 
         internal object OwinVersion
@@ -80,6 +84,11 @@ namespace NowinWebServer
             }
         }
 
+		internal void RemoveOwinVersion()
+		{
+            _flag0 &= ~0x1u;
+		}
+
         internal object CallCancelled
         {
             get
@@ -98,6 +107,11 @@ namespace NowinWebServer
                 _CallCancelled = value;
             }
         }
+
+		internal void RemoveCallCancelled()
+		{
+            _flag0 &= ~0x2u;
+		}
 
         internal object RequestProtocol
         {
@@ -118,6 +132,11 @@ namespace NowinWebServer
             }
         }
 
+		internal void RemoveRequestProtocol()
+		{
+            _flag0 &= ~0x4u;
+		}
+
         internal object RequestMethod
         {
             get
@@ -136,6 +155,11 @@ namespace NowinWebServer
                 _RequestMethod = value;
             }
         }
+
+		internal void RemoveRequestMethod()
+		{
+            _flag0 &= ~0x8u;
+		}
 
         internal object RequestScheme
         {
@@ -156,6 +180,11 @@ namespace NowinWebServer
             }
         }
 
+		internal void RemoveRequestScheme()
+		{
+            _flag0 &= ~0x10u;
+		}
+
         internal object RequestPathBase
         {
             get
@@ -174,6 +203,11 @@ namespace NowinWebServer
                 _RequestPathBase = value;
             }
         }
+
+		internal void RemoveRequestPathBase()
+		{
+            _flag0 &= ~0x20u;
+		}
 
         internal object RequestPath
         {
@@ -194,6 +228,11 @@ namespace NowinWebServer
             }
         }
 
+		internal void RemoveRequestPath()
+		{
+            _flag0 &= ~0x40u;
+		}
+
         internal object RequestQueryString
         {
             get
@@ -212,6 +251,11 @@ namespace NowinWebServer
                 _RequestQueryString = value;
             }
         }
+
+		internal void RemoveRequestQueryString()
+		{
+            _flag0 &= ~0x80u;
+		}
 
         internal object RequestHeaders
         {
@@ -232,6 +276,11 @@ namespace NowinWebServer
             }
         }
 
+		internal void RemoveRequestHeaders()
+		{
+            _flag0 &= ~0x100u;
+		}
+
         internal object RequestBody
         {
             get
@@ -250,6 +299,11 @@ namespace NowinWebServer
                 _RequestBody = value;
             }
         }
+
+		internal void RemoveRequestBody()
+		{
+            _flag0 &= ~0x200u;
+		}
 
         internal object ResponseStatusCode
         {
@@ -271,6 +325,11 @@ namespace NowinWebServer
             }
         }
 
+		internal void RemoveResponseStatusCode()
+		{
+            _flag0 &= ~0x400u;
+		}
+
         internal object ResponseReasonPhrase
         {
             get
@@ -290,6 +349,11 @@ namespace NowinWebServer
                 _callback.ResponseReasonPhase = (string) value;
             }
         }
+
+		internal void RemoveResponseReasonPhrase()
+		{
+            _flag0 &= ~0x800u;
+		}
 
         internal object ResponseHeaders
         {
@@ -311,6 +375,11 @@ namespace NowinWebServer
             }
         }
 
+		internal void RemoveResponseHeaders()
+		{
+            _flag0 &= ~0x1000u;
+		}
+
         internal object ResponseBody
         {
             get
@@ -329,6 +398,11 @@ namespace NowinWebServer
                 _ResponseBody = value;
             }
         }
+
+		internal void RemoveResponseBody()
+		{
+            _flag0 &= ~0x2000u;
+		}
 
         internal object ServerRemoteIpAddress
         {
@@ -349,6 +423,11 @@ namespace NowinWebServer
             }
         }
 
+		internal void RemoveServerRemoteIpAddress()
+		{
+            _flag0 &= ~0x4000u;
+		}
+
         internal object ServerRemotePort
         {
             get
@@ -367,6 +446,11 @@ namespace NowinWebServer
                 _ServerRemotePort = value;
             }
         }
+
+		internal void RemoveServerRemotePort()
+		{
+            _flag0 &= ~0x8000u;
+		}
 
         internal object ServerLocalIpAddress
         {
@@ -387,6 +471,11 @@ namespace NowinWebServer
             }
         }
 
+		internal void RemoveServerLocalIpAddress()
+		{
+            _flag0 &= ~0x10000u;
+		}
+
         internal object ServerLocalPort
         {
             get
@@ -406,6 +495,11 @@ namespace NowinWebServer
             }
         }
 
+		internal void RemoveServerLocalPort()
+		{
+            _flag0 &= ~0x20000u;
+		}
+
         internal object ServerIsLocal
         {
             get
@@ -424,6 +518,35 @@ namespace NowinWebServer
                 _ServerIsLocal = value;
             }
         }
+
+		internal void RemoveServerIsLocal()
+		{
+            _flag0 &= ~0x40000u;
+		}
+
+        internal object WebSocketAcceptFunc
+        {
+            get
+            {
+                if (((_initFlag0 & 0x80000u) != 0))
+                {
+                    _WebSocketAcceptFunc = _handler.WebSocketAcceptFunc;
+                    _initFlag0 &= ~0x80000u;
+                }
+                return _WebSocketAcceptFunc;
+            }
+            set
+            {
+                _initFlag0 &= ~0x80000u;
+                _flag0 |= 0x80000u;
+                _WebSocketAcceptFunc = value;
+            }
+        }
+
+		internal void RemoveWebSocketAcceptFunc()
+		{
+            _flag0 &= ~0x80000u;
+		}
 
         private bool PropertiesContainsKey(string key)
         {
@@ -473,6 +596,10 @@ namespace NowinWebServer
                         return true;
                     }
                     if (((_flag0 & 0x20000u) != 0) && key=="server.LocalPort")
+                    {
+                        return true;
+                    }
+                    if (((_flag0 & 0x80000u) != 0) && key=="websocket.Accept")
                     {
                         return true;
                     }
@@ -590,6 +717,11 @@ namespace NowinWebServer
                     if (((_flag0 & 0x20000u) != 0) && key=="server.LocalPort")
                     {
                         value = ServerLocalPort;
+                        return true;
+                    }
+                    if (((_flag0 & 0x80000u) != 0) && key=="websocket.Accept")
+                    {
+                        value = WebSocketAcceptFunc;
                         return true;
                     }
                    break;
@@ -716,6 +848,11 @@ namespace NowinWebServer
                     if (key=="server.LocalPort")
                     {
                         ServerLocalPort = value;
+                        return true;
+                    }
+                    if (key=="websocket.Accept")
+                    {
+                        WebSocketAcceptFunc = value;
                         return true;
                     }
                    break;
@@ -851,6 +988,12 @@ namespace NowinWebServer
                     {
                         _flag0 &= ~0x20000u;
                         _ServerLocalPort = null;
+                        return true;
+                    }
+                    if (((_flag0 & 0x80000u) != 0) && key=="websocket.Accept")
+                    {
+                        _flag0 &= ~0x80000u;
+                        _WebSocketAcceptFunc = null;
                         return true;
                     }
                    break;
@@ -1004,6 +1147,10 @@ namespace NowinWebServer
             {
                 yield return "server.IsLocal";
             }
+            if (((_flag0 & 0x80000u) != 0))
+            {
+                yield return "websocket.Accept";
+            }
         }
 
         private IEnumerable<object> PropertiesValues()
@@ -1084,6 +1231,10 @@ namespace NowinWebServer
             {
                 yield return ServerIsLocal;
             }
+            if (((_flag0 & 0x80000u) != 0))
+            {
+                yield return WebSocketAcceptFunc;
+            }
         }
 
         private IEnumerable<KeyValuePair<string, object>> PropertiesEnumerable()
@@ -1163,6 +1314,10 @@ namespace NowinWebServer
             if (((_flag0 & 0x40000u) != 0))
             {
                 yield return new KeyValuePair<string, object>("server.IsLocal", ServerIsLocal);
+            }
+            if (((_flag0 & 0x80000u) != 0))
+            {
+                yield return new KeyValuePair<string, object>("websocket.Accept", WebSocketAcceptFunc);
             }
         }
     }

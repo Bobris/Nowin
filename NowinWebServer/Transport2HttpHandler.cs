@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Net;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -53,6 +55,24 @@ namespace NowinWebServer
         readonly List<KeyValuePair<string, object>> _responseHeaders = new List<KeyValuePair<string, object>>();
         readonly ThreadLocal<char[]> _charBuffer;
 
+        [Flags]
+        enum WebSocketReqConditions
+        {
+            Start = 0,
+
+            GetMethod = 1,
+            UpgradeWebSocket = 2,
+            ConnectionUpgrade = 4,
+            Version13 = 8,
+            ValidKey = 16,
+
+            AllSatisfied = 31
+        }
+
+        WebSocketReqConditions _webSocketReqCondition;
+        string _webSocketKey;
+        bool _isWebSocket;
+
         public Transport2HttpHandler(IHttpLayerHandler next, bool isSsl, IIpIsLocalChecker ipIsLocalChecker, byte[] buffer, int startBufferOffset, int receiveBufferSize, int constantsOffset, ThreadLocal<char[]> charBuffer)
         {
             _next = next;
@@ -77,9 +97,11 @@ namespace NowinWebServer
 
         void ParseRequest(byte[] buffer, int startBufferOffset, int posOfReqEnd)
         {
+            _isWebSocket = false;
             _next.PrepareForRequest();
             posOfReqEnd -= 2;
             _responseHeaders.Clear();
+            _webSocketReqCondition = WebSocketReqConditions.Start;
             if (_cancellation.IsCancellationRequested)
                 _cancellation = new CancellationTokenSource();
             _responseIsChunked = false;
@@ -144,6 +166,10 @@ namespace NowinWebServer
                     {
                         _isKeepAlive = false;
                     }
+                    else if (value.Equals("Upgrade", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _webSocketReqCondition |= WebSocketReqConditions.ConnectionUpgrade;
+                    }
                 }
             }
             else if (name.Equals("Expect", StringComparison.OrdinalIgnoreCase))
@@ -167,6 +193,25 @@ namespace NowinWebServer
                     RequestIsChunked = true;
                     RequestContentLength = ulong.MaxValue;
                 }
+            }
+            else if (name.Equals("Upgrade", StringComparison.OrdinalIgnoreCase))
+            {
+                if (value.Equals("websocket", StringComparison.OrdinalIgnoreCase))
+                {
+                    _webSocketReqCondition |= WebSocketReqConditions.UpgradeWebSocket;
+                }
+            }
+            else if (name.Equals("Sec-WebSocket-Version", StringComparison.OrdinalIgnoreCase))
+            {
+                if (value=="13")
+                {
+                    _webSocketReqCondition |= WebSocketReqConditions.Version13;
+                }
+            }
+            else if (name.Equals("Sec-WebSocket-Key", StringComparison.OrdinalIgnoreCase))
+            {
+                _webSocketReqCondition |= WebSocketReqConditions.ValidKey;
+                _webSocketKey = value;
             }
             _next.AddRequestHeader(name, value);
         }
@@ -368,6 +413,7 @@ namespace NowinWebServer
                     if (buffer[p + 1] == 'E' && buffer[p + 2] == 'T' && buffer[p + 3] == ' ')
                     {
                         pos = p + 4;
+                        _webSocketReqCondition |= WebSocketReqConditions.GetMethod;
                         return "GET";
                     }
                     break;
@@ -819,6 +865,10 @@ namespace NowinWebServer
                 {
                     tcs.SetResult(true);
                 }
+                else if (_isWebSocket)
+                {
+                    _next.UpgradedToWebSocket(true);
+                }
             }
             else
             {
@@ -827,6 +877,10 @@ namespace NowinWebServer
                 if (tcs != null)
                 {
                     tcs.SetException(exception);
+                }
+                else if (_isWebSocket)
+                {
+                    _next.UpgradedToWebSocket(false);
                 }
                 _isKeepAlive = false;
             }
@@ -914,6 +968,11 @@ namespace NowinWebServer
             }
         }
 
+        public bool IsWebSocketReq
+        {
+            get { return _webSocketReqCondition == WebSocketReqConditions.AllSatisfied; }
+        }
+
         public int ResponseStatusCode
         {
             set { _statusCode = value; }
@@ -942,6 +1001,53 @@ namespace NowinWebServer
         public void AddResponseHeader(string name, IEnumerable<string> values)
         {
             _responseHeaders.Add(new KeyValuePair<string, object>(name, values));
+        }
+
+        public void UpgradeToWebSocket()
+        {
+            if (_responseHeadersSend)
+            {
+                _isKeepAlive = false;
+                Callback.StartDisconnect();
+                return;
+            }
+            _next.PrepareResponseHeaders();
+            _isKeepAlive = false;
+            _responseHeaderPos = 0;
+            HeaderAppend("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ");
+            var sha1 = new SHA1Managed();
+            var hash = sha1.ComputeHash(Encoding.ASCII.GetBytes(_webSocketKey + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"));
+            HeaderAppend(Convert.ToBase64String(hash));
+            HeaderAppendCrLf();
+            foreach (var header in _responseHeaders)
+            {
+                if (header.Value is String)
+                {
+                    HeaderAppend(header.Key);
+                    HeaderAppend(": ");
+                    HeaderAppend((String)header.Value);
+                    HeaderAppendCrLf();
+                }
+                else
+                {
+                    foreach (var value in (IEnumerable<string>)header.Value)
+                    {
+                        HeaderAppend(header.Key);
+                        HeaderAppend(": ");
+                        HeaderAppend(value);
+                        HeaderAppendCrLf();
+                    }
+                }
+            }
+            _responseHeaders.Clear();
+            HeaderAppendCrLf();
+            if (_responseHeaderPos > ReceiveBufferSize)
+            {
+                SendInternalServerError();
+                throw new ArgumentOutOfRangeException();
+            }
+            _isWebSocket = true;
+            Callback.StartSend(Buffer, StartBufferOffset + ReceiveBufferSize, _responseHeaderPos);
         }
 
         public void ResponseFinished()

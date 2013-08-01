@@ -8,5 +8,6 @@ namespace NowinWebServer
         void AddRequestHeader(string name, string value);
         void HandleRequest();
         void PrepareResponseHeaders();
+        void UpgradedToWebSocket(bool success);
     }
 }

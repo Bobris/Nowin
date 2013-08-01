@@ -1,10 +1,51 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NowinWebServer
 {
     using OwinApp = Func<IDictionary<string, object>, Task>;
+    using WebSocketAccept = Action<IDictionary<string, object>, Func<IDictionary<string, object>, Task>>;
+    using WebSocketSendAsync =
+         Func
+         <
+             ArraySegment<byte> /* data */,
+             int /* messageType */,
+             bool /* endOfMessage */,
+             CancellationToken /* cancel */,
+             Task
+         >;
+    using WebSocketReceiveAsync =
+        Func
+        <
+            ArraySegment<byte> /* data */,
+            CancellationToken /* cancel */,
+            Task
+            <
+                Tuple
+                <
+                    int /* messageType */,
+                    bool /* endOfMessage */,
+                    int /* count */
+                >
+            >
+        >;
+    using WebSocketReceiveTuple =
+        Tuple
+        <
+            int /* messageType */,
+            bool /* endOfMessage */,
+            int /* count */
+        >;
+    using WebSocketCloseAsync =
+        Func
+        <
+            int /* closeStatus */,
+            string /* closeDescription */,
+            CancellationToken /* cancel */,
+            Task
+        >;
 
     public class OwinHandler : IHttpLayerHandler
     {
@@ -14,8 +55,15 @@ namespace NowinWebServer
         internal readonly Dictionary<string, string[]> ReqHeaders;
         internal readonly Dictionary<string, string[]> RespHeaders;
         IDictionary<string, string[]> _overwrittenResponseHeaders;
+        bool _inWebSocket;
+        OwinApp _webSocketFunc;
 
         public IHttpLayerCallback Callback { set; internal get; }
+
+        public WebSocketAccept WebSocketAcceptFunc
+        {
+            get { return WebSocketAcceptMethod; }
+        }
 
         public OwinHandler(OwinApp app)
         {
@@ -31,6 +79,8 @@ namespace NowinWebServer
 
         public void PrepareForRequest()
         {
+            _inWebSocket = false;
+            _webSocketFunc = null;
             _environment.Reset();
             ReqHeaders.Clear();
             RespHeaders.Clear();
@@ -55,9 +105,12 @@ namespace NowinWebServer
         {
             Callback.ResponseStatusCode = 200; // Default status code
             _overwrittenResponseHeaders = RespHeaders;
+            if (!Callback.IsWebSocketReq)
+                _environment.RemoveWebSocketAcceptFunc();
             var task = _app(_environment);
             if (task.IsCompleted)
             {
+                if (_inWebSocket) return;
                 if (task.IsFaulted || task.IsCanceled)
                 {
                     Callback.ResponseStatusCode = 500;
@@ -68,13 +121,14 @@ namespace NowinWebServer
             }
             task.ContinueWith((t, o) =>
                 {
+                    if (((OwinHandler)o)._inWebSocket) return;
+                    var callback = ((OwinHandler) o).Callback;
                     if (t.IsFaulted || t.IsCanceled)
                     {
-                        Callback.ResponseStatusCode = 500;
-                        Callback.ResponseReasonPhase = null;
+                        callback.ResponseStatusCode = 500;
+                        callback.ResponseReasonPhase = null;
                     }
-                    Callback.ResponseFinished();
-                    _environment.Reset();
+                    callback.ResponseFinished();
                 }, this);
         }
 
@@ -135,5 +189,55 @@ namespace NowinWebServer
         {
             _overwrittenResponseHeaders = value;
         }
+
+        void WebSocketAcceptMethod(IDictionary<string, object> dictionary, Func<IDictionary<string, object>, Task> func)
+        {
+            // TODO handle dictionary parameter
+            _webSocketFunc = func;
+            _inWebSocket = true;
+            Callback.UpgradeToWebSocket();
+        }
+
+        public void UpgradedToWebSocket(bool success)
+        {
+            if (!success)
+            {
+                Callback.ResponseStatusCode = 500;
+                Callback.ResponseFinished();
+                return;
+            }
+            var webSocketEnv = new Dictionary<string, object>();
+            webSocketEnv.Add("websocket.SendAsync", (WebSocketSendAsync)WebSocketSendAsyncMethod);
+            webSocketEnv.Add("websocket.ReceiveAsync", (WebSocketReceiveAsync)WebSocketReceiveAsyncMethod);
+            webSocketEnv.Add("websocket.CloseAsync", (WebSocketCloseAsync)WebSocketCloseAsyncMethod);
+            webSocketEnv.Add("websocket.Version", "1.0");
+            webSocketEnv.Add("websocket.CallCancelled", Callback.CallCancelled);
+            try
+            {
+                var task = _webSocketFunc(webSocketEnv);
+                task.ContinueWith((t, o) => ((OwinHandler)o).Callback.ResponseFinished(), this);
+            }
+            catch
+            {
+                Callback.ResponseFinished();
+            }
+        }
+
+
+        Task WebSocketSendAsyncMethod(ArraySegment<byte> data, int messageType, bool endOfMessage, CancellationToken cancel)
+        {
+            throw new NotImplementedException();
+        }
+
+        Task<WebSocketReceiveTuple> WebSocketReceiveAsyncMethod(ArraySegment<byte> data, CancellationToken cancel)
+        {
+            throw new NotImplementedException();
+        }
+
+        Task WebSocketCloseAsyncMethod(int closeStatus, string closeDescription, CancellationToken cancel)
+        {
+            throw new NotImplementedException();
+        }
+
     }
 }

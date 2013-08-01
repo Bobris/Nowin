@@ -28,6 +28,9 @@ var props = new[]
   new {Key="server.LocalIpAddress", Type="string", Name="ServerLocalIpAddress", Get="_callback.LocalIpAddress", Set="" },
   new {Key="server.LocalPort", Type="string", Name="ServerLocalPort", Get="_callback.LocalPort", Set="" },
   new {Key="server.IsLocal", Type="bool", Name="ServerIsLocal", Get="_callback.IsLocal", Set="" },
+
+// WebSockets key
+  new {Key="websocket.Accept", Type="WebSocketAccept", Name="WebSocketAcceptFunc", Get="_handler.WebSocketAcceptFunc", Set="" },
 }.Select((prop, Index)=>new {prop.Key, prop.Type, prop.Name, prop.Get, prop.Set, Index});
 
 var lengths = props.GroupBy(prop=>prop.Key.Length);
@@ -55,6 +58,8 @@ using System.Threading.Tasks;
 
 namespace NowinWebServer
 {
+    using WebSocketAccept = Action<IDictionary<string, object>, Func<IDictionary<string, object>, Task>>;
+
     internal partial class OwinEnvironment
     {
         UInt32 _flag0;
@@ -95,6 +100,11 @@ namespace NowinWebServer
 <# } #>
             }
         }
+
+		internal void Remove<#=prop.Name#>()
+		{
+            <#=Clear(prop.Index)#>;
+		}
 
 <# } #>
         private bool PropertiesContainsKey(string key)
