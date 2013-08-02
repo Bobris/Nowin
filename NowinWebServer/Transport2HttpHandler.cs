@@ -17,7 +17,7 @@ namespace NowinWebServer
         public readonly int ReceiveBufferSize;
         public readonly int ResponseBodyBufferOffset;
         readonly int _constantsOffset;
-        internal readonly byte[] Buffer;
+        readonly byte[] _buffer;
         public int ReceiveBufferPos;
         int _receiveBufferFullness;
         bool _waitingForRequest;
@@ -71,6 +71,7 @@ namespace NowinWebServer
         WebSocketReqConditions _webSocketReqCondition;
         string _webSocketKey;
         bool _isWebSocket;
+        bool _startedReceiveData;
 
         public Transport2HttpHandler(IHttpLayerHandler next, bool isSsl, IIpIsLocalChecker ipIsLocalChecker, byte[] buffer, int startBufferOffset, int receiveBufferSize, int constantsOffset, ThreadLocal<char[]> charBuffer)
         {
@@ -80,7 +81,7 @@ namespace NowinWebServer
             ResponseBodyBufferOffset = StartBufferOffset + ReceiveBufferSize * 2 + 8;
             _constantsOffset = constantsOffset;
             _charBuffer = charBuffer;
-            Buffer = buffer;
+            _buffer = buffer;
             _isSsl = isSsl;
             _ipIsLocalChecker = ipIsLocalChecker;
             _cancellation = new CancellationTokenSource();
@@ -544,9 +545,9 @@ namespace NowinWebServer
         {
             // It always fits so skip buffer size check
             var j = StartBufferOffset + ReceiveBufferSize + _responseHeaderPos;
-            Buffer[j++] = (byte)('0' + status / 100);
-            Buffer[j++] = (byte)('0' + status / 10 % 10);
-            Buffer[j] = (byte)('0' + status % 10);
+            _buffer[j++] = (byte)('0' + status / 100);
+            _buffer[j++] = (byte)('0' + status / 10 % 10);
+            _buffer[j] = (byte)('0' + status % 10);
             _responseHeaderPos += 3;
         }
 
@@ -558,8 +559,8 @@ namespace NowinWebServer
                 return;
             }
             var i = StartBufferOffset + ReceiveBufferSize + _responseHeaderPos;
-            Buffer[i] = 13;
-            Buffer[i + 1] = 10;
+            _buffer[i] = 13;
+            _buffer[i + 1] = 10;
             _responseHeaderPos += 2;
         }
 
@@ -573,7 +574,7 @@ namespace NowinWebServer
             var j = StartBufferOffset + ReceiveBufferSize + _responseHeaderPos;
             foreach (var ch in text)
             {
-                Buffer[j++] = (byte)ch;
+                _buffer[j++] = (byte)ch;
             }
             _responseHeaderPos += text.Length;
         }
@@ -581,7 +582,7 @@ namespace NowinWebServer
         void NormalizeReceiveBuffer()
         {
             if (ReceiveBufferPos == 0) return;
-            Array.Copy(Buffer, StartBufferOffset + ReceiveBufferPos, Buffer, StartBufferOffset, _receiveBufferFullness - StartBufferOffset - ReceiveBufferPos);
+            Array.Copy(_buffer, StartBufferOffset + ReceiveBufferPos, _buffer, StartBufferOffset, _receiveBufferFullness - StartBufferOffset - ReceiveBufferPos);
             _receiveBufferFullness -= ReceiveBufferPos;
             ReceiveBufferPos = 0;
         }
@@ -598,7 +599,7 @@ namespace NowinWebServer
                     SendInternalServerError();
                     return;
                 }
-                OptimallyMergeTwoRegions(Buffer, StartBufferOffset + ReceiveBufferSize, _responseHeaderPos, ref offset, ref len);
+                OptimallyMergeTwoRegions(_buffer, StartBufferOffset + ReceiveBufferSize, _responseHeaderPos, ref offset, ref len);
                 _responseHeadersSend = true;
             }
             else
@@ -610,12 +611,12 @@ namespace NowinWebServer
                 }
                 if (_responseIsChunked)
                 {
-                    WrapInChunk(Buffer, ref offset, ref len);
-                    AppendZeroChunk(Buffer, offset, ref len);
+                    WrapInChunk(_buffer, ref offset, ref len);
+                    AppendZeroChunk(_buffer, offset, ref len);
                 }
             }
             _lastPacket = true;
-            Callback.StartSend(Buffer, offset, len);
+            Callback.StartSend(_buffer, offset, len);
         }
 
         static void AppendZeroChunk(byte[] buffer, int offset, ref int len)
@@ -633,7 +634,7 @@ namespace NowinWebServer
         {
             while (true)
             {
-                var len = await _reqRespStream.ReadAsync(Buffer, StartBufferOffset + ReceiveBufferSize, ReceiveBufferSize);
+                var len = await _reqRespStream.ReadAsync(_buffer, StartBufferOffset + ReceiveBufferSize, ReceiveBufferSize);
                 if (len < ReceiveBufferSize) return;
             }
         }
@@ -685,21 +686,21 @@ namespace NowinWebServer
         {
             if (!_responseHeadersSend)
             {
-                if (Buffer != buffer) throw new InvalidOperationException();
+                if (_buffer != buffer) throw new InvalidOperationException();
                 FillResponse(false);
                 if (_responseHeaderPos > ReceiveBufferSize) throw new ArgumentException(string.Format("Response headers are longer({0}) than buffer({1})", _responseHeaderPos, ReceiveBufferSize));
                 if (_responseIsChunked && len != 0)
                 {
-                    WrapInChunk(Buffer, ref startOffset, ref len);
+                    WrapInChunk(_buffer, ref startOffset, ref len);
                 }
-                OptimallyMergeTwoRegions(Buffer, StartBufferOffset + ReceiveBufferSize, _responseHeaderPos, ref startOffset, ref len);
+                OptimallyMergeTwoRegions(_buffer, StartBufferOffset + ReceiveBufferSize, _responseHeaderPos, ref startOffset, ref len);
                 _responseHeadersSend = true;
             }
             else if (_responseIsChunked)
             {
-                if (Buffer != buffer) throw new InvalidOperationException();
+                if (_buffer != buffer) throw new InvalidOperationException();
                 if (len == 0) return Task.Delay(0);
-                WrapInChunk(Buffer, ref startOffset, ref len);
+                WrapInChunk(_buffer, ref startOffset, ref len);
             }
             if (_responseContentLength != ulong.MaxValue && _reqRespStream.ResponseLength > _responseContentLength)
             {
@@ -749,7 +750,7 @@ namespace NowinWebServer
 
         public void Send100Continue()
         {
-            Callback.StartSend(Buffer, _constantsOffset, Server.Status100Continue.Length);
+            Callback.StartSend(_buffer, _constantsOffset, Server.Status100Continue.Length);
         }
 
         public void StartNextReceive()
@@ -758,7 +759,7 @@ namespace NowinWebServer
             var count = StartBufferOffset + ReceiveBufferSize - _receiveBufferFullness;
             if (count > 0)
             {
-                Callback.StartReceive(Buffer, _receiveBufferFullness, count);
+                Callback.StartReceive(_buffer, _receiveBufferFullness, count);
             }
         }
 
@@ -770,7 +771,7 @@ namespace NowinWebServer
 
         public void PrepareAccept()
         {
-            Callback.StartAccept(Buffer, StartBufferOffset, ReceiveBufferSize);
+            Callback.StartAccept(_buffer, StartBufferOffset, ReceiveBufferSize);
         }
 
         public void FinishAccept(byte[] buffer, int offset, int length, IPEndPoint remoteEndPoint, IPEndPoint localEndPoint)
@@ -806,6 +807,11 @@ namespace NowinWebServer
                 }
                 else
                 {
+                    if (_startedReceiveData)
+                    {
+                        _startedReceiveData = false;
+                        _next.FinishReceiveData(false);
+                    }
                     _cancellation.Cancel();
                     _reqRespStream.ConnectionClosed();
                 }
@@ -817,7 +823,7 @@ namespace NowinWebServer
             if (_waitingForRequest)
             {
                 NormalizeReceiveBuffer();
-                var posOfReqEnd = FindRequestEnd(Buffer, StartBufferOffset, _receiveBufferFullness);
+                var posOfReqEnd = FindRequestEnd(_buffer, StartBufferOffset, _receiveBufferFullness);
                 if (posOfReqEnd < 0)
                 {
                     var count = StartBufferOffset + ReceiveBufferSize - _receiveBufferFullness;
@@ -833,7 +839,7 @@ namespace NowinWebServer
                 try
                 {
                     ReceiveBufferPos = posOfReqEnd - StartBufferOffset;
-                    ParseRequest(Buffer, StartBufferOffset, posOfReqEnd);
+                    ParseRequest(_buffer, StartBufferOffset, posOfReqEnd);
                     _next.HandleRequest();
                 }
                 catch (Exception)
@@ -845,7 +851,12 @@ namespace NowinWebServer
             }
             else
             {
-                if (_reqRespStream.ProcessDataAndShouldReadMore())
+                if (_startedReceiveData)
+                {
+                    _startedReceiveData = false;
+                    _next.FinishReceiveData(true);
+                }
+                else if (_reqRespStream.ProcessDataAndShouldReadMore())
                 {
                     StartNextReceive();
                 }
@@ -1039,7 +1050,7 @@ namespace NowinWebServer
                 throw new ArgumentOutOfRangeException();
             }
             _isWebSocket = true;
-            Callback.StartSend(Buffer, StartBufferOffset + ReceiveBufferSize, _responseHeaderPos);
+            Callback.StartSend(_buffer, StartBufferOffset + ReceiveBufferSize, _responseHeaderPos);
         }
 
         public void ResponseFinished()
@@ -1071,6 +1082,32 @@ namespace NowinWebServer
                 return;
             }
             SendHttpResponseAndPrepareForNext();
+        }
+
+        public byte[] Buffer
+        {
+            get { return _buffer; }
+        }
+
+        public int ReceiveDataOffset
+        {
+            get { return StartBufferOffset + ReceiveBufferPos; }
+        }
+
+        public int ReceiveDataLength
+        {
+            get { return _receiveBufferFullness - StartBufferOffset - ReceiveBufferPos; }
+        }
+
+        public void ConsumeReceiveData(int count)
+        {
+            ReceiveBufferPos += count;
+        }
+
+        public void StartReceiveData()
+        {
+            _startedReceiveData = true;
+            StartNextReceive();
         }
 
         public bool CanUseDirectWrite()

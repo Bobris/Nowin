@@ -32,5 +32,12 @@ namespace NowinWebServer
 
         void UpgradeToWebSocket();
         void ResponseFinished();
+
+        byte[] Buffer { get; }
+        int ReceiveDataOffset { get; }
+        int ReceiveDataLength { get; }
+        void ConsumeReceiveData(int count);
+        void StartReceiveData();
+
     }
 }

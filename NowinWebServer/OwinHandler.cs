@@ -57,6 +57,18 @@ namespace NowinWebServer
         IDictionary<string, string[]> _overwrittenResponseHeaders;
         bool _inWebSocket;
         OwinApp _webSocketFunc;
+        ArraySegment<byte> _webSocketReceiveSegment;
+        TaskCompletionSource<WebSocketReceiveTuple> _webSocketReceiveTcs;
+        WebSocketReceiveState _webSocketReceiveState;
+        ulong _webSocketFrameLen;
+        byte _webSocketMask0;
+        byte _webSocketMask1;
+        byte _webSocketMask2;
+        byte _webSocketMask3;
+        bool _webSocketFrameLast;
+        byte _webSocketFrameOpcode;
+        int _webSocketReceiveCount;
+        int _maskIndex;
 
         public IHttpLayerCallback Callback { set; internal get; }
 
@@ -122,7 +134,7 @@ namespace NowinWebServer
             task.ContinueWith((t, o) =>
                 {
                     if (((OwinHandler)o)._inWebSocket) return;
-                    var callback = ((OwinHandler) o).Callback;
+                    var callback = ((OwinHandler)o).Callback;
                     if (t.IsFaulted || t.IsCanceled)
                     {
                         callback.ResponseStatusCode = 500;
@@ -195,6 +207,7 @@ namespace NowinWebServer
             // TODO handle dictionary parameter
             _webSocketFunc = func;
             _inWebSocket = true;
+            _webSocketReceiveState = WebSocketReceiveState.Header;
             Callback.UpgradeToWebSocket();
         }
 
@@ -206,12 +219,14 @@ namespace NowinWebServer
                 Callback.ResponseFinished();
                 return;
             }
-            var webSocketEnv = new Dictionary<string, object>();
-            webSocketEnv.Add("websocket.SendAsync", (WebSocketSendAsync)WebSocketSendAsyncMethod);
-            webSocketEnv.Add("websocket.ReceiveAsync", (WebSocketReceiveAsync)WebSocketReceiveAsyncMethod);
-            webSocketEnv.Add("websocket.CloseAsync", (WebSocketCloseAsync)WebSocketCloseAsyncMethod);
-            webSocketEnv.Add("websocket.Version", "1.0");
-            webSocketEnv.Add("websocket.CallCancelled", Callback.CallCancelled);
+            var webSocketEnv = new Dictionary<string, object>
+                {
+                    {"websocket.SendAsync", (WebSocketSendAsync) WebSocketSendAsyncMethod},
+                    {"websocket.ReceiveAsync", (WebSocketReceiveAsync) WebSocketReceiveAsyncMethod},
+                    {"websocket.CloseAsync", (WebSocketCloseAsync) WebSocketCloseAsyncMethod},
+                    {"websocket.Version", "1.0"},
+                    {"websocket.CallCancelled", Callback.CallCancelled}
+                };
             try
             {
                 var task = _webSocketFunc(webSocketEnv);
@@ -223,6 +238,16 @@ namespace NowinWebServer
             }
         }
 
+        public void FinishReceiveData(bool success)
+        {
+            if (!success)
+            {
+                _webSocketReceiveTcs.SetCanceled();
+                return;
+            }
+            ParseWebSocketReceivedData();
+        }
+
         Task WebSocketSendAsyncMethod(ArraySegment<byte> data, int messageType, bool endOfMessage, CancellationToken cancel)
         {
             throw new NotImplementedException();
@@ -230,13 +255,142 @@ namespace NowinWebServer
 
         Task<WebSocketReceiveTuple> WebSocketReceiveAsyncMethod(ArraySegment<byte> data, CancellationToken cancel)
         {
-            throw new NotImplementedException();
+            _webSocketReceiveSegment = data;
+            _webSocketReceiveTcs = new TaskCompletionSource<WebSocketReceiveTuple>();
+            _webSocketReceiveCount = 0;
+            ParseWebSocketReceivedData();
+            return _webSocketReceiveTcs.Task;
         }
 
         Task WebSocketCloseAsyncMethod(int closeStatus, string closeDescription, CancellationToken cancel)
         {
-            throw new NotImplementedException();
+            // TODO Close crap
+            return Task.Delay(0);
         }
 
+        void ParseWebSocketReceivedData()
+        {
+            if (Callback.ReceiveDataLength == 0)
+            {
+                Callback.StartReceiveData();
+                return;
+            }
+            if (_webSocketReceiveState == WebSocketReceiveState.Header)
+            {
+                var len = ParseHeader(Callback.Buffer, Callback.ReceiveDataOffset, Callback.ReceiveDataLength);
+                if (len > 0)
+                {
+                    Callback.ConsumeReceiveData(len);
+                    _webSocketReceiveState = WebSocketReceiveState.Body;
+                    _maskIndex = 0;
+                }
+                else if (len < 0)
+                {
+                    _webSocketReceiveState = WebSocketReceiveState.Error;
+                }
+            }
+            if (_webSocketReceiveState == WebSocketReceiveState.Body)
+            {
+                var len = (int)Math.Min(_webSocketFrameLen, (ulong)_webSocketReceiveSegment.Count);
+                if (Callback.ReceiveDataLength < len) len = Callback.ReceiveDataLength;
+                Unmask(Callback.Buffer, Callback.ReceiveDataOffset, _webSocketReceiveSegment.Array,
+                       _webSocketReceiveSegment.Offset, len);
+                Callback.ConsumeReceiveData(len);
+                _webSocketFrameLen -= (ulong)len;
+                _webSocketReceiveCount += len;
+                _webSocketReceiveSegment = new ArraySegment<byte>(_webSocketReceiveSegment.Array, _webSocketReceiveSegment.Offset + len, _webSocketReceiveSegment.Count - len);
+                if (_webSocketFrameLen==0)
+                {
+                    _webSocketReceiveTcs.SetResult(new WebSocketReceiveTuple(_webSocketFrameOpcode,_webSocketFrameLast,_webSocketReceiveCount));
+                    _webSocketReceiveState = WebSocketReceiveState.Header;
+                }
+                else if (_webSocketReceiveSegment.Count==0)
+                {
+                    _webSocketReceiveTcs.SetResult(new WebSocketReceiveTuple(_webSocketFrameOpcode, false, _webSocketReceiveCount));
+                }
+                if (Callback.ReceiveDataLength == 0)
+                {
+                    Callback.StartReceiveData();
+                }
+            }
+            else if (_webSocketReceiveState == WebSocketReceiveState.Error)
+            {
+                _webSocketReceiveTcs.SetCanceled();
+            }
+        }
+
+        void Unmask(byte[] src, int srcOfs, byte[] dst, int dstOfs, int len)
+        {
+            while (len-- > 0)
+            {
+                byte b;
+                if (_maskIndex == 0) b = _webSocketMask0;
+                else if (_maskIndex == 1) b = _webSocketMask1;
+                else if (_maskIndex == 2) b = _webSocketMask2;
+                else b = _webSocketMask3;
+                dst[dstOfs] = (byte)(src[srcOfs] ^ b);
+                srcOfs++;
+                dstOfs++;
+                _maskIndex = (_maskIndex + 1) & 3;
+            }
+        }
+
+        int ParseHeader(byte[] buffer, int offset, int length)
+        {
+            var b0 = buffer[offset];
+            if ((b0 & 0x70) != 0) return -1;
+            if (!ValidWebSocketOpcode((byte)(b0 & 0xf))) return -1;
+            if (length < 2) return 0;
+            var b = buffer[offset + 1];
+            if ((b & 0x80) != 0x80) return -1;
+            b = (byte)(b & 0x7f);
+            _webSocketFrameLast = (b0 & 0x80) != 0;
+            _webSocketFrameOpcode = (byte)(b0 & 0xf);
+            if (b == 126)
+            {
+                if (length < 8) return 0;
+                _webSocketFrameLen = (ulong)((buffer[offset + 2] << 8) + buffer[offset + 3]);
+                ReadMask(buffer, offset + 4);
+                return 8;
+            }
+            if (b == 127)
+            {
+                if (length < 14) return 0;
+                _webSocketFrameLen = (ulong)((buffer[offset + 2] << 56) +
+                    (buffer[offset + 3] << 48) +
+                    (buffer[offset + 4] << 40) +
+                    (buffer[offset + 5] << 32) +
+                    (buffer[offset + 6] << 24) +
+                    (buffer[offset + 7] << 16) +
+                    (buffer[offset + 8] << 8) +
+                    buffer[offset + 9]);
+                ReadMask(buffer, offset + 10);
+                return 14;
+            }
+            if (length < 6) return 0;
+            _webSocketFrameLen = b;
+            ReadMask(buffer, offset + 2);
+            return 6;
+        }
+
+        void ReadMask(byte[] buffer, int offset)
+        {
+            _webSocketMask0 = buffer[offset];
+            _webSocketMask1 = buffer[offset + 1];
+            _webSocketMask2 = buffer[offset + 2];
+            _webSocketMask3 = buffer[offset + 3];
+        }
+
+        bool ValidWebSocketOpcode(byte i)
+        {
+            return i <= 2 || i >= 8 && i <= 10;
+        }
+
+        enum WebSocketReceiveState
+        {
+            Header,
+            Body,
+            Error
+        }
     }
 }
