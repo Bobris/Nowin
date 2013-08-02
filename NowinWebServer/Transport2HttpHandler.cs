@@ -875,6 +875,7 @@ namespace NowinWebServer
                 }
                 else if (_isWebSocket)
                 {
+                    _isWebSocket = false;
                     _next.UpgradedToWebSocket(true);
                 }
             }
@@ -889,6 +890,7 @@ namespace NowinWebServer
                 }
                 else if (_isWebSocket)
                 {
+                    _isWebSocket = false;
                     _next.UpgradedToWebSocket(false);
                 }
             }

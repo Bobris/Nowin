@@ -248,23 +248,24 @@ namespace NowinWebServer
             ParseWebSocketReceivedData();
         }
 
-        public void FinishSendData(bool success)
-        {
-            throw new NotImplementedException();
-        }
-
         Task WebSocketSendAsyncMethod(ArraySegment<byte> data, int messageType, bool endOfMessage, CancellationToken cancel)
         {
-            throw new NotImplementedException();
+            var buf = Callback.Buffer;
+            var o = Callback.SendDataOffset;
+            buf[o] = (byte) ((endOfMessage ? 0x80 : 0) + messageType);
+            buf[o + 1] = (byte) data.Count;
+            Array.Copy(data.Array,data.Offset,buf,o+2,data.Count);
+            return Callback.SendData(buf, o, 2 + data.Count);
         }
 
         Task<WebSocketReceiveTuple> WebSocketReceiveAsyncMethod(ArraySegment<byte> data, CancellationToken cancel)
         {
             _webSocketReceiveSegment = data;
-            _webSocketReceiveTcs = new TaskCompletionSource<WebSocketReceiveTuple>();
+            var tcs = new TaskCompletionSource<WebSocketReceiveTuple>();
+            _webSocketReceiveTcs = tcs;
             _webSocketReceiveCount = 0;
             ParseWebSocketReceivedData();
-            return _webSocketReceiveTcs.Task;
+            return tcs.Task;
         }
 
         Task WebSocketCloseAsyncMethod(int closeStatus, string closeDescription, CancellationToken cancel)
@@ -280,6 +281,7 @@ namespace NowinWebServer
                 Callback.StartReceiveData();
                 return;
             }
+            if (_webSocketReceiveTcs == null) return;
             if (_webSocketReceiveState == WebSocketReceiveState.Header)
             {
                 var len = ParseHeader(Callback.Buffer, Callback.ReceiveDataOffset, Callback.ReceiveDataLength);
@@ -306,12 +308,16 @@ namespace NowinWebServer
                 _webSocketReceiveSegment = new ArraySegment<byte>(_webSocketReceiveSegment.Array, _webSocketReceiveSegment.Offset + len, _webSocketReceiveSegment.Count - len);
                 if (_webSocketFrameLen==0)
                 {
-                    _webSocketReceiveTcs.SetResult(new WebSocketReceiveTuple(_webSocketFrameOpcode,_webSocketFrameLast,_webSocketReceiveCount));
+                    var tcs = _webSocketReceiveTcs;
+                    _webSocketReceiveTcs = null;
+                    tcs.SetResult(new WebSocketReceiveTuple(_webSocketFrameOpcode, _webSocketFrameLast, _webSocketReceiveCount));
                     _webSocketReceiveState = WebSocketReceiveState.Header;
                 }
                 else if (_webSocketReceiveSegment.Count==0)
                 {
-                    _webSocketReceiveTcs.SetResult(new WebSocketReceiveTuple(_webSocketFrameOpcode, false, _webSocketReceiveCount));
+                    var tcs = _webSocketReceiveTcs;
+                    _webSocketReceiveTcs = null;
+                    tcs.SetResult(new WebSocketReceiveTuple(_webSocketFrameOpcode, false, _webSocketReceiveCount));
                 }
                 if (Callback.ReceiveDataLength == 0)
                 {
@@ -320,7 +326,9 @@ namespace NowinWebServer
             }
             else if (_webSocketReceiveState == WebSocketReceiveState.Error)
             {
-                _webSocketReceiveTcs.SetCanceled();
+                var tcs = _webSocketReceiveTcs;
+                _webSocketReceiveTcs = null;
+                tcs.SetCanceled();
             }
         }
 
