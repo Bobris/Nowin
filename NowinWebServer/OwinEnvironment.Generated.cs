@@ -287,7 +287,7 @@ namespace NowinWebServer
             {
                 if (((_initFlag0 & 0x200u) != 0))
                 {
-                    _RequestBody = _callback.RequestBody;
+                    _RequestBody = _callback.ReqRespBody;
                     _initFlag0 &= ~0x200u;
                 }
                 return _RequestBody;
@@ -386,7 +386,7 @@ namespace NowinWebServer
             {
                 if (((_initFlag0 & 0x2000u) != 0))
                 {
-                    _ResponseBody = _callback.ResponseBody;
+                    _ResponseBody = _callback.ReqRespBody;
                     _initFlag0 &= ~0x2000u;
                 }
                 return _ResponseBody;

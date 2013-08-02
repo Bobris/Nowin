@@ -74,8 +74,7 @@
     <Compile Include="ITransportLayerHandler.cs" />
     <Compile Include="OwinKeys.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RequestStream.cs" />
-    <Compile Include="ResponseStream.cs" />
+    <Compile Include="ReqRespStream.cs" />
     <Compile Include="SaeaLayerCallback.cs" />
     <Compile Include="Server.cs" />
   </ItemGroup>

@@ -871,6 +871,7 @@ namespace NowinWebServer
             {
                 var tcs = _tcsSend;
                 _tcsSend = null;
+                _isKeepAlive = false;
                 if (tcs != null)
                 {
                     tcs.SetException(exception);
@@ -879,7 +880,6 @@ namespace NowinWebServer
                 {
                     _next.UpgradedToWebSocket(false);
                 }
-                _isKeepAlive = false;
             }
             if (_lastPacket)
             {
@@ -901,12 +901,7 @@ namespace NowinWebServer
             get { return _cancellation.Token; }
         }
 
-        public Stream ResponseBody
-        {
-            get { return _reqRespStream; }
-        }
-
-        public Stream RequestBody
+        public Stream ReqRespBody
         {
             get { return _reqRespStream; }
         }

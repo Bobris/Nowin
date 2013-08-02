@@ -8,8 +8,7 @@ namespace NowinWebServer
     {
         CancellationToken CallCancelled { get; }
 
-        Stream ResponseBody { get; }
-        Stream RequestBody { get; }
+        Stream ReqRespBody { get; }
 
         string RequestPath { get; }
         string RequestQueryString { get; }
