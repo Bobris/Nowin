@@ -29,8 +29,7 @@ namespace NowinWebServer
         bool _responseHeadersSend;
         readonly bool _isSsl;
         readonly IIpIsLocalChecker _ipIsLocalChecker;
-        readonly ResponseStream _responseStream;
-        readonly RequestStream _requestStream;
+        readonly ReqRespStream _reqRespStream;
         TaskCompletionSource<bool> _tcsSend;
         CancellationTokenSource _cancellation;
         int _responseHeaderPos;
@@ -85,8 +84,7 @@ namespace NowinWebServer
             _isSsl = isSsl;
             _ipIsLocalChecker = ipIsLocalChecker;
             _cancellation = new CancellationTokenSource();
-            _responseStream = new ResponseStream(this);
-            _requestStream = new RequestStream(this);
+            _reqRespStream = new ReqRespStream(this);
             _next.Callback = this;
         }
 
@@ -474,11 +472,11 @@ namespace NowinWebServer
             }
             if (finished)
             {
-                if (_responseContentLength != ulong.MaxValue && _responseContentLength != (ulong)_responseStream.Length)
+                if (_responseContentLength != ulong.MaxValue && _responseContentLength != _reqRespStream.ResponseLength)
                 {
                     status = 500;
                 }
-                _responseContentLength = (ulong)_responseStream.Length;
+                _responseContentLength = _reqRespStream.ResponseLength;
             }
             _responseHeaderPos = 0;
             HeaderAppend("HTTP/1.1 ");
@@ -590,8 +588,8 @@ namespace NowinWebServer
 
         void SendHttpResponseAndPrepareForNext()
         {
-            var offset = _responseStream.StartOffset;
-            var len = _responseStream.LocalPos;
+            var offset = _reqRespStream.ResponseStartOffset;
+            var len = _reqRespStream.ResponseLocalPos;
             if (!_responseHeadersSend)
             {
                 FillResponse(true);
@@ -605,7 +603,7 @@ namespace NowinWebServer
             }
             else
             {
-                if (_responseContentLength != ulong.MaxValue && (ulong)_responseStream.Position != _responseContentLength)
+                if (_responseContentLength != ulong.MaxValue && _reqRespStream.ResponseLength != _responseContentLength)
                 {
                     Callback.StartDisconnect();
                     return;
@@ -635,7 +633,7 @@ namespace NowinWebServer
         {
             while (true)
             {
-                var len = await _requestStream.ReadAsync(Buffer, StartBufferOffset + ReceiveBufferSize, ReceiveBufferSize);
+                var len = await _reqRespStream.ReadAsync(Buffer, StartBufferOffset + ReceiveBufferSize, ReceiveBufferSize);
                 if (len < ReceiveBufferSize) return;
             }
         }
@@ -680,8 +678,7 @@ namespace NowinWebServer
             _waitingForRequest = true;
             _responseHeadersSend = false;
             _lastPacket = false;
-            _requestStream.Reset();
-            _responseStream.Reset();
+            _reqRespStream.Reset();
         }
 
         public Task WriteAsync(byte[] buffer, int startOffset, int len)
@@ -704,7 +701,7 @@ namespace NowinWebServer
                 if (len == 0) return Task.Delay(0);
                 WrapInChunk(Buffer, ref startOffset, ref len);
             }
-            if (_responseContentLength != ulong.MaxValue && (ulong)_responseStream.Position > _responseContentLength)
+            if (_responseContentLength != ulong.MaxValue && _reqRespStream.ResponseLength > _responseContentLength)
             {
                 Callback.StartDisconnect();
                 throw new ArgumentOutOfRangeException("len", "Cannot send more bytes than specified in Content-Length header");
@@ -810,7 +807,7 @@ namespace NowinWebServer
                 else
                 {
                     _cancellation.Cancel();
-                    _requestStream.ConnectionClosed();
+                    _reqRespStream.ConnectionClosed();
                 }
                 return;
             }
@@ -848,7 +845,7 @@ namespace NowinWebServer
             }
             else
             {
-                if (_requestStream.ProcessDataAndShouldReadMore())
+                if (_reqRespStream.ProcessDataAndShouldReadMore())
                 {
                     StartNextReceive();
                 }
@@ -906,12 +903,12 @@ namespace NowinWebServer
 
         public Stream ResponseBody
         {
-            get { return _responseStream; }
+            get { return _reqRespStream; }
         }
 
         public Stream RequestBody
         {
-            get { return _requestStream; }
+            get { return _reqRespStream; }
         }
 
         public string RequestPath
@@ -1064,7 +1061,7 @@ namespace NowinWebServer
                 }
                 return;
             }
-            if (_requestStream.Position != _requestStream.Length)
+            if (_reqRespStream.RequestPosition != RequestContentLength)
             {
                 DrainRequestStreamAsync().ContinueWith((t, o) =>
                 {

@@ -5,57 +5,37 @@ using System.Threading.Tasks;
 
 namespace NowinWebServer
 {
-    internal class RequestStream : Stream
+    internal class ReqRespStream : Stream
     {
         readonly Transport2HttpHandler _transport2HttpHandler;
         readonly byte[] _buf;
+        internal ulong RequestPosition;
         TaskCompletionSource<int> _tcs;
         byte[] _asyncBuffer;
         int _asyncOffset;
         int _asyncCount;
         int _asyncResult;
-        long _position;
         ChunkedDecoder _chunkedDecoder = new ChunkedDecoder();
 
-        public RequestStream(Transport2HttpHandler transport2HttpHandler)
+        internal readonly int ResponseStartOffset;
+        internal int ResponseLocalPos;
+        readonly int _responseMaxLen;
+        ulong _responsePosition;
+
+        public ReqRespStream(Transport2HttpHandler transport2HttpHandler)
         {
             _transport2HttpHandler = transport2HttpHandler;
             _buf = transport2HttpHandler.Buffer;
+            _responseMaxLen = transport2HttpHandler.ReceiveBufferSize;
+            ResponseStartOffset = transport2HttpHandler.ResponseBodyBufferOffset;
         }
 
         public void Reset()
         {
-            _position = 0;
             _chunkedDecoder.Reset();
-        }
-
-        public override void Flush()
-        {
-            throw new InvalidOperationException();
-        }
-
-        public override Task FlushAsync(CancellationToken cancellationToken)
-        {
-            throw new InvalidOperationException();
-        }
-
-        public override long Seek(long offset, SeekOrigin origin)
-        {
-            switch (origin)
-            {
-                case SeekOrigin.Begin:
-                    Position = offset;
-                    break;
-                case SeekOrigin.Current:
-                    Position = Position + offset;
-                    break;
-                case SeekOrigin.End:
-                    Position = Length + offset;
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException("origin");
-            }
-            return Position;
+            RequestPosition = 0;
+            ResponseLocalPos = 0;
+            _responsePosition = 0;
         }
 
         public override void SetLength(long value)
@@ -79,13 +59,13 @@ namespace NowinWebServer
 
         void ReadSyncPart(byte[] buffer, int offset, int count)
         {
-            if (Position == 0 && _transport2HttpHandler.ShouldSend100Continue)
+            if (RequestPosition == 0 && _transport2HttpHandler.ShouldSend100Continue)
             {
                 _transport2HttpHandler.Send100Continue();
             }
-            if ((uint)count > _transport2HttpHandler.RequestContentLength - (ulong)Position)
+            if ((uint)count > _transport2HttpHandler.RequestContentLength - RequestPosition)
             {
-                count = (int)(_transport2HttpHandler.RequestContentLength - (ulong)Position);
+                count = (int)(_transport2HttpHandler.RequestContentLength - RequestPosition);
             }
             _asyncBuffer = buffer;
             _asyncOffset = offset;
@@ -113,7 +93,7 @@ namespace NowinWebServer
             if (len > 0)
             {
                 Array.Copy(_buf, _transport2HttpHandler.StartBufferOffset + _transport2HttpHandler.ReceiveBufferPos, _asyncBuffer, _asyncOffset, len);
-                _position += len;
+                RequestPosition += (ulong)len;
                 _transport2HttpHandler.ReceiveBufferPos += len;
                 _asyncOffset += len;
                 _asyncCount -= len;
@@ -130,7 +110,7 @@ namespace NowinWebServer
                 var decodedDataAvail = _chunkedDecoder.DataAvailable;
                 if (decodedDataAvail < 0)
                 {
-                    _transport2HttpHandler.RequestContentLength = (ulong)_position;
+                    _transport2HttpHandler.RequestContentLength = RequestPosition;
                     _asyncCount = 0;
                     break;
                 }
@@ -138,7 +118,7 @@ namespace NowinWebServer
                 {
                     if (_chunkedDecoder.ProcessByte(_buf[encodedDataOfs]))
                     {
-                        _transport2HttpHandler.RequestContentLength = (ulong)_position;
+                        _transport2HttpHandler.RequestContentLength = RequestPosition;
                         _asyncCount = 0;
                     }
                     encodedDataOfs++;
@@ -161,7 +141,7 @@ namespace NowinWebServer
                     _asyncResult += decodedDataAvail;
                     encodedDataAvail -= decodedDataAvail;
                     encodedDataOfs += decodedDataAvail;
-                    _position += decodedDataAvail;
+                    RequestPosition += (ulong)decodedDataAvail;
                 }
             }
             _transport2HttpHandler.ReceiveBufferPos = encodedDataOfs - _transport2HttpHandler.StartBufferOffset;
@@ -181,15 +161,10 @@ namespace NowinWebServer
         public void ConnectionClosed()
         {
             var tcs = _tcs;
-            if (tcs!=null)
+            if (tcs != null)
             {
                 tcs.TrySetCanceled();
             }
-        }
-
-        public override void Write(byte[] buffer, int offset, int count)
-        {
-            throw new InvalidOperationException();
         }
 
         public override bool CanRead
@@ -204,7 +179,7 @@ namespace NowinWebServer
 
         public override bool CanWrite
         {
-            get { return false; }
+            get { return true; }
         }
 
         public override long Length
@@ -214,8 +189,83 @@ namespace NowinWebServer
 
         public override long Position
         {
-            get { return _position; }
-            set { if (_position != value) throw new ArgumentOutOfRangeException("value"); }
+            get { throw new InvalidOperationException(); }
+            set { throw new InvalidOperationException(); }
+        }
+
+        public ulong ResponseLength
+        {
+            get { return _responsePosition; }
+        }
+
+        public override void Flush()
+        {
+            FlushAsync(CancellationToken.None).Wait();
+        }
+
+        public override Task FlushAsync(CancellationToken cancellationToken)
+        {
+            return FlushAsyncCore();
+        }
+
+        Task FlushAsyncCore()
+        {
+            var len = ResponseLocalPos;
+            ResponseLocalPos = 0;
+            return _transport2HttpHandler.WriteAsync(_buf, ResponseStartOffset, len);
+        }
+
+        public override long Seek(long offset, SeekOrigin origin)
+        {
+            throw new InvalidOperationException();
+        }
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            if (count <= _responseMaxLen - ResponseLocalPos)
+            {
+                Array.Copy(buffer, offset, _buf, ResponseStartOffset + ResponseLocalPos, count);
+                _responsePosition += (ulong)count;
+                ResponseLocalPos += count;
+                return;
+            }
+            WriteAsync(buffer, offset, count, CancellationToken.None).Wait();
+        }
+
+        public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            if (count <= _responseMaxLen - ResponseLocalPos)
+            {
+                Array.Copy(buffer, offset, _buf, ResponseStartOffset + ResponseLocalPos, count);
+                _responsePosition += (ulong)count;
+                ResponseLocalPos += count;
+                return Task.Delay(0);
+            }
+            return WriteOverflowAsync(buffer, offset, count);
+        }
+
+        async Task WriteOverflowAsync(byte[] buffer, int offset, int count)
+        {
+            do
+            {
+                if (ResponseLocalPos == _responseMaxLen)
+                {
+                    await FlushAsyncCore();
+                    if ((count >= _responseMaxLen) && _transport2HttpHandler.CanUseDirectWrite())
+                    {
+                        _responsePosition += (ulong)count;
+                        await _transport2HttpHandler.WriteAsync(buffer, offset, count);
+                        return;
+                    }
+                }
+                var tillEnd = _responseMaxLen - ResponseLocalPos;
+                if (tillEnd > count) tillEnd = count;
+                Array.Copy(buffer, offset, _buf, ResponseStartOffset + ResponseLocalPos, tillEnd);
+                _responsePosition += (ulong)tillEnd;
+                ResponseLocalPos += tillEnd;
+                offset += tillEnd;
+                count -= tillEnd;
+            } while (count > 0);
         }
     }
 }
