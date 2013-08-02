@@ -248,6 +248,11 @@ namespace NowinWebServer
             ParseWebSocketReceivedData();
         }
 
+        public void FinishSendData(bool success)
+        {
+            throw new NotImplementedException();
+        }
+
         Task WebSocketSendAsyncMethod(ArraySegment<byte> data, int messageType, bool endOfMessage, CancellationToken cancel)
         {
             throw new NotImplementedException();

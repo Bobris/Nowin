@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace NowinWebServer
 {
@@ -38,6 +39,8 @@ namespace NowinWebServer
         int ReceiveDataLength { get; }
         void ConsumeReceiveData(int count);
         void StartReceiveData();
-
+        int SendDataOffset { get; }
+        int SendDataLength { get; }
+        Task SendData(byte[] buffer, int offset, int length);
     }
 }

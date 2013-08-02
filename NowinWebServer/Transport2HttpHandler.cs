@@ -1110,6 +1110,24 @@ namespace NowinWebServer
             StartNextReceive();
         }
 
+        public int SendDataOffset
+        {
+            get { return StartBufferOffset + ReceiveBufferSize; }
+        }
+
+        public int SendDataLength
+        {
+            get { return ReceiveBufferSize * 2 + Transport2HttpFactory.AdditionalSpace; }
+        }
+
+        public Task SendData(byte[] buffer, int offset, int length)
+        {
+            var tcs = new TaskCompletionSource<bool>();
+            _tcsSend = tcs;
+            Callback.StartSend(buffer, offset, length);
+            return tcs.Task;
+        }
+
         public bool CanUseDirectWrite()
         {
             return !_responseIsChunked && _responseHeadersSend;

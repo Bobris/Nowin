@@ -5,6 +5,7 @@ namespace NowinWebServer
 {
     public class Transport2HttpFactory : ILayerFactory
     {
+        internal const int AdditionalSpace = 16;
         readonly int _receiveBufferSize;
         readonly bool _isSsl;
         readonly IIpIsLocalChecker _ipIsLocalChecker;
@@ -22,7 +23,7 @@ namespace NowinWebServer
 
         int MyPerConnectionBufferSize()
         {
-            return _receiveBufferSize * 3 + 16;
+            return _receiveBufferSize * 3 + AdditionalSpace;
         }
 
         public int PerConnectionBufferSize { get; private set; }
