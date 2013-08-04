@@ -23,6 +23,7 @@ var props = new[]
   new {Key="owin.ResponseBody", Type="Stream", Name="ResponseBody", Get="_callback.ReqRespBody", Set="" },
   
 // ServerVariable keys
+  new {Key="server.Capabilities", Type="IDictionary<string, object>", Name="ServerCapabilities", Get="_handler.Capabilities", Set="" },
   new {Key="server.RemoteIpAddress", Type="string", Name="ServerRemoteIpAddress", Get="_callback.RemoteIpAddress", Set="" },
   new {Key="server.RemotePort", Type="string", Name="ServerRemotePort", Get="_callback.RemotePort", Set="" },
   new {Key="server.LocalIpAddress", Type="string", Name="ServerLocalIpAddress", Get="_callback.LocalIpAddress", Set="" },

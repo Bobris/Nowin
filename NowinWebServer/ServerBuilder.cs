@@ -13,6 +13,7 @@ namespace NowinWebServer
         X509Certificate _certificate;
         int _bufferSize;
         Func<IDictionary<string, object>, Task> _app;
+        IDictionary<string, object> _capabilities;
 
         public static ServerBuilder New()
         {
@@ -70,6 +71,12 @@ namespace NowinWebServer
             return this;
         }
 
+        public ServerBuilder SetOwinCapabilities(IDictionary<string, object> capabilities)
+        {
+            _capabilities = capabilities;
+            return this;
+        }
+
         public INowinServer Build()
         {
             return new Server(this);
@@ -117,6 +124,11 @@ namespace NowinWebServer
         Func<IDictionary<string, object>, Task> IServerParameters.OwinApp
         {
             get { return _app; }
+        }
+
+        IDictionary<string, object> IServerParameters.OwinCapabilities
+        {
+            get { return _capabilities; }
         }
     }
 }

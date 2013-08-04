@@ -51,7 +51,7 @@ namespace NowinWebServer
 
         public void Start()
         {
-            _layerFactory = new OwinHandlerFactory(_parameters.OwinApp);
+            _layerFactory = new OwinHandlerFactory(_parameters.OwinApp,_parameters.OwinCapabilities);
             _ipIsLocalChecker = new IpIsLocalChecker();
             _connectionAllocationStrategy = _parameters.ConnectionAllocationStrategy;
             var isSsl = _parameters.Certificate != null;

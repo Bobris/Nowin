@@ -29,5 +29,7 @@ namespace NowinWebServer
         public const string ServerCapabilitiesKey = "server.Capabilities";
         public const string ServerNameKey = "server.Name";
 
+        public const string WebSocketVersionKey = "websocket.Version";
+        public const string WebSocketVersion = "1.0";
     }
 }

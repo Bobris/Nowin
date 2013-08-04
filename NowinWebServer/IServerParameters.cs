@@ -13,5 +13,6 @@ namespace NowinWebServer
         X509Certificate Certificate { get; }
         int BufferSize { get; }
         Func<IDictionary<string, object>, Task> OwinApp { get; }
+        IDictionary<string, object> OwinCapabilities { get; }
     }
 }

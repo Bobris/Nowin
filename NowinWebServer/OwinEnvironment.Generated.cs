@@ -32,6 +32,7 @@ namespace NowinWebServer
         object _ResponseReasonPhrase;
         object _ResponseHeaders;
         object _ResponseBody;
+        object _ServerCapabilities;
         object _ServerRemoteIpAddress;
         object _ServerRemotePort;
         object _ServerLocalIpAddress;
@@ -41,8 +42,8 @@ namespace NowinWebServer
 
 		void PropertiesReset()
 		{
-		    _flag0 = 0xfffffu;
-			_initFlag0 = 0xfffffu;
+		    _flag0 = 0x1fffffu;
+			_initFlag0 = 0x1fffffu;
 		     _OwinVersion = null;
 		     _CallCancelled = null;
 		     _RequestProtocol = null;
@@ -57,6 +58,7 @@ namespace NowinWebServer
 		     _ResponseReasonPhrase = null;
 		     _ResponseHeaders = null;
 		     _ResponseBody = null;
+		     _ServerCapabilities = null;
 		     _ServerRemoteIpAddress = null;
 		     _ServerRemotePort = null;
 		     _ServerLocalIpAddress = null;
@@ -404,148 +406,172 @@ namespace NowinWebServer
             _flag0 &= ~0x2000u;
 		}
 
-        internal object ServerRemoteIpAddress
+        internal object ServerCapabilities
         {
             get
             {
                 if (((_initFlag0 & 0x4000u) != 0))
                 {
-                    _ServerRemoteIpAddress = _callback.RemoteIpAddress;
+                    _ServerCapabilities = _handler.Capabilities;
                     _initFlag0 &= ~0x4000u;
                 }
-                return _ServerRemoteIpAddress;
+                return _ServerCapabilities;
             }
             set
             {
                 _initFlag0 &= ~0x4000u;
                 _flag0 |= 0x4000u;
+                _ServerCapabilities = value;
+            }
+        }
+
+		internal void RemoveServerCapabilities()
+		{
+            _flag0 &= ~0x4000u;
+		}
+
+        internal object ServerRemoteIpAddress
+        {
+            get
+            {
+                if (((_initFlag0 & 0x8000u) != 0))
+                {
+                    _ServerRemoteIpAddress = _callback.RemoteIpAddress;
+                    _initFlag0 &= ~0x8000u;
+                }
+                return _ServerRemoteIpAddress;
+            }
+            set
+            {
+                _initFlag0 &= ~0x8000u;
+                _flag0 |= 0x8000u;
                 _ServerRemoteIpAddress = value;
             }
         }
 
 		internal void RemoveServerRemoteIpAddress()
 		{
-            _flag0 &= ~0x4000u;
+            _flag0 &= ~0x8000u;
 		}
 
         internal object ServerRemotePort
         {
             get
             {
-                if (((_initFlag0 & 0x8000u) != 0))
+                if (((_initFlag0 & 0x10000u) != 0))
                 {
                     _ServerRemotePort = _callback.RemotePort;
-                    _initFlag0 &= ~0x8000u;
+                    _initFlag0 &= ~0x10000u;
                 }
                 return _ServerRemotePort;
             }
             set
             {
-                _initFlag0 &= ~0x8000u;
-                _flag0 |= 0x8000u;
+                _initFlag0 &= ~0x10000u;
+                _flag0 |= 0x10000u;
                 _ServerRemotePort = value;
             }
         }
 
 		internal void RemoveServerRemotePort()
 		{
-            _flag0 &= ~0x8000u;
+            _flag0 &= ~0x10000u;
 		}
 
         internal object ServerLocalIpAddress
         {
             get
             {
-                if (((_initFlag0 & 0x10000u) != 0))
+                if (((_initFlag0 & 0x20000u) != 0))
                 {
                     _ServerLocalIpAddress = _callback.LocalIpAddress;
-                    _initFlag0 &= ~0x10000u;
+                    _initFlag0 &= ~0x20000u;
                 }
                 return _ServerLocalIpAddress;
             }
             set
             {
-                _initFlag0 &= ~0x10000u;
-                _flag0 |= 0x10000u;
+                _initFlag0 &= ~0x20000u;
+                _flag0 |= 0x20000u;
                 _ServerLocalIpAddress = value;
             }
         }
 
 		internal void RemoveServerLocalIpAddress()
 		{
-            _flag0 &= ~0x10000u;
+            _flag0 &= ~0x20000u;
 		}
 
         internal object ServerLocalPort
         {
             get
             {
-                if (((_initFlag0 & 0x20000u) != 0))
+                if (((_initFlag0 & 0x40000u) != 0))
                 {
                     _ServerLocalPort = _callback.LocalPort;
-                    _initFlag0 &= ~0x20000u;
+                    _initFlag0 &= ~0x40000u;
                 }
                 return _ServerLocalPort;
             }
             set
             {
-                _initFlag0 &= ~0x20000u;
-                _flag0 |= 0x20000u;
+                _initFlag0 &= ~0x40000u;
+                _flag0 |= 0x40000u;
                 _ServerLocalPort = value;
             }
         }
 
 		internal void RemoveServerLocalPort()
 		{
-            _flag0 &= ~0x20000u;
+            _flag0 &= ~0x40000u;
 		}
 
         internal object ServerIsLocal
         {
             get
             {
-                if (((_initFlag0 & 0x40000u) != 0))
+                if (((_initFlag0 & 0x80000u) != 0))
                 {
                     _ServerIsLocal = _callback.IsLocal;
-                    _initFlag0 &= ~0x40000u;
+                    _initFlag0 &= ~0x80000u;
                 }
                 return _ServerIsLocal;
             }
             set
             {
-                _initFlag0 &= ~0x40000u;
-                _flag0 |= 0x40000u;
+                _initFlag0 &= ~0x80000u;
+                _flag0 |= 0x80000u;
                 _ServerIsLocal = value;
             }
         }
 
 		internal void RemoveServerIsLocal()
 		{
-            _flag0 &= ~0x40000u;
+            _flag0 &= ~0x80000u;
 		}
 
         internal object WebSocketAcceptFunc
         {
             get
             {
-                if (((_initFlag0 & 0x80000u) != 0))
+                if (((_initFlag0 & 0x100000u) != 0))
                 {
                     _WebSocketAcceptFunc = _handler.WebSocketAcceptFunc;
-                    _initFlag0 &= ~0x80000u;
+                    _initFlag0 &= ~0x100000u;
                 }
                 return _WebSocketAcceptFunc;
             }
             set
             {
-                _initFlag0 &= ~0x80000u;
-                _flag0 |= 0x80000u;
+                _initFlag0 &= ~0x100000u;
+                _flag0 |= 0x100000u;
                 _WebSocketAcceptFunc = value;
             }
         }
 
 		internal void RemoveWebSocketAcceptFunc()
 		{
-            _flag0 &= ~0x80000u;
+            _flag0 &= ~0x100000u;
 		}
 
         private bool PropertiesContainsKey(string key)
@@ -595,11 +621,11 @@ namespace NowinWebServer
                     {
                         return true;
                     }
-                    if (((_flag0 & 0x20000u) != 0) && key=="server.LocalPort")
+                    if (((_flag0 & 0x40000u) != 0) && key=="server.LocalPort")
                     {
                         return true;
                     }
-                    if (((_flag0 & 0x80000u) != 0) && key=="websocket.Accept")
+                    if (((_flag0 & 0x100000u) != 0) && key=="websocket.Accept")
                     {
                         return true;
                     }
@@ -619,6 +645,10 @@ namespace NowinWebServer
                     {
                         return true;
                     }
+                    if (((_flag0 & 0x4000u) != 0) && key=="server.Capabilities")
+                    {
+                        return true;
+                    }
                    break;
                 case 25:
                     if (((_flag0 & 0x800u) != 0) && key=="owin.ResponseReasonPhrase")
@@ -631,25 +661,25 @@ namespace NowinWebServer
                     {
                         return true;
                     }
-                    if (((_flag0 & 0x8000u) != 0) && key=="server.RemotePort")
+                    if (((_flag0 & 0x10000u) != 0) && key=="server.RemotePort")
                     {
                         return true;
                     }
                    break;
                 case 22:
-                    if (((_flag0 & 0x4000u) != 0) && key=="server.RemoteIpAddress")
+                    if (((_flag0 & 0x8000u) != 0) && key=="server.RemoteIpAddress")
                     {
                         return true;
                     }
                    break;
                 case 21:
-                    if (((_flag0 & 0x10000u) != 0) && key=="server.LocalIpAddress")
+                    if (((_flag0 & 0x20000u) != 0) && key=="server.LocalIpAddress")
                     {
                         return true;
                     }
                    break;
                 case 14:
-                    if (((_flag0 & 0x40000u) != 0) && key=="server.IsLocal")
+                    if (((_flag0 & 0x80000u) != 0) && key=="server.IsLocal")
                     {
                         return true;
                     }
@@ -714,12 +744,12 @@ namespace NowinWebServer
                         value = RequestBody;
                         return true;
                     }
-                    if (((_flag0 & 0x20000u) != 0) && key=="server.LocalPort")
+                    if (((_flag0 & 0x40000u) != 0) && key=="server.LocalPort")
                     {
                         value = ServerLocalPort;
                         return true;
                     }
-                    if (((_flag0 & 0x80000u) != 0) && key=="websocket.Accept")
+                    if (((_flag0 & 0x100000u) != 0) && key=="websocket.Accept")
                     {
                         value = WebSocketAcceptFunc;
                         return true;
@@ -743,6 +773,11 @@ namespace NowinWebServer
                         value = RequestHeaders;
                         return true;
                     }
+                    if (((_flag0 & 0x4000u) != 0) && key=="server.Capabilities")
+                    {
+                        value = ServerCapabilities;
+                        return true;
+                    }
                    break;
                 case 25:
                     if (((_flag0 & 0x800u) != 0) && key=="owin.ResponseReasonPhrase")
@@ -757,28 +792,28 @@ namespace NowinWebServer
                         value = ResponseBody;
                         return true;
                     }
-                    if (((_flag0 & 0x8000u) != 0) && key=="server.RemotePort")
+                    if (((_flag0 & 0x10000u) != 0) && key=="server.RemotePort")
                     {
                         value = ServerRemotePort;
                         return true;
                     }
                    break;
                 case 22:
-                    if (((_flag0 & 0x4000u) != 0) && key=="server.RemoteIpAddress")
+                    if (((_flag0 & 0x8000u) != 0) && key=="server.RemoteIpAddress")
                     {
                         value = ServerRemoteIpAddress;
                         return true;
                     }
                    break;
                 case 21:
-                    if (((_flag0 & 0x10000u) != 0) && key=="server.LocalIpAddress")
+                    if (((_flag0 & 0x20000u) != 0) && key=="server.LocalIpAddress")
                     {
                         value = ServerLocalIpAddress;
                         return true;
                     }
                    break;
                 case 14:
-                    if (((_flag0 & 0x40000u) != 0) && key=="server.IsLocal")
+                    if (((_flag0 & 0x80000u) != 0) && key=="server.IsLocal")
                     {
                         value = ServerIsLocal;
                         return true;
@@ -872,6 +907,11 @@ namespace NowinWebServer
                     if (key=="owin.RequestHeaders")
                     {
                         RequestHeaders = value;
+                        return true;
+                    }
+                    if (key=="server.Capabilities")
+                    {
+                        ServerCapabilities = value;
                         return true;
                     }
                    break;
@@ -984,15 +1024,15 @@ namespace NowinWebServer
                         _RequestBody = null;
                         return true;
                     }
-                    if (((_flag0 & 0x20000u) != 0) && key=="server.LocalPort")
+                    if (((_flag0 & 0x40000u) != 0) && key=="server.LocalPort")
                     {
-                        _flag0 &= ~0x20000u;
+                        _flag0 &= ~0x40000u;
                         _ServerLocalPort = null;
                         return true;
                     }
-                    if (((_flag0 & 0x80000u) != 0) && key=="websocket.Accept")
+                    if (((_flag0 & 0x100000u) != 0) && key=="websocket.Accept")
                     {
-                        _flag0 &= ~0x80000u;
+                        _flag0 &= ~0x100000u;
                         _WebSocketAcceptFunc = null;
                         return true;
                     }
@@ -1018,6 +1058,12 @@ namespace NowinWebServer
                         _RequestHeaders = null;
                         return true;
                     }
+                    if (((_flag0 & 0x4000u) != 0) && key=="server.Capabilities")
+                    {
+                        _flag0 &= ~0x4000u;
+                        _ServerCapabilities = null;
+                        return true;
+                    }
                    break;
                 case 25:
                     if (((_flag0 & 0x800u) != 0) && key=="owin.ResponseReasonPhrase")
@@ -1034,33 +1080,33 @@ namespace NowinWebServer
                         _ResponseBody = null;
                         return true;
                     }
-                    if (((_flag0 & 0x8000u) != 0) && key=="server.RemotePort")
+                    if (((_flag0 & 0x10000u) != 0) && key=="server.RemotePort")
                     {
-                        _flag0 &= ~0x8000u;
+                        _flag0 &= ~0x10000u;
                         _ServerRemotePort = null;
                         return true;
                     }
                    break;
                 case 22:
-                    if (((_flag0 & 0x4000u) != 0) && key=="server.RemoteIpAddress")
+                    if (((_flag0 & 0x8000u) != 0) && key=="server.RemoteIpAddress")
                     {
-                        _flag0 &= ~0x4000u;
+                        _flag0 &= ~0x8000u;
                         _ServerRemoteIpAddress = null;
                         return true;
                     }
                    break;
                 case 21:
-                    if (((_flag0 & 0x10000u) != 0) && key=="server.LocalIpAddress")
+                    if (((_flag0 & 0x20000u) != 0) && key=="server.LocalIpAddress")
                     {
-                        _flag0 &= ~0x10000u;
+                        _flag0 &= ~0x20000u;
                         _ServerLocalIpAddress = null;
                         return true;
                     }
                    break;
                 case 14:
-                    if (((_flag0 & 0x40000u) != 0) && key=="server.IsLocal")
+                    if (((_flag0 & 0x80000u) != 0) && key=="server.IsLocal")
                     {
-                        _flag0 &= ~0x40000u;
+                        _flag0 &= ~0x80000u;
                         _ServerIsLocal = null;
                         return true;
                     }
@@ -1129,25 +1175,29 @@ namespace NowinWebServer
             }
             if (((_flag0 & 0x4000u) != 0))
             {
-                yield return "server.RemoteIpAddress";
+                yield return "server.Capabilities";
             }
             if (((_flag0 & 0x8000u) != 0))
             {
-                yield return "server.RemotePort";
+                yield return "server.RemoteIpAddress";
             }
             if (((_flag0 & 0x10000u) != 0))
             {
-                yield return "server.LocalIpAddress";
+                yield return "server.RemotePort";
             }
             if (((_flag0 & 0x20000u) != 0))
             {
-                yield return "server.LocalPort";
+                yield return "server.LocalIpAddress";
             }
             if (((_flag0 & 0x40000u) != 0))
             {
-                yield return "server.IsLocal";
+                yield return "server.LocalPort";
             }
             if (((_flag0 & 0x80000u) != 0))
+            {
+                yield return "server.IsLocal";
+            }
+            if (((_flag0 & 0x100000u) != 0))
             {
                 yield return "websocket.Accept";
             }
@@ -1213,25 +1263,29 @@ namespace NowinWebServer
             }
             if (((_flag0 & 0x4000u) != 0))
             {
-                yield return ServerRemoteIpAddress;
+                yield return ServerCapabilities;
             }
             if (((_flag0 & 0x8000u) != 0))
             {
-                yield return ServerRemotePort;
+                yield return ServerRemoteIpAddress;
             }
             if (((_flag0 & 0x10000u) != 0))
             {
-                yield return ServerLocalIpAddress;
+                yield return ServerRemotePort;
             }
             if (((_flag0 & 0x20000u) != 0))
             {
-                yield return ServerLocalPort;
+                yield return ServerLocalIpAddress;
             }
             if (((_flag0 & 0x40000u) != 0))
             {
-                yield return ServerIsLocal;
+                yield return ServerLocalPort;
             }
             if (((_flag0 & 0x80000u) != 0))
+            {
+                yield return ServerIsLocal;
+            }
+            if (((_flag0 & 0x100000u) != 0))
             {
                 yield return WebSocketAcceptFunc;
             }
@@ -1297,25 +1351,29 @@ namespace NowinWebServer
             }
             if (((_flag0 & 0x4000u) != 0))
             {
-                yield return new KeyValuePair<string, object>("server.RemoteIpAddress", ServerRemoteIpAddress);
+                yield return new KeyValuePair<string, object>("server.Capabilities", ServerCapabilities);
             }
             if (((_flag0 & 0x8000u) != 0))
             {
-                yield return new KeyValuePair<string, object>("server.RemotePort", ServerRemotePort);
+                yield return new KeyValuePair<string, object>("server.RemoteIpAddress", ServerRemoteIpAddress);
             }
             if (((_flag0 & 0x10000u) != 0))
             {
-                yield return new KeyValuePair<string, object>("server.LocalIpAddress", ServerLocalIpAddress);
+                yield return new KeyValuePair<string, object>("server.RemotePort", ServerRemotePort);
             }
             if (((_flag0 & 0x20000u) != 0))
             {
-                yield return new KeyValuePair<string, object>("server.LocalPort", ServerLocalPort);
+                yield return new KeyValuePair<string, object>("server.LocalIpAddress", ServerLocalIpAddress);
             }
             if (((_flag0 & 0x40000u) != 0))
             {
-                yield return new KeyValuePair<string, object>("server.IsLocal", ServerIsLocal);
+                yield return new KeyValuePair<string, object>("server.LocalPort", ServerLocalPort);
             }
             if (((_flag0 & 0x80000u) != 0))
+            {
+                yield return new KeyValuePair<string, object>("server.IsLocal", ServerIsLocal);
+            }
+            if (((_flag0 & 0x100000u) != 0))
             {
                 yield return new KeyValuePair<string, object>("websocket.Accept", WebSocketAcceptFunc);
             }

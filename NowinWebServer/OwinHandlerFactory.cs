@@ -7,10 +7,12 @@ namespace NowinWebServer
     public class OwinHandlerFactory : ILayerFactory
     {
         readonly Func<IDictionary<string, object>, Task> _app;
+        readonly IDictionary<string, object> _owinCapabilities;
 
-        public OwinHandlerFactory(Func<IDictionary<string, object>, Task> app)
+        public OwinHandlerFactory(Func<IDictionary<string, object>, Task> app, IDictionary<string, object> owinCapabilities)
         {
             _app = app;
+            _owinCapabilities = owinCapabilities;
         }
 
         public int PerConnectionBufferSize { get { return 0; } }
@@ -21,7 +23,7 @@ namespace NowinWebServer
 
         public ILayerHandler Create(byte[] buffer, int offset, int commonOffset)
         {
-            return new OwinHandler(_app);
+            return new OwinHandler(_app, _owinCapabilities);
         }
     }
 }

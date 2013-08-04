@@ -22,6 +22,8 @@ namespace NowinWebServer
             properties[OwinKeys.ServerCapabilitiesKey] = capabilities;
 
             capabilities[OwinKeys.ServerNameKey] = "NowinWebServer";
+            // TODO uncomment when WebSocket finished
+            // capabilities[OwinKeys.WebSocketVersionKey] = OwinKeys.WebSocketVersion;
         }
 
         public static IDisposable Create(Func<IDictionary<string, object>, Task> app, IDictionary<string, object> properties)
@@ -36,6 +38,9 @@ namespace NowinWebServer
                 throw new ArgumentNullException("properties");
             }
 
+            var capabilities = properties.Get<IDictionary<string, object>>(OwinKeys.ServerCapabilitiesKey)
+                               ?? new Dictionary<string, object>();
+
             var addresses = properties.Get<IList<IDictionary<string, object>>>("host.Addresses")
                             ?? new List<IDictionary<string, object>>();
 
@@ -46,6 +51,7 @@ namespace NowinWebServer
                 int port;
                 if (!int.TryParse(address.Get<string>("port"), out port)) throw new ArgumentException("port must be number from 0 to 65535");
                 builder.SetPort(port);
+                builder.SetOwinCapabilities(capabilities);
                 var certificate = address.Get<X509Certificate>("certificate");
                 if (certificate != null)
                     builder.SetCertificate(certificate);

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -50,6 +51,7 @@ namespace NowinWebServer
     public class OwinHandler : IHttpLayerHandler
     {
         readonly OwinApp _app;
+        readonly IDictionary<string, object> _owinCapabilities;
 
         readonly OwinEnvironment _environment;
         internal readonly Dictionary<string, string[]> ReqHeaders;
@@ -59,6 +61,14 @@ namespace NowinWebServer
         OwinApp _webSocketFunc;
         ArraySegment<byte> _webSocketReceiveSegment;
         TaskCompletionSource<WebSocketReceiveTuple> _webSocketReceiveTcs;
+
+        enum WebSocketReceiveState
+        {
+            Header,
+            Body,
+            Error
+        }
+
         WebSocketReceiveState _webSocketReceiveState;
         ulong _webSocketFrameLen;
         byte _webSocketMask0;
@@ -66,9 +76,12 @@ namespace NowinWebServer
         byte _webSocketMask2;
         byte _webSocketMask3;
         bool _webSocketFrameLast;
+        bool _webSocketNextSendIsStartOfMessage;
         byte _webSocketFrameOpcode;
         int _webSocketReceiveCount;
         int _maskIndex;
+        readonly SemaphoreSlim _sendLock = new SemaphoreSlim(1);
+        readonly Dictionary<string, object> _webSocketEnv;
 
         public IHttpLayerCallback Callback { set; internal get; }
 
@@ -77,12 +90,26 @@ namespace NowinWebServer
             get { return WebSocketAcceptMethod; }
         }
 
-        public OwinHandler(OwinApp app)
+        public object Capabilities
+        {
+            get { return _owinCapabilities; }
+        }
+
+        public OwinHandler(OwinApp app, IDictionary<string, object> owinCapabilities)
         {
             _app = app;
+            _owinCapabilities = owinCapabilities;
             _environment = new OwinEnvironment(this);
             ReqHeaders = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
             RespHeaders = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+            _webSocketEnv = new Dictionary<string, object>
+                {
+                    {"websocket.SendAsync", (WebSocketSendAsync) WebSocketSendAsyncMethod},
+                    {"websocket.ReceiveAsync", (WebSocketReceiveAsync) WebSocketReceiveAsyncMethod},
+                    {"websocket.CloseAsync", (WebSocketCloseAsync) WebSocketCloseAsyncMethod},
+                    {"websocket.Version", "1.0"},
+                    {"websocket.CallCancelled", null}
+                };
         }
 
         public void Dispose()
@@ -204,10 +231,19 @@ namespace NowinWebServer
 
         void WebSocketAcceptMethod(IDictionary<string, object> dictionary, Func<IDictionary<string, object>, Task> func)
         {
-            // TODO handle dictionary parameter
+            if (dictionary != null)
+            {
+                object value;
+                if (dictionary.TryGetValue("websocket.SubProtocol", out value) && value is string)
+                {
+                    RespHeaders.Remove("Sec-WebSocket-Protocol");
+                    RespHeaders.Add("Sec-WebSocket-Protocol", new[] { (string)value });
+                }
+            }
             _webSocketFunc = func;
             _inWebSocket = true;
             _webSocketReceiveState = WebSocketReceiveState.Header;
+            _webSocketNextSendIsStartOfMessage = true;
             Callback.UpgradeToWebSocket();
         }
 
@@ -219,17 +255,12 @@ namespace NowinWebServer
                 Callback.ResponseFinished();
                 return;
             }
-            var webSocketEnv = new Dictionary<string, object>
-                {
-                    {"websocket.SendAsync", (WebSocketSendAsync) WebSocketSendAsyncMethod},
-                    {"websocket.ReceiveAsync", (WebSocketReceiveAsync) WebSocketReceiveAsyncMethod},
-                    {"websocket.CloseAsync", (WebSocketCloseAsync) WebSocketCloseAsyncMethod},
-                    {"websocket.Version", "1.0"},
-                    {"websocket.CallCancelled", Callback.CallCancelled}
-                };
+            _webSocketEnv["websocket.CallCancelled"] = Callback.CallCancelled;
+            _webSocketEnv.Remove("websocket.ClientCloseStatus");
+            _webSocketEnv.Remove("websocket.ClientCloseDescription");
             try
             {
-                var task = _webSocketFunc(webSocketEnv);
+                var task = _webSocketFunc(_webSocketEnv);
                 task.ContinueWith((t, o) => ((OwinHandler)o).Callback.ResponseFinished(), this);
             }
             catch
@@ -248,14 +279,49 @@ namespace NowinWebServer
             ParseWebSocketReceivedData();
         }
 
-        Task WebSocketSendAsyncMethod(ArraySegment<byte> data, int messageType, bool endOfMessage, CancellationToken cancel)
+        async Task WebSocketSendAsyncMethod(ArraySegment<byte> data, int messageType, bool endOfMessage, CancellationToken cancel)
         {
-            var buf = Callback.Buffer;
-            var o = Callback.SendDataOffset;
-            buf[o] = (byte) ((endOfMessage ? 0x80 : 0) + messageType);
-            buf[o + 1] = (byte) data.Count;
-            Array.Copy(data.Array,data.Offset,buf,o+2,data.Count);
-            return Callback.SendData(buf, o, 2 + data.Count);
+            if (!_webSocketNextSendIsStartOfMessage)
+            {
+                messageType = 0;
+            }
+            await _sendLock.WaitAsync(cancel);
+            try
+            {
+                var buf = Callback.Buffer;
+                var maxlen = Math.Min(Callback.SendDataLength - 4, 65535);
+                var last = false;
+                do
+                {
+                    var l = data.Count;
+                    if (l > maxlen) l = maxlen; else last = true;
+                    var o = Callback.SendDataOffset;
+                    buf[o] = (byte)(((last & endOfMessage) ? 0x80 : 0) + messageType);
+                    messageType = 0;
+                    int headerSize;
+                    if (l < 126)
+                    {
+                        buf[o + 1] = (byte)data.Count;
+                        headerSize = 2;
+                    }
+                    else
+                    {
+                        buf[o + 1] = 126;
+                        buf[o + 2] = (byte)(l / 256);
+                        buf[o + 3] = (byte)(l % 256);
+                        headerSize = 4;
+                    }
+                    Array.Copy(data.Array, data.Offset, buf, o + headerSize, l);
+                    await Callback.SendData(buf, o, headerSize + l);
+                    data = new ArraySegment<byte>(data.Array, data.Offset + l, data.Count - l);
+
+                } while (!last);
+                _webSocketNextSendIsStartOfMessage = endOfMessage;
+            }
+            finally
+            {
+                _sendLock.Release();
+            }
         }
 
         Task<WebSocketReceiveTuple> WebSocketReceiveAsyncMethod(ArraySegment<byte> data, CancellationToken cancel)
@@ -268,10 +334,42 @@ namespace NowinWebServer
             return tcs.Task;
         }
 
-        Task WebSocketCloseAsyncMethod(int closeStatus, string closeDescription, CancellationToken cancel)
+        async Task WebSocketCloseAsyncMethod(int closeStatus, string closeDescription, CancellationToken cancel)
         {
-            // TODO Close crap
-            return Task.Delay(0);
+            await _sendLock.WaitAsync(cancel);
+            try
+            {
+                var buf = Callback.Buffer;
+                var maxlen = Math.Min(Callback.SendDataLength - 4, 65535);
+                var l = 2;
+                var o = Callback.SendDataOffset + 4;
+                buf[o] = (byte)(closeStatus / 256);
+                buf[o + 1] = (byte)(closeStatus % 256);
+                if (Encoding.UTF8.GetByteCount(closeDescription) > maxlen)
+                {
+                    closeDescription = "";
+                }
+                l += Encoding.UTF8.GetBytes(closeDescription, 0, closeDescription.Length, buf, o + 2);
+                int headerSize;
+                if (l < 126)
+                {
+                    buf[o - 1] = (byte)l;
+                    headerSize = 2;
+                }
+                else
+                {
+                    buf[o - 3] = 126;
+                    buf[o - 2] = (byte)(l / 256);
+                    buf[o - 1] = (byte)(l % 256);
+                    headerSize = 4;
+                }
+                buf[o - headerSize] = 0x88; // Final frame of close
+                await Callback.SendData(buf, o - headerSize, headerSize + l);
+            }
+            finally
+            {
+                _sendLock.Release();
+            }
         }
 
         void ParseWebSocketReceivedData()
@@ -306,14 +404,14 @@ namespace NowinWebServer
                 _webSocketFrameLen -= (ulong)len;
                 _webSocketReceiveCount += len;
                 _webSocketReceiveSegment = new ArraySegment<byte>(_webSocketReceiveSegment.Array, _webSocketReceiveSegment.Offset + len, _webSocketReceiveSegment.Count - len);
-                if (_webSocketFrameLen==0)
+                if (_webSocketFrameLen == 0)
                 {
                     var tcs = _webSocketReceiveTcs;
                     _webSocketReceiveTcs = null;
                     tcs.SetResult(new WebSocketReceiveTuple(_webSocketFrameOpcode, _webSocketFrameLast, _webSocketReceiveCount));
                     _webSocketReceiveState = WebSocketReceiveState.Header;
                 }
-                else if (_webSocketReceiveSegment.Count==0)
+                else if (_webSocketReceiveSegment.Count == 0)
                 {
                     var tcs = _webSocketReceiveTcs;
                     _webSocketReceiveTcs = null;
@@ -397,13 +495,6 @@ namespace NowinWebServer
         bool ValidWebSocketOpcode(byte i)
         {
             return i <= 2 || i >= 8 && i <= 10;
-        }
-
-        enum WebSocketReceiveState
-        {
-            Header,
-            Body,
-            Error
         }
     }
 }
