@@ -22,8 +22,7 @@ namespace NowinWebServer
             properties[OwinKeys.ServerCapabilitiesKey] = capabilities;
 
             capabilities[OwinKeys.ServerNameKey] = "NowinWebServer";
-            // TODO uncomment when WebSocket finished
-            // capabilities[OwinKeys.WebSocketVersionKey] = OwinKeys.WebSocketVersion;
+            capabilities[OwinKeys.WebSocketVersionKey] = OwinKeys.WebSocketVersion;
         }
 
         public static IDisposable Create(Func<IDictionary<string, object>, Task> app, IDictionary<string, object> properties)

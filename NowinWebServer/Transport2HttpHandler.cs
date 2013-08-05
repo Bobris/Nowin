@@ -165,7 +165,7 @@ namespace NowinWebServer
                     {
                         _isKeepAlive = false;
                     }
-                    else if (value.Equals("Upgrade", StringComparison.OrdinalIgnoreCase))
+                    else if (value.IndexOf("Upgrade", StringComparison.OrdinalIgnoreCase)>=0)
                     {
                         _webSocketReqCondition |= WebSocketReqConditions.ConnectionUpgrade;
                     }

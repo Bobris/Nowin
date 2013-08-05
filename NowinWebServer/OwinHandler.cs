@@ -66,10 +66,11 @@ namespace NowinWebServer
         {
             Header,
             Body,
+            Close,
             Error
         }
 
-        WebSocketReceiveState _webSocketReceiveState;
+        volatile WebSocketReceiveState _webSocketReceiveState;
         ulong _webSocketFrameLen;
         byte _webSocketMask0;
         byte _webSocketMask1;
@@ -80,8 +81,10 @@ namespace NowinWebServer
         byte _webSocketFrameOpcode;
         int _webSocketReceiveCount;
         int _maskIndex;
+        int _webSocketReceiving;
         readonly SemaphoreSlim _sendLock = new SemaphoreSlim(1);
         readonly Dictionary<string, object> _webSocketEnv;
+        TaskCompletionSource<object> _webSocketTcsReceivedClose;
 
         public IHttpLayerCallback Callback { set; internal get; }
 
@@ -271,9 +274,14 @@ namespace NowinWebServer
 
         public void FinishReceiveData(bool success)
         {
+            _webSocketReceiving = 0;
             if (!success)
             {
-                _webSocketReceiveTcs.SetCanceled();
+                _webSocketReceiveState = WebSocketReceiveState.Close;
+                var tcs = _webSocketReceiveTcs;
+                if (tcs != null) tcs.SetCanceled();
+                var tcs2 = _webSocketTcsReceivedClose;
+                if (tcs2 != null) tcs2.TrySetResult(null);
                 return;
             }
             ParseWebSocketReceivedData();
@@ -328,6 +336,11 @@ namespace NowinWebServer
         {
             _webSocketReceiveSegment = data;
             var tcs = new TaskCompletionSource<WebSocketReceiveTuple>();
+            if (_webSocketReceiveState == WebSocketReceiveState.Close)
+            {
+                tcs.SetCanceled();
+                return tcs.Task;
+            }
             _webSocketReceiveTcs = tcs;
             _webSocketReceiveCount = 0;
             ParseWebSocketReceivedData();
@@ -364,7 +377,13 @@ namespace NowinWebServer
                     headerSize = 4;
                 }
                 buf[o - headerSize] = 0x88; // Final frame of close
+                _webSocketTcsReceivedClose = new TaskCompletionSource<object>();
                 await Callback.SendData(buf, o - headerSize, headerSize + l);
+                if (_webSocketReceiveState == WebSocketReceiveState.Close)
+                {
+                    _webSocketTcsReceivedClose.TrySetResult(null);
+                }
+                await _webSocketTcsReceivedClose.Task;
             }
             finally
             {
@@ -376,7 +395,7 @@ namespace NowinWebServer
         {
             if (Callback.ReceiveDataLength == 0)
             {
-                Callback.StartReceiveData();
+                StartReciveDataIfNotAlreadyReceiving();
                 return;
             }
             if (_webSocketReceiveTcs == null) return;
@@ -396,6 +415,42 @@ namespace NowinWebServer
             }
             if (_webSocketReceiveState == WebSocketReceiveState.Body)
             {
+                if (_webSocketFrameOpcode == 0x8)
+                {
+                    if (Callback.ReceiveDataLength < (int)_webSocketFrameLen)
+                    {
+                        StartReciveDataIfNotAlreadyReceiving();
+                        return;
+                    }
+                    var buf = Callback.Buffer;
+                    var o = Callback.ReceiveDataOffset;
+                    Unmask(buf, o, buf, o, (int)_webSocketFrameLen);
+                    if (_webSocketFrameLen >= 2)
+                    {
+                        _webSocketEnv.Add("websocket.ClientCloseStatus", buf[o] * 256 + buf[o + 1]);
+                        _webSocketEnv.Add("websocket.ClientCloseDescription",
+                                          new String(Encoding.UTF8.GetChars(buf, o + 2, (int)_webSocketFrameLen - 2)));
+                    }
+                    else
+                    {
+                        _webSocketEnv.Add("websocket.ClientCloseStatus", 0);
+                        _webSocketEnv.Add("websocket.ClientCloseDescription", "");
+                    }
+                    Callback.ConsumeReceiveData((int)_webSocketFrameLen);
+                    _webSocketReceiveState = WebSocketReceiveState.Close;
+                    var tcs = _webSocketReceiveTcs;
+                    if (tcs != null)
+                    {
+                        _webSocketReceiveTcs = null;
+                        tcs.SetResult(new WebSocketReceiveTuple(0x8, true, 0));
+                    }
+                    var tcs2 = _webSocketTcsReceivedClose;
+                    if (tcs2 != null)
+                    {
+                        tcs2.TrySetResult(null);
+                    }
+                    return;
+                }
                 var len = (int)Math.Min(_webSocketFrameLen, (ulong)_webSocketReceiveSegment.Count);
                 if (Callback.ReceiveDataLength < len) len = Callback.ReceiveDataLength;
                 Unmask(Callback.Buffer, Callback.ReceiveDataOffset, _webSocketReceiveSegment.Array,
@@ -407,27 +462,42 @@ namespace NowinWebServer
                 if (_webSocketFrameLen == 0)
                 {
                     var tcs = _webSocketReceiveTcs;
-                    _webSocketReceiveTcs = null;
-                    tcs.SetResult(new WebSocketReceiveTuple(_webSocketFrameOpcode, _webSocketFrameLast, _webSocketReceiveCount));
+                    if (tcs != null)
+                    {
+                        _webSocketReceiveTcs = null;
+                        tcs.SetResult(new WebSocketReceiveTuple(_webSocketFrameOpcode, _webSocketFrameLast, _webSocketReceiveCount));
+                    }
                     _webSocketReceiveState = WebSocketReceiveState.Header;
                 }
                 else if (_webSocketReceiveSegment.Count == 0)
                 {
                     var tcs = _webSocketReceiveTcs;
-                    _webSocketReceiveTcs = null;
-                    tcs.SetResult(new WebSocketReceiveTuple(_webSocketFrameOpcode, false, _webSocketReceiveCount));
+                    if (tcs != null)
+                    {
+                        _webSocketReceiveTcs = null;
+                        tcs.SetResult(new WebSocketReceiveTuple(_webSocketFrameOpcode, false, _webSocketReceiveCount));
+                    }
                 }
                 if (Callback.ReceiveDataLength == 0)
                 {
-                    Callback.StartReceiveData();
+                    StartReciveDataIfNotAlreadyReceiving();
                 }
             }
             else if (_webSocketReceiveState == WebSocketReceiveState.Error)
             {
                 var tcs = _webSocketReceiveTcs;
-                _webSocketReceiveTcs = null;
-                tcs.SetCanceled();
+                if (tcs != null)
+                {
+                    _webSocketReceiveTcs = null;
+                    tcs.SetCanceled();
+                }
             }
+        }
+
+        void StartReciveDataIfNotAlreadyReceiving()
+        {
+            if (Interlocked.CompareExchange(ref _webSocketReceiving, 1, 0) == 0)
+                Callback.StartReceiveData();
         }
 
         void Unmask(byte[] src, int srcOfs, byte[] dst, int dstOfs, int len)
