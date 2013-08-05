@@ -490,7 +490,6 @@ namespace NowinWebServer
             HeaderAppendCrLf();
             if (status == 500)
             {
-                _responseContentLength = 0;
                 _isKeepAlive = false;
             }
             if (_responseContentLength != ulong.MaxValue)
