@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 
@@ -21,7 +23,7 @@ namespace NowinWebServer
                                ?? new Dictionary<string, object>();
             properties[OwinKeys.ServerCapabilitiesKey] = capabilities;
 
-            capabilities[OwinKeys.ServerNameKey] = "NowinWebServer";
+            capabilities[OwinKeys.ServerNameKey] = "Nowin";
             capabilities[OwinKeys.WebSocketVersionKey] = OwinKeys.WebSocketVersion;
         }
 
@@ -44,6 +46,7 @@ namespace NowinWebServer
                             ?? new List<IDictionary<string, object>>();
 
             var servers = new List<INowinServer>();
+            var endpoints = new List<IPEndPoint>();
             foreach (var address in addresses)
             {
                 var builder = ServerBuilder.New().SetOwinApp(app);
@@ -55,6 +58,7 @@ namespace NowinWebServer
                 if (certificate != null)
                     builder.SetCertificate(certificate);
                 servers.Add(builder.Build());
+                endpoints.Add(((IServerParameters) builder).EndPoint);
             }
 
             var disposer = new Disposer(servers.Cast<IDisposable>().ToArray());
@@ -63,6 +67,13 @@ namespace NowinWebServer
                 foreach (var nowinServer in servers)
                 {
                     nowinServer.Start();
+                }
+                // This is workaround to Windows Server 2012 issue by calling ReadLine after AcceptAsync, by making one bogus connection this problem goes away
+                foreach (var ipEndPoint in endpoints)
+                {
+                    var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.IP);
+                    socket.Connect(ipEndPoint);
+                    socket.Close();                    
                 }
             }
             catch (Exception)
