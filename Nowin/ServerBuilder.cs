@@ -4,7 +4,7 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 
-namespace NowinWebServer
+namespace Nowin
 {
     public class ServerBuilder : IServerParameters
     {

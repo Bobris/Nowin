@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace NowinWebServer
+namespace Nowin
 {
     public class OwinHandlerFactory : ILayerFactory
     {

@@ -1,6 +1,6 @@
 using System.Security.Cryptography.X509Certificates;
 
-namespace NowinWebServer
+namespace Nowin
 {
     public class SslTransportFactory : ILayerFactory
     {

@@ -4,7 +4,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace NowinWebServer
+namespace Nowin
 {
     public class Server : INowinServer
     {

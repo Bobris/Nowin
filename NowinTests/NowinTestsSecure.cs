@@ -4,7 +4,7 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using NUnit.Framework;
-using NowinWebServer;
+using Nowin;
 
 // Heavily inspired by Katana project OwinHttpListener tests
 

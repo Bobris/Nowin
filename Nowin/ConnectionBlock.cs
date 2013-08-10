@@ -1,4 +1,4 @@
-namespace NowinWebServer
+namespace Nowin
 {
     internal class ConnectionBlock
     {

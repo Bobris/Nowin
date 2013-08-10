@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace NowinWebServer
+namespace Nowin
 {
     class Transport2HttpHandler : ITransportLayerHandler, IHttpLayerCallback
     {

@@ -1,7 +1,7 @@
 using System;
 using System.Net;
 
-namespace NowinWebServer
+namespace Nowin
 {
     public interface ITransportLayerHandler : ILayerHandler
     {

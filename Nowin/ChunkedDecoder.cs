@@ -1,7 +1,7 @@
 using System;
 using System.Diagnostics;
 
-namespace NowinWebServer
+namespace Nowin
 {
     internal struct ChunkedDecoder
     {

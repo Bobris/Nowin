@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 
-namespace NowinWebServer
+namespace Nowin
 {
     public class Transport2HttpFactory : ILayerFactory
     {

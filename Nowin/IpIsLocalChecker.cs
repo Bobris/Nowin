@@ -3,7 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 
-namespace NowinWebServer
+namespace Nowin
 {
     public class IpIsLocalChecker : IIpIsLocalChecker
     {

@@ -1,6 +1,6 @@
 using System.Net;
 
-namespace NowinWebServer
+namespace Nowin
 {
     public interface IIpIsLocalChecker
     {

@@ -1,4 +1,4 @@
-namespace NowinWebServer
+namespace Nowin
 {
     public interface ITransportLayerCallback : ILayerCallback
     {

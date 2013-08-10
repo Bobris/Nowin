@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using NUnit.Framework;
-using NowinWebServer;
+using Nowin;
 
 namespace NowinTests
 {

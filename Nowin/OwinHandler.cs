@@ -4,7 +4,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace NowinWebServer
+namespace Nowin
 {
     using OwinApp = Func<IDictionary<string, object>, Task>;
     using WebSocketAccept = Action<IDictionary<string, object>, Func<IDictionary<string, object>, Task>>;

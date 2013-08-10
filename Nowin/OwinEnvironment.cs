@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 
-namespace NowinWebServer
+namespace Nowin
 {
     internal sealed partial class OwinEnvironment : IDictionary<string, object>
     {

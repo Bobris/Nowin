@@ -7,8 +7,8 @@
     <ProjectGuid>{EFF3B76F-E9E4-4DA6-B46D-E2DEA456545E}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>NowinWebServer</RootNamespace>
-    <AssemblyName>NowinWebServer</AssemblyName>
+    <RootNamespace>Nowin</RootNamespace>
+    <AssemblyName>Nowin</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>

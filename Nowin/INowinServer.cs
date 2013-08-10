@@ -1,6 +1,6 @@
 using System;
 
-namespace NowinWebServer
+namespace Nowin
 {
     public interface INowinServer : IDisposable
     {

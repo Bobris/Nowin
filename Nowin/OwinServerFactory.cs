@@ -6,7 +6,7 @@ using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 
-namespace NowinWebServer
+namespace Nowin
 {
     public static class OwinServerFactory
     {
