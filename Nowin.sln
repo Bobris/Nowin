@@ -13,7 +13,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "OtherWebServerSamples", "Ot
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleOwinApp", "SampleOwinApp\SampleOwinApp.csproj", "{5897FAEE-8B03-405A-9661-099CBFB2A162}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NowinWebServer", "NowinWebServer\NowinWebServer.csproj", "{EFF3B76F-E9E4-4DA6-B46D-E2DEA456545E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nowin", "Nowin\Nowin.csproj", "{EFF3B76F-E9E4-4DA6-B46D-E2DEA456545E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NowinTests", "NowinTests\NowinTests.csproj", "{84E1BFBD-2EB0-44C8-A7F7-54E4AB152C13}"
 EndProject

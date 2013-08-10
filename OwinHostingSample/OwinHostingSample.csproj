@@ -61,9 +61,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\NowinWebServer\NowinWebServer.csproj">
+    <ProjectReference Include="..\Nowin\Nowin.csproj">
       <Project>{eff3b76f-e9e4-4da6-b46d-e2dea456545e}</Project>
-      <Name>NowinWebServer</Name>
+      <Name>Nowin</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

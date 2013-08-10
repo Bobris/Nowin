@@ -78,9 +78,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\NowinWebServer\NowinWebServer.csproj">
+    <ProjectReference Include="..\Nowin\Nowin.csproj">
       <Project>{eff3b76f-e9e4-4da6-b46d-e2dea456545e}</Project>
-      <Name>NowinWebServer</Name>
+      <Name>Nowin</Name>
     </ProjectReference>
     <ProjectReference Include="..\SampleOwinApp\SampleOwinApp.csproj">
       <Project>{5897faee-8b03-405a-9661-099cbfb2a162}</Project>

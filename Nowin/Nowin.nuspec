@@ -9,9 +9,9 @@
     <licenseUrl>http://www.opensource.org/licenses/mit-license.php</licenseUrl>
     <projectUrl>http://github.com/Bobris/Nowin</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>Fast Owin Web server in pure .Net without reliance on HttpListener and with SSL support</description>
+    <description>Fast Owin Web server in pure .Net without reliance on HttpListener or Win8, includes WebSockets and SSL support</description>
     <summary>Owin Web server in pure .Net</summary>
-    <tags>webserver owin http</tags>
+    <tags>webserver owin http websockets</tags>
     <dependencies>
     </dependencies>
   </metadata>

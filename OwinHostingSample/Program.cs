@@ -11,7 +11,7 @@ namespace OwinHostingSample
         {
             var options = new StartOptions
             {
-                ServerFactory = "NowinWebServer",
+                ServerFactory = "Nowin",
                 Port = 8080
             };
 
