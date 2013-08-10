@@ -4,7 +4,9 @@ using System.IO;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Owin;
+using Microsoft.AspNet.SignalR;
+using Owin;
+using Microsoft.Owin.Builder;
 
 namespace SampleOwinApp
 {
@@ -32,29 +34,29 @@ namespace SampleOwinApp
         internal static T Get<T>(this IDictionary<string, object> dictionary, string key)
         {
             object value;
-            return dictionary.TryGetValue(key, out value) ? (T) value : default(T);
+            return dictionary.TryGetValue(key, out value) ? (T)value : default(T);
         }
     }
 
-    public class Sample
+    public class MyHub : Hub
     {
-        public static Task App(IDictionary<string, object> arg)
+        public void Send(string name, string message)
         {
-            var req = new OwinRequest(arg);
-            var resp = new OwinResponse(arg);
-            if (req.Path == "/")
+            Clients.All.addMessage(name, message);
+        }
+    }
+
+    public class Startup
+    {
+        public void Configuration(IAppBuilder app)
+        {
+            app.MapSignalR();
+            app.Map("/echo", a => a.Run(c =>
             {
-                resp.StatusCode = 200;
-                resp.ContentType = "text/plain";
-                resp.Write("Hello World!");
-                return Task.Delay(0);
-            }
-            if (req.Path == "/echo")
-            {
-                var accept = arg.Get<WebSocketAccept>("websocket.Accept");
+                var accept = c.Get<WebSocketAccept>("websocket.Accept");
                 if (accept == null)
                 {
-                    resp.StatusCode = 500;
+                    c.Response.StatusCode = 500;
                     return Task.Delay(0);
                 }
                 accept(
@@ -73,17 +75,51 @@ namespace SampleOwinApp
                     });
 
                 return Task.Delay(0);
+            }));
+            app.Run(c =>
+                {
+                    var path = c.Request.Path;
+                    if (path == "/")
+                    {
+                        c.Response.StatusCode = 200;
+                        c.Response.ContentType = "text/plain";
+                        c.Response.Write("Hello World!");
+                        return Task.Delay(0);
+                    }
+                    if (path.Contains(".."))
+                    {
+                        // hackers ..
+                        c.Response.StatusCode = 500;
+                        return Task.Delay(0);
+                    }
+                    Console.WriteLine(Path.GetFullPath("."));
+                    var p = Path.Combine(@"..\..\..\SampleOwinApp\", path.Substring(1));
+                    if (File.Exists(p))
+                    {
+                        c.Response.StatusCode = 200;
+                        c.Response.ContentType = p.EndsWith(".js") ? "application/javascript" : "text/html";
+                        return c.Response.WriteAsync(File.ReadAllBytes(p));
+                    }
+                    c.Response.StatusCode = 500;
+                    return Task.Delay(0);
+                });
+        }
+    }
 
-            }
-            var p = Path.Combine(@"c:\Research\SampleWebPage", req.Path.Substring(1));
-            if (File.Exists(p))
-            {
-                resp.StatusCode = 200;
-                resp.ContentType = "text/html";
-                return resp.WriteAsync(File.ReadAllBytes(p));
-            }
-            resp.StatusCode = 500;
-            return Task.Delay(0);
+    public static class Sample
+    {
+        static readonly Func<IDictionary<string, object>, Task> OwinApp;
+
+        static Sample()
+        {
+            var builder = new AppBuilder();
+            new Startup().Configuration(builder);
+            OwinApp = builder.Build();
+        }
+
+        public static Task App(IDictionary<string, object> arg)
+        {
+            return OwinApp(arg);
         }
     }
 }

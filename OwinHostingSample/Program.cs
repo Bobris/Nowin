@@ -27,7 +27,7 @@ namespace OwinHostingSample
     {
         public void Configuration(IAppBuilder app)
         {
-            app.Use(context =>
+            app.Run(context =>
             {
                 if (context.Request.Path == "/")
                 {

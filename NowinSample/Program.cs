@@ -1,7 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Owin.Builder;
 using NowinWebServer;
 
 namespace NowinSample
@@ -10,7 +11,10 @@ namespace NowinSample
     {
         static void Main(string[] args)
         {
-            var builder = ServerBuilder.New().SetPort(8888).SetOwinApp(SampleOwinApp.Sample.App);
+            var owinbuilder = new AppBuilder();
+            OwinServerFactory.Initialize(owinbuilder.Properties);
+            new SampleOwinApp.Startup().Configuration(owinbuilder);
+            var builder = ServerBuilder.New().SetPort(8888).SetOwinApp(owinbuilder.Build()).SetOwinCapabilities((IDictionary<string, object>) owinbuilder.Properties[OwinKeys.ServerCapabilitiesKey]);
             //builder.SetCertificate(new X509Certificate2("../../../sslcert/test.pfx", "nowin"));
             using (var server = builder.Build())
             {
