@@ -58,7 +58,7 @@ namespace Nowin
                 if (certificate != null)
                     builder.SetCertificate(certificate);
                 servers.Add(builder.Build());
-                endpoints.Add(((IServerParameters) builder).EndPoint);
+                endpoints.Add(new IPEndPoint(IPAddress.Loopback,port));
             }
 
             var disposer = new Disposer(servers.Cast<IDisposable>().ToArray());
