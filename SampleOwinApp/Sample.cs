@@ -92,7 +92,6 @@ namespace SampleOwinApp
                         c.Response.StatusCode = 500;
                         return Task.Delay(0);
                     }
-                    Console.WriteLine(Path.GetFullPath("."));
                     var p = Path.Combine(@"..\..\..\SampleOwinApp\", path.Substring(1));
                     if (File.Exists(p))
                     {
