@@ -985,6 +985,65 @@ namespace NowinTests
             }
         }
 
+        [Test]
+        public void BasicOnSendingHeadersWorks()
+        {
+            var listener = CreateServer(
+                env =>
+                {
+                    env["owin.ResponseReasonPhrase"] = "Custom";
+                    var responseStream = env.Get<Stream>("owin.ResponseBody");
+
+                    var responseHeaders = env.Get<IDictionary<string, string[]>>("owin.ResponseHeaders");
+
+                    env.Get<Action<Action<object>, object>>("server.OnSendingHeaders")(state => responseHeaders["custom-header"] = new[] { "customvalue" }, null);
+
+                    responseHeaders["content-length"] = new[] { "10" };
+
+                    responseStream.Write(new byte[10], 0, 10);
+
+                    return Task.Delay(0);
+                });
+
+            using (listener)
+            {
+                var client = new HttpClient();
+                var response = client.PostAsync(HttpClientAddress, new StringContent(SampleContent)).Result;
+                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+                Assert.AreEqual("Custom", response.ReasonPhrase);
+                Assert.AreEqual("customvalue", response.Headers.GetValues("custom-header").First());
+                Assert.AreEqual(10, response.Content.ReadAsByteArrayAsync().Result.Length);
+            }
+        }
+
+        [Test]
+        public void DoubleOnSendingHeadersWorks()
+        {
+            var listener = CreateServer(
+                env =>
+                {
+                    var responseHeaders = env.Get<IDictionary<string, string[]>>("owin.ResponseHeaders");
+
+                    env.Get<Action<Action<object>, object>>("server.OnSendingHeaders")(state => responseHeaders["custom-header"] = new[] { (string)state }, "customvalue");
+                    env.Get<Action<Action<object>, object>>("server.OnSendingHeaders")(state =>
+                        {
+                            responseHeaders["custom-header"] = new[] { "badvalue" };
+                            responseHeaders["custom-header2"] = new[] { "goodvalue" };
+                        }, null);
+
+                    return Task.Delay(0);
+                });
+
+            using (listener)
+            {
+                var client = new HttpClient();
+                var response = client.PostAsync(HttpClientAddress, new StringContent(SampleContent)).Result;
+                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+                Assert.AreEqual("customvalue", response.Headers.GetValues("custom-header").First());
+                Assert.AreEqual("goodvalue", response.Headers.GetValues("custom-header2").First());
+            }
+        }
+
         static void SendRequest(IDisposable listener, HttpRequestMessage request)
         {
             using (listener)

@@ -34,6 +34,7 @@ namespace Nowin
         void UpgradeToWebSocket();
         void ResponseFinished();
 
+        bool HeadersSend { get; }
         byte[] Buffer { get; }
         int ReceiveDataOffset { get; }
         int ReceiveDataLength { get; }

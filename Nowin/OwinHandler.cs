@@ -85,6 +85,8 @@ namespace Nowin
         readonly SemaphoreSlim _sendLock = new SemaphoreSlim(1);
         readonly Dictionary<string, object> _webSocketEnv;
         TaskCompletionSource<object> _webSocketTcsReceivedClose;
+        readonly List<KeyValuePair<Action<object>, object>> _onHeadersList = new List<KeyValuePair<Action<object>, object>>();
+        public readonly Action<Action<object>, object> OnSendingHeadersAction;
 
         public IHttpLayerCallback Callback { set; internal get; }
 
@@ -105,6 +107,7 @@ namespace Nowin
             _environment = new OwinEnvironment(this);
             ReqHeaders = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
             RespHeaders = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+            OnSendingHeadersAction = OnSendingHeadersMethod;
             _webSocketEnv = new Dictionary<string, object>
                 {
                     {"websocket.SendAsync", (WebSocketSendAsync) WebSocketSendAsyncMethod},
@@ -113,6 +116,12 @@ namespace Nowin
                     {"websocket.Version", "1.0"},
                     {"websocket.CallCancelled", null}
                 };
+        }
+
+        void OnSendingHeadersMethod(Action<object> action, object state)
+        {
+            if (Callback.HeadersSend) throw new InvalidOperationException("Headers already sent");
+            _onHeadersList.Add(new KeyValuePair<Action<object>, object>(action, state));
         }
 
         public void Dispose()
@@ -124,6 +133,7 @@ namespace Nowin
             _inWebSocket = false;
             _webSocketFunc = null;
             _environment.Reset();
+            _onHeadersList.Clear();
             ReqHeaders.Clear();
             RespHeaders.Clear();
         }
@@ -176,6 +186,11 @@ namespace Nowin
 
         public void PrepareResponseHeaders()
         {
+            for (int i = _onHeadersList.Count - 1; i >= 0; i--)
+            {
+                var p = _onHeadersList[i];
+                p.Key(p.Value);
+            }
             string[] connectionValues;
             var headers = _overwrittenResponseHeaders;
             if (headers == null)

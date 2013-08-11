@@ -165,7 +165,7 @@ namespace Nowin
                     {
                         _isKeepAlive = false;
                     }
-                    else if (value.IndexOf("Upgrade", StringComparison.OrdinalIgnoreCase)>=0)
+                    else if (value.IndexOf("Upgrade", StringComparison.OrdinalIgnoreCase) >= 0)
                     {
                         _webSocketReqCondition |= WebSocketReqConditions.ConnectionUpgrade;
                     }
@@ -202,7 +202,7 @@ namespace Nowin
             }
             else if (name.Equals("Sec-WebSocket-Version", StringComparison.OrdinalIgnoreCase))
             {
-                if (value=="13")
+                if (value == "13")
                 {
                     _webSocketReqCondition |= WebSocketReqConditions.Version13;
                 }
@@ -1083,6 +1083,11 @@ namespace Nowin
                 return;
             }
             SendHttpResponseAndPrepareForNext();
+        }
+
+        public bool HeadersSend
+        {
+            get { return _responseHeadersSend; }
         }
 
         public byte[] Buffer
