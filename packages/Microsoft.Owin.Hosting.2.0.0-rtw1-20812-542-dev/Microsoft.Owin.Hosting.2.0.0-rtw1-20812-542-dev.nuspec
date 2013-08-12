@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/10/nuspec.xsd">
+  <metadata>
+    <id>Microsoft.Owin.Hosting</id>
+    <version>2.0.0-rtw1-20812-542-dev</version>
+    <title>Microsoft.Owin.Hosting  (nightly 2013 Aug 12)</title>
+    <authors>Microsoft</authors>
+    <owners>Microsoft</owners>
+    <licenseUrl>http://www.microsoft.com/web/webpi/eula/aspnetcomponent_enu.htm</licenseUrl>
+    <projectUrl>http://katanaproject.codeplex.com/</projectUrl>
+    <iconUrl>https://nugetgallery.blob.core.windows.net/icons/Microsoft.Owin.Hosting.2.0.0-rtw1-20812-542-dev.png</iconUrl>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <description>Provides default infrastructure types for hosting and running OWIN-based applications.</description>
+    <summary>Provides default infrastructure types for hosting and running OWIN-based applications.</summary>
+    <tags>Microsoft OWIN</tags>
+    <dependencies>
+      <dependency id="Owin" version="1.0" />
+      <dependency id="Microsoft.Owin" version="2.0.0-rtw1-20812-542-dev" />
+    </dependencies>
+  </metadata>
+</package>

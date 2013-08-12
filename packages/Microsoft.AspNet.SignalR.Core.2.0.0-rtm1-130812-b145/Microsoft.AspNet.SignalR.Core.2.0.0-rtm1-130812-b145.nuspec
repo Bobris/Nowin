@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/10/nuspec.xsd">
+  <metadata>
+    <id>Microsoft.AspNet.SignalR.Core</id>
+    <version>2.0.0-rtm1-130812-b145</version>
+    <title>Microsoft ASP.NET SignalR Core Components</title>
+    <authors>Microsoft</authors>
+    <owners>Microsoft</owners>
+    <licenseUrl>http://www.microsoft.com/web/webpi/eula/signalr_prerelease.htm</licenseUrl>
+    <projectUrl>http://www.asp.net/signalr</projectUrl>
+    <iconUrl>https://nugetgallery.blob.core.windows.net/icons/Microsoft.AspNet.SignalR.Core.2.0.0-rtm1-130812-b145.png</iconUrl>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <description>Core server components for ASP.NET SignalR.</description>
+    <summary>Core server components for ASP.NET SignalR.</summary>
+    <copyright>© Microsoft Corporation. All rights reserved.</copyright>
+    <tags>Microsoft AspNet SignalR AspNetSignalR Core</tags>
+    <dependencies>
+      <dependency id="Newtonsoft.Json" version="5.0.0" />
+      <dependency id="Owin" version="1.0" />
+      <dependency id="Microsoft.Owin" version="2.0.0-rtw" />
+      <dependency id="Microsoft.Owin.Security" version="2.0.0-rtw" />
+    </dependencies>
+  </metadata>
+</package>

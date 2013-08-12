@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/10/nuspec.xsd">
+  <metadata>
+    <id>Microsoft.AspNet.SignalR</id>
+    <version>2.0.0-rtm1-130812-b145</version>
+    <title>Microsoft ASP.NET SignalR</title>
+    <authors>Microsoft</authors>
+    <owners>Microsoft</owners>
+    <licenseUrl>http://www.microsoft.com/web/webpi/eula/signalr_prerelease.htm</licenseUrl>
+    <projectUrl>http://www.asp.net/signalr</projectUrl>
+    <iconUrl>https://nugetgallery.blob.core.windows.net/icons/Microsoft.AspNet.SignalR.2.0.0-rtm1-130812-b145.png</iconUrl>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <description>Incredibly simple real-time web for .NET.
+      This package pulls in the server components and JavaScript client required to use SignalR in an ASP.NET application.</description>
+    <summary>Incredibly simple real-time web for .NET.
+      This package pulls in the server components and JavaScript client required to use SignalR in an ASP.NET application.</summary>
+    <copyright>© Microsoft Corporation. All rights reserved.</copyright>
+    <tags>Microsoft AspNet SignalR AspNetSignalR websockets real-time realtime comet HTTP streaming</tags>
+    <dependencies>
+      <dependency id="Microsoft.AspNet.SignalR.JS" version="2.0.0-rtm1-130812-b145" />
+      <dependency id="Microsoft.AspNet.SignalR.Core" version="2.0.0-rtm1-130812-b145" />
+      <dependency id="Microsoft.Owin.Host.SystemWeb" version="2.0.0-rtw" />
+    </dependencies>
+    <frameworkAssemblies>
+      <frameworkAssembly assemblyName="System" targetFramework=".NETFramework4.0" />
+    </frameworkAssemblies>
+  </metadata>
+</package>

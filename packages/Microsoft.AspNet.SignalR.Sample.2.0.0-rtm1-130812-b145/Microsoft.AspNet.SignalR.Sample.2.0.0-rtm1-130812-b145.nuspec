@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/10/nuspec.xsd">
+  <metadata>
+    <id>Microsoft.AspNet.SignalR.Sample</id>
+    <version>2.0.0-rtm1-130812-b145</version>
+    <title>Microsoft ASP.NET SignalR Sample</title>
+    <authors>Microsoft</authors>
+    <owners>Microsoft</owners>
+    <licenseUrl>http://www.microsoft.com/web/webpi/eula/signalr_prerelease.htm</licenseUrl>
+    <projectUrl>http://www.asp.net/signalr</projectUrl>
+    <iconUrl>https://nugetgallery.blob.core.windows.net/icons/Microsoft.AspNet.SignalR.Sample.2.0.0-rtm1-130812-b145.png</iconUrl>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <description>Foo</description>
+    <summary>Foo</summary>
+    <copyright>© Microsoft Corporation. All rights reserved.</copyright>
+    <tags>Microsoft AspNet SignalR AspNetSignalR Sample</tags>
+    <dependencies>
+      <dependency id="Microsoft.AspNet.SignalR" version="2.0.0-rtm1-130812-b145" />
+    </dependencies>
+  </metadata>
+</package>
