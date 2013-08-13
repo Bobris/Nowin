@@ -1056,6 +1056,11 @@ namespace Nowin
 
         public void ResponseFinished()
         {
+            if (_isWebSocket)
+            {
+                Callback.StartDisconnect();
+                return;
+            }
             if (_statusCode == 500 || _cancellation.IsCancellationRequested)
             {
                 _cancellation.Cancel();
