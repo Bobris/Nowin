@@ -46,7 +46,7 @@ namespace Nowin
 
         static void IoCompleted(object sender, SocketAsyncEventArgs e)
         {
-            //Console.WriteLine("IoCompleted {0} {1} {2} {3}", e.LastOperation, e.Offset, e.BytesTransferred, e.SocketError);
+            Log.Write("IoCompleted {0} {1} {2} {3}", e.LastOperation, e.Offset, e.BytesTransferred, e.SocketError);
             var self = (SaeaLayerCallback)e.UserToken;
             switch (e.LastOperation)
             {
@@ -148,7 +148,7 @@ namespace Nowin
 
         public void StartAccept(byte[] buffer, int offset, int length)
         {
-            //Console.WriteLine("start accept {0} {1}",offset,length);
+            Log.Write("start accept {0} {1}", offset, length);
             int oldState, newState;
             do
             {
@@ -182,7 +182,7 @@ namespace Nowin
 
         public void StartReceive(byte[] buffer, int offset, int length)
         {
-            //Console.WriteLine("start receive {0} {1}", offset, length);
+            Log.Write("start receive {0} {1}", offset, length);
             int oldState, newState;
             do
             {
@@ -210,7 +210,7 @@ namespace Nowin
 
         public void StartSend(byte[] buffer, int offset, int length)
         {
-            //Console.WriteLine("start send {0} {1}", offset, length);
+            Log.Write("start send {0} {1}", offset, length);
             int oldState, newState;
             do
             {
@@ -238,6 +238,7 @@ namespace Nowin
 
         public void StartDisconnect()
         {
+            Log.Write("start disconnect");
             int oldState, newState;
             do
             {

@@ -52,6 +52,7 @@
     <Compile Include="INowinServer.cs" />
     <Compile Include="IpIsLocalChecker.cs" />
     <Compile Include="IServerParameters.cs" />
+    <Compile Include="Log.cs" />
     <Compile Include="OwinEnvironment.cs" />
     <Compile Include="OwinEnvironment.Generated.cs">
       <AutoGen>True</AutoGen>
