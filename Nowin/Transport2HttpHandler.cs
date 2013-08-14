@@ -816,8 +816,8 @@ namespace Nowin
                 }
                 return;
             }
-            //Console.WriteLine("======= Offset {0}, Length {1}", offset - StartBufferOffset, length);
-            //Console.WriteLine(Encoding.UTF8.GetString(buffer, offset, length));
+            Console.WriteLine("======= Offset {0}, Length {1}", offset - StartBufferOffset, length);
+            Console.WriteLine(Encoding.UTF8.GetString(buffer, offset, length));
             _receiveBufferFullness = offset + length;
             if (_waitingForRequest)
             {
@@ -1056,11 +1056,6 @@ namespace Nowin
 
         public void ResponseFinished()
         {
-            if (_isWebSocket)
-            {
-                Callback.StartDisconnect();
-                return;
-            }
             if (_statusCode == 500 || _cancellation.IsCancellationRequested)
             {
                 _cancellation.Cancel();
@@ -1088,6 +1083,11 @@ namespace Nowin
                 return;
             }
             SendHttpResponseAndPrepareForNext();
+        }
+
+        public void CloseConnection()
+        {
+            Callback.StartDisconnect();
         }
 
         public bool HeadersSend

@@ -99,7 +99,7 @@ namespace SampleOwinApp
                         c.Response.ContentType = p.EndsWith(".js") ? "application/javascript" : "text/html";
                         return c.Response.WriteAsync(File.ReadAllBytes(p));
                     }
-                    c.Response.StatusCode = 500;
+                    c.Response.StatusCode = 404;
                     return Task.Delay(0);
                 });
         }

@@ -211,6 +211,10 @@ namespace Nowin
         public void StartSend(byte[] buffer, int offset, int length)
         {
             Log.Write("start send {0} {1}", offset, length);
+            if (offset==0)
+            {
+                int kkk = 0;
+            }
             int oldState, newState;
             do
             {

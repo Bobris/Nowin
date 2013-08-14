@@ -33,6 +33,7 @@ namespace Nowin
 
         void UpgradeToWebSocket();
         void ResponseFinished();
+        void CloseConnection();
 
         bool HeadersSend { get; }
         byte[] Buffer { get; }

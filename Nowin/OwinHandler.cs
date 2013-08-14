@@ -66,6 +66,7 @@ namespace Nowin
         {
             Header,
             Body,
+            Closing,
             Close,
             Error
         }
@@ -82,6 +83,7 @@ namespace Nowin
         int _webSocketReceiveCount;
         int _maskIndex;
         int _webSocketReceiving;
+        int _webSocketSendBufferUsedSize;
         readonly SemaphoreSlim _sendLock = new SemaphoreSlim(1);
         readonly Dictionary<string, object> _webSocketEnv;
         TaskCompletionSource<object> _webSocketTcsReceivedClose;
@@ -263,6 +265,7 @@ namespace Nowin
             _inWebSocket = true;
             _webSocketReceiveState = WebSocketReceiveState.Header;
             _webSocketNextSendIsStartOfMessage = true;
+            _webSocketSendBufferUsedSize = 0;
             Callback.UpgradeToWebSocket();
         }
 
@@ -281,11 +284,11 @@ namespace Nowin
             try
             {
                 var task = _webSocketFunc(_webSocketEnv);
-                task.ContinueWith((t, o) => ((OwinHandler)o).Callback.ResponseFinished(), this);
+                task.ContinueWith((t, o) => ((OwinHandler)o).Callback.CloseConnection(), this);
             }
             catch
             {
-                Callback.ResponseFinished();
+                Callback.CloseConnection();
             }
         }
 
@@ -317,30 +320,39 @@ namespace Nowin
                 var buf = Callback.Buffer;
                 var maxlen = Math.Min(Callback.SendDataLength - 4, 65535);
                 var last = false;
+                var o = Callback.SendDataOffset + 4;
                 do
                 {
-                    var l = data.Count;
+                    if (_webSocketReceiveState == WebSocketReceiveState.Close)
+                    {
+                        throw new OperationCanceledException("Connection is already closed");
+                    }
+                    var l = _webSocketSendBufferUsedSize + data.Count;
                     if (l > maxlen) l = maxlen; else last = true;
-                    var o = Callback.SendDataOffset;
-                    buf[o] = (byte)(((last & endOfMessage) ? 0x80 : 0) + messageType);
-                    messageType = 0;
+                    Array.Copy(data.Array, data.Offset, buf, o + _webSocketSendBufferUsedSize, l - _webSocketSendBufferUsedSize);
+                    data = new ArraySegment<byte>(data.Array, data.Offset + l - _webSocketSendBufferUsedSize, data.Count - l + _webSocketSendBufferUsedSize);
+                    if (data.Count == 0 && last && !endOfMessage)
+                    {
+                        _webSocketSendBufferUsedSize = l;
+                        return;
+                    }
+                    _webSocketSendBufferUsedSize = 0;
                     int headerSize;
                     if (l < 126)
                     {
-                        buf[o + 1] = (byte)data.Count;
+                        buf[o - 1] = (byte)l;
                         headerSize = 2;
                     }
                     else
                     {
-                        buf[o + 1] = 126;
-                        buf[o + 2] = (byte)(l / 256);
-                        buf[o + 3] = (byte)(l % 256);
+                        buf[o - 3] = 126;
+                        buf[o - 2] = (byte)(l / 256);
+                        buf[o - 1] = (byte)(l % 256);
                         headerSize = 4;
                     }
-                    Array.Copy(data.Array, data.Offset, buf, o + headerSize, l);
-                    await Callback.SendData(buf, o, headerSize + l);
-                    data = new ArraySegment<byte>(data.Array, data.Offset + l, data.Count - l);
-
+                    buf[o - headerSize] = (byte)(((last & endOfMessage) ? 0x80 : 0) + messageType);
+                    messageType = 0;
+                    await Callback.SendData(buf, o - headerSize, headerSize + l);
                 } while (!last);
                 _webSocketNextSendIsStartOfMessage = endOfMessage;
             }
@@ -355,7 +367,7 @@ namespace Nowin
             Log.Write("WebSocketReceiveAsyncMethod buffer:{0}", data.Count);
             _webSocketReceiveSegment = data;
             var tcs = new TaskCompletionSource<WebSocketReceiveTuple>();
-            if (_webSocketReceiveState == WebSocketReceiveState.Close)
+            if (_webSocketReceiveState == WebSocketReceiveState.Close || _webSocketReceiveState == WebSocketReceiveState.Closing)
             {
                 tcs.SetCanceled();
                 return tcs.Task;
@@ -368,6 +380,11 @@ namespace Nowin
 
         async Task WebSocketCloseAsyncMethod(int closeStatus, string closeDescription, CancellationToken cancel)
         {
+            if (_webSocketReceiveState == WebSocketReceiveState.Close)
+            {
+                Log.Write("Ignoring WebSocketCloseAsync closeStatus:{0} desc:{1}", closeStatus, closeDescription);
+                return;
+            }
             Log.Write("WebSocketCloseAsync closeStatus:{0} desc:{1}", closeStatus, closeDescription);
             await _sendLock.WaitAsync(cancel);
             try
@@ -399,7 +416,7 @@ namespace Nowin
                 buf[o - headerSize] = 0x88; // Final frame of close
                 _webSocketTcsReceivedClose = new TaskCompletionSource<object>();
                 await Callback.SendData(buf, o - headerSize, headerSize + l);
-                if (_webSocketReceiveState == WebSocketReceiveState.Close)
+                if (_webSocketReceiveState == WebSocketReceiveState.Close || _webSocketReceiveState == WebSocketReceiveState.Closing)
                 {
                     _webSocketTcsReceivedClose.TrySetResult(null);
                 }
@@ -458,7 +475,7 @@ namespace Nowin
                     }
                     Log.Write("Received WebSocketClose Status:{0} Desc:{1}", _webSocketEnv["websocket.ClientCloseStatus"], _webSocketEnv["websocket.ClientCloseDescription"]);
                     Callback.ConsumeReceiveData((int)_webSocketFrameLen);
-                    _webSocketReceiveState = WebSocketReceiveState.Close;
+                    _webSocketReceiveState = WebSocketReceiveState.Closing;
                     var tcs = _webSocketReceiveTcs;
                     if (tcs != null)
                     {
