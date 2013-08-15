@@ -30,7 +30,7 @@ namespace Nowin
         readonly bool _isSsl;
         readonly IIpIsLocalChecker _ipIsLocalChecker;
         readonly ReqRespStream _reqRespStream;
-        TaskCompletionSource<bool> _tcsSend;
+        volatile TaskCompletionSource<bool> _tcsSend;
         CancellationTokenSource _cancellation;
         int _responseHeaderPos;
         bool _lastPacket;
@@ -610,9 +610,22 @@ namespace Nowin
                 }
                 if (_responseIsChunked)
                 {
-                    WrapInChunk(_buffer, ref offset, ref len);
+                    if (len != 0)
+                    {
+                        WrapInChunk(_buffer, ref offset, ref len);
+                    }
                     AppendZeroChunk(_buffer, offset, ref len);
                 }
+            }
+            var tcs = _tcsSend;
+            if (tcs != null)
+            {
+                tcs.Task.ContinueWith(_ =>
+                    {
+                        _lastPacket = true;
+                        Callback.StartSend(_buffer, offset, len);
+                    });
+                return;
             }
             _lastPacket = true;
             Callback.StartSend(_buffer, offset, len);
@@ -640,6 +653,12 @@ namespace Nowin
 
         void SendInternalServerError()
         {
+            var tcs = _tcsSend;
+            if (tcs != null)
+            {
+                tcs.Task.ContinueWith(_ => SendInternalServerError());
+                return;
+            }
             _isKeepAlive = false;
             _lastPacket = true;
             try
@@ -706,7 +725,23 @@ namespace Nowin
                 Callback.StartDisconnect();
                 throw new ArgumentOutOfRangeException("len", "Cannot send more bytes than specified in Content-Length header");
             }
-            var tcs = new TaskCompletionSource<bool>();
+            var tcs = _tcsSend;
+            if (tcs != null)
+            {
+                return tcs.Task.ContinueWith(_ =>
+                {
+                    tcs = new TaskCompletionSource<bool>();
+                    Thread.MemoryBarrier();
+                    if (_tcsSend != null)
+                    {
+                        throw new InvalidOperationException("Want to start send but previous is still sending");
+                    }
+                    _tcsSend = tcs;
+                    Callback.StartSend(buffer, startOffset, len);
+                });
+            }
+            tcs = new TaskCompletionSource<bool>();
+            Thread.MemoryBarrier();
             _tcsSend = tcs;
             Callback.StartSend(buffer, startOffset, len);
             return tcs.Task;
@@ -749,6 +784,9 @@ namespace Nowin
 
         public void Send100Continue()
         {
+            var tcs = new TaskCompletionSource<bool>();
+            Thread.MemoryBarrier();
+            _tcsSend = tcs;
             Callback.StartSend(_buffer, _constantsOffset, Server.Status100Continue.Length);
         }
 
