@@ -6,20 +6,20 @@ namespace Nowin
     public static class Log
     {
         [Conditional("DEBUG")]
-        public static void Write(string message)
+        public static void Write(int id, string message)
         {
-            LogInternal(message);
+            LogInternal(id, message);
         }
 
         [Conditional("DEBUG")]
-        public static void Write(string message, params object[] param)
+        public static void Write(int id, string message, params object[] param)
         {
-            LogInternal(string.Format(message, param));
+            LogInternal(id, string.Format(message, param));
         }
 
-        static void LogInternal(string message)
+        static void LogInternal(int id, string message)
         {
-            Console.WriteLine("{0:O} {1}", DateTime.UtcNow, message);
+            Console.WriteLine("{0:O} ID{1,-5} {2}", DateTime.UtcNow, id, message);
         }
     }
 }

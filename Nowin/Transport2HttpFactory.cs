@@ -44,9 +44,9 @@ namespace Nowin
             _next.InitCommonBuffer(buffer, offset + MyCommonBufferSize());
         }
 
-        public ILayerHandler Create(byte[] buffer, int offset, int commonOffset)
+        public ILayerHandler Create(byte[] buffer, int offset, int commonOffset, int handlerId)
         {
-            var nextHandler = (IHttpLayerHandler)_next.Create(buffer, offset + MyPerConnectionBufferSize(), commonOffset + MyCommonBufferSize());
+            var nextHandler = (IHttpLayerHandler)_next.Create(buffer, offset + MyPerConnectionBufferSize(), commonOffset + MyCommonBufferSize(), handlerId);
             return new Transport2HttpHandler(nextHandler, _isSsl, _ipIsLocalChecker, buffer, offset, _receiveBufferSize, commonOffset, _charBuffer);
         }
     }

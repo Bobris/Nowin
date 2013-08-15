@@ -20,6 +20,7 @@ namespace Nowin
         readonly ITransportLayerHandler _handler;
         readonly Socket _listenSocket;
         readonly Server _server;
+        readonly int _handlerId;
         readonly SocketAsyncEventArgs _receiveEvent = new SocketAsyncEventArgs();
         readonly SocketAsyncEventArgs _sendEvent = new SocketAsyncEventArgs();
         readonly SocketAsyncEventArgs _disconnectEvent = new SocketAsyncEventArgs();
@@ -27,11 +28,12 @@ namespace Nowin
 #pragma warning disable 420
         volatile int _state;
 
-        public SaeaLayerCallback(ITransportLayerHandler handler, Socket listenSocket, Server server)
+        public SaeaLayerCallback(ITransportLayerHandler handler, Socket listenSocket, Server server, int handlerId)
         {
             _handler = handler;
             _listenSocket = listenSocket;
             _server = server;
+            _handlerId = handlerId;
             _receiveEvent.Completed += IoCompleted;
             _sendEvent.Completed += IoCompleted;
             _disconnectEvent.Completed += IoCompleted;
@@ -46,8 +48,8 @@ namespace Nowin
 
         static void IoCompleted(object sender, SocketAsyncEventArgs e)
         {
-            Log.Write("IoCompleted {0} {1} {2} {3}", e.LastOperation, e.Offset, e.BytesTransferred, e.SocketError);
             var self = (SaeaLayerCallback)e.UserToken;
+            Log.Write(self._handlerId, "IoCompleted {0} {1} {2} {3}", e.LastOperation, e.Offset, e.BytesTransferred, e.SocketError);
             switch (e.LastOperation)
             {
                 case SocketAsyncOperation.Accept:
@@ -148,7 +150,7 @@ namespace Nowin
 
         public void StartAccept(byte[] buffer, int offset, int length)
         {
-            Log.Write("start accept {0} {1}", offset, length);
+            Log.Write(_handlerId, "start accept {0} {1}", offset, length);
             int oldState, newState;
             do
             {
@@ -182,7 +184,7 @@ namespace Nowin
 
         public void StartReceive(byte[] buffer, int offset, int length)
         {
-            Log.Write("start receive {0} {1}", offset, length);
+            Log.Write(_handlerId, "start receive {0} {1}", offset, length);
             int oldState, newState;
             do
             {
@@ -210,11 +212,7 @@ namespace Nowin
 
         public void StartSend(byte[] buffer, int offset, int length)
         {
-            Log.Write("start send {0} {1}", offset, length);
-            if (offset==0)
-            {
-                int kkk = 0;
-            }
+            Log.Write(_handlerId, "start send {0} {1}", offset, length);
             int oldState, newState;
             do
             {
@@ -242,7 +240,7 @@ namespace Nowin
 
         public void StartDisconnect()
         {
-            Log.Write("start disconnect");
+            Log.Write(_handlerId, "start disconnect");
             int oldState, newState;
             do
             {

@@ -28,9 +28,9 @@ namespace Nowin
             _next.InitCommonBuffer(buffer, offset);
         }
 
-        public ILayerHandler Create(byte[] buffer, int offset, int commonOffset)
+        public ILayerHandler Create(byte[] buffer, int offset, int commonOffset, int handlerId)
         {
-            var nextHandler = (ITransportLayerHandler)_next.Create(buffer, offset, commonOffset);
+            var nextHandler = (ITransportLayerHandler)_next.Create(buffer, offset, commonOffset, handlerId);
             var handler = new SslTransportHandler(nextHandler, _certificate);
             return handler;
         }

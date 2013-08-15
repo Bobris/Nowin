@@ -21,9 +21,9 @@ namespace Nowin
         {
         }
 
-        public ILayerHandler Create(byte[] buffer, int offset, int commonOffset)
+        public ILayerHandler Create(byte[] buffer, int offset, int commonOffset, int handlerId)
         {
-            return new OwinHandler(_app, _owinCapabilities);
+            return new OwinHandler(_app, _owinCapabilities, handlerId);
         }
     }
 }

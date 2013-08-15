@@ -52,6 +52,7 @@ namespace Nowin
     {
         readonly OwinApp _app;
         readonly IDictionary<string, object> _owinCapabilities;
+        readonly int _handlerId;
 
         readonly OwinEnvironment _environment;
         internal readonly Dictionary<string, string[]> ReqHeaders;
@@ -102,10 +103,11 @@ namespace Nowin
             get { return _owinCapabilities; }
         }
 
-        public OwinHandler(OwinApp app, IDictionary<string, object> owinCapabilities)
+        public OwinHandler(OwinApp app, IDictionary<string, object> owinCapabilities, int handlerId)
         {
             _app = app;
             _owinCapabilities = owinCapabilities;
+            _handlerId = handlerId;
             _environment = new OwinEnvironment(this);
             ReqHeaders = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
             RespHeaders = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
@@ -251,7 +253,7 @@ namespace Nowin
 
         void WebSocketAcceptMethod(IDictionary<string, object> dictionary, Func<IDictionary<string, object>, Task> func)
         {
-            Log.Write("WebSocketAcceptMethod");
+            Log.Write(_handlerId, "WebSocketAcceptMethod");
             if (dictionary != null)
             {
                 object value;
@@ -271,7 +273,7 @@ namespace Nowin
 
         public void UpgradedToWebSocket(bool success)
         {
-            Log.Write("UpgradedToWebSocket {0}", success);
+            Log.Write(_handlerId, "UpgradedToWebSocket {0}", success);
             if (!success)
             {
                 Callback.ResponseStatusCode = 500;
@@ -309,7 +311,7 @@ namespace Nowin
 
         async Task WebSocketSendAsyncMethod(ArraySegment<byte> data, int messageType, bool endOfMessage, CancellationToken cancel)
         {
-            Log.Write("WebSocketSendAsyncMethod Len:{0} MessageType:{1} EndOfMessage:{2}", data.Count, messageType, endOfMessage);
+            Log.Write(_handlerId, "WebSocketSendAsyncMethod Len:{0} MessageType:{1} EndOfMessage:{2}", data.Count, messageType, endOfMessage);
             if (!_webSocketNextSendIsStartOfMessage)
             {
                 messageType = 0;
@@ -364,7 +366,7 @@ namespace Nowin
 
         Task<WebSocketReceiveTuple> WebSocketReceiveAsyncMethod(ArraySegment<byte> data, CancellationToken cancel)
         {
-            Log.Write("WebSocketReceiveAsyncMethod buffer:{0}", data.Count);
+            Log.Write(_handlerId, "WebSocketReceiveAsyncMethod buffer:{0}", data.Count);
             _webSocketReceiveSegment = data;
             var tcs = new TaskCompletionSource<WebSocketReceiveTuple>();
             if (_webSocketReceiveState == WebSocketReceiveState.Close || _webSocketReceiveState == WebSocketReceiveState.Closing)
@@ -382,10 +384,10 @@ namespace Nowin
         {
             if (_webSocketReceiveState == WebSocketReceiveState.Close)
             {
-                Log.Write("Ignoring WebSocketCloseAsync closeStatus:{0} desc:{1}", closeStatus, closeDescription);
+                Log.Write(_handlerId, "Ignoring WebSocketCloseAsync closeStatus:{0} desc:{1}", closeStatus, closeDescription);
                 return;
             }
-            Log.Write("WebSocketCloseAsync closeStatus:{0} desc:{1}", closeStatus, closeDescription);
+            Log.Write(_handlerId, "WebSocketCloseAsync closeStatus:{0} desc:{1}", closeStatus, closeDescription);
             await _sendLock.WaitAsync(cancel);
             try
             {
@@ -473,7 +475,7 @@ namespace Nowin
                         _webSocketEnv.Add("websocket.ClientCloseStatus", 0);
                         _webSocketEnv.Add("websocket.ClientCloseDescription", "");
                     }
-                    Log.Write("Received WebSocketClose Status:{0} Desc:{1}", _webSocketEnv["websocket.ClientCloseStatus"], _webSocketEnv["websocket.ClientCloseDescription"]);
+                    Log.Write(_handlerId, "Received WebSocketClose Status:{0} Desc:{1}", _webSocketEnv["websocket.ClientCloseStatus"], _webSocketEnv["websocket.ClientCloseDescription"]);
                     Callback.ConsumeReceiveData((int)_webSocketFrameLen);
                     _webSocketReceiveState = WebSocketReceiveState.Closing;
                     var tcs = _webSocketReceiveTcs;
@@ -503,7 +505,7 @@ namespace Nowin
                     if (tcs != null)
                     {
                         _webSocketReceiveTcs = null;
-                        Log.Write("Received WebSocketFrame Opcode:{0} Last:{1} Length:{2}", _webSocketFrameOpcode, _webSocketFrameLast, _webSocketReceiveCount);
+                        Log.Write(_handlerId, "Received WebSocketFrame Opcode:{0} Last:{1} Length:{2}", _webSocketFrameOpcode, _webSocketFrameLast, _webSocketReceiveCount);
                         tcs.SetResult(new WebSocketReceiveTuple(_webSocketFrameOpcode, _webSocketFrameLast, _webSocketReceiveCount));
                     }
                     _webSocketReceiveState = WebSocketReceiveState.Header;
@@ -514,7 +516,7 @@ namespace Nowin
                     if (tcs != null)
                     {
                         _webSocketReceiveTcs = null;
-                        Log.Write("Received WebSocketFrame Opcode:{0} Last:{1} Length:{2}", _webSocketFrameOpcode, false, _webSocketReceiveCount);
+                        Log.Write(_handlerId, "Received WebSocketFrame Opcode:{0} Last:{1} Length:{2}", _webSocketFrameOpcode, false, _webSocketReceiveCount);
                         tcs.SetResult(new WebSocketReceiveTuple(_webSocketFrameOpcode, false, _webSocketReceiveCount));
                     }
                 }
