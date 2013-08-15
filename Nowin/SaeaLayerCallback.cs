@@ -87,7 +87,6 @@ namespace Nowin
             } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
             _server.ReportNewConnectedClient();
             _socket = _receiveEvent.AcceptSocket;
-            _receiveEvent.AcceptSocket = null;
             if (_receiveEvent.BytesTransferred >= 0 && _receiveEvent.SocketError == SocketError.Success)
             {
                 _handler.FinishAccept(_receiveEvent.Buffer, _receiveEvent.Offset, _receiveEvent.BytesTransferred, _socket.RemoteEndPoint as IPEndPoint, _socket.LocalEndPoint as IPEndPoint);
@@ -172,6 +171,8 @@ namespace Nowin
             }
             if (!willRaiseEvent)
             {
+                var e = _receiveEvent;
+                Log.Write(_handlerId, "Sync Accept {0} {1} {2} {3}", e.LastOperation, e.Offset, e.BytesTransferred, e.SocketError);
                 ProcessAccept();
             }
         }
@@ -206,6 +207,8 @@ namespace Nowin
             }
             if (!willRaiseEvent)
             {
+                var e = _receiveEvent;
+                Log.Write(_handlerId, "Sync Receive {0} {1} {2} {3}", e.LastOperation, e.Offset, e.BytesTransferred, e.SocketError);
                 ProcessReceive();
             }
         }
@@ -234,6 +237,8 @@ namespace Nowin
             }
             if (!willRaiseEvent)
             {
+                var e = _sendEvent;
+                Log.Write(_handlerId, "Sync Send {0} {1} {2} {3}", e.LastOperation, e.Offset, e.BytesTransferred, e.SocketError);
                 ProcessSend();
             }
         }
@@ -261,6 +266,8 @@ namespace Nowin
             }
             if (!willRaiseEvent)
             {
+                var e = _disconnectEvent;
+                Log.Write(_handlerId, "Sync Disconnect {0} {1} {2} {3}", e.LastOperation, e.Offset, e.BytesTransferred, e.SocketError);
                 ProcessDisconnect();
             }
         }

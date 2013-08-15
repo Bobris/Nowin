@@ -854,8 +854,10 @@ namespace Nowin
                 }
                 return;
             }
+#if DEBUG
             Console.WriteLine("======= Offset {0}, Length {1}", offset - StartBufferOffset, length);
             Console.WriteLine(Encoding.UTF8.GetString(buffer, offset, length));
+#endif
             _receiveBufferFullness = offset + length;
             if (_waitingForRequest)
             {
