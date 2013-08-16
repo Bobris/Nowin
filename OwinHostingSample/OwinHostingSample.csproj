@@ -40,9 +40,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Microsoft.Owin.Hosting.2.0.0-rtw1-20812-542-dev\lib\net45\Microsoft.Owin.Hosting.dll</HintPath>
     </Reference>
-    <Reference Include="Nowin, Version=0.9.0.3, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="Nowin, Version=0.9.1.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Nowin.0.9.0.3\lib\net45\Nowin.dll</HintPath>
+      <HintPath>..\packages\Nowin.0.9.1.0\lib\net45\Nowin.dll</HintPath>
     </Reference>
     <Reference Include="Owin, Version=1.0.0.0, Culture=neutral, PublicKeyToken=f0ebd12fd5e55cc5, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
