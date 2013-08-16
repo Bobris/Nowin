@@ -134,6 +134,7 @@ namespace Nowin
 
         public void PrepareForRequest()
         {
+            Log.Write(_handlerId,"PrepareForRequest");
             _inWebSocket = false;
             _webSocketFunc = null;
             _environment.Reset();
@@ -160,6 +161,7 @@ namespace Nowin
         public void HandleRequest()
         {
             Callback.ResponseStatusCode = 200; // Default status code
+            Callback.ResponseReasonPhase = null;
             _overwrittenResponseHeaders = RespHeaders;
             if (!Callback.IsWebSocketReq)
                 _environment.RemoveWebSocketAcceptFunc();

@@ -53,6 +53,7 @@ namespace Nowin
         string _reasonPhase;
         readonly List<KeyValuePair<string, object>> _responseHeaders = new List<KeyValuePair<string, object>>();
         readonly ThreadLocal<char[]> _charBuffer;
+        readonly int _handlerId;
 
         [Flags]
         enum WebSocketReqConditions
@@ -72,8 +73,9 @@ namespace Nowin
         string _webSocketKey;
         bool _isWebSocket;
         bool _startedReceiveData;
+        int _disconnecting;
 
-        public Transport2HttpHandler(IHttpLayerHandler next, bool isSsl, IIpIsLocalChecker ipIsLocalChecker, byte[] buffer, int startBufferOffset, int receiveBufferSize, int constantsOffset, ThreadLocal<char[]> charBuffer)
+        public Transport2HttpHandler(IHttpLayerHandler next, bool isSsl, IIpIsLocalChecker ipIsLocalChecker, byte[] buffer, int startBufferOffset, int receiveBufferSize, int constantsOffset, ThreadLocal<char[]> charBuffer, int handlerId)
         {
             _next = next;
             StartBufferOffset = startBufferOffset;
@@ -81,6 +83,7 @@ namespace Nowin
             ResponseBodyBufferOffset = StartBufferOffset + ReceiveBufferSize * 2 + 8;
             _constantsOffset = constantsOffset;
             _charBuffer = charBuffer;
+            _handlerId = handlerId;
             _buffer = buffer;
             _isSsl = isSsl;
             _ipIsLocalChecker = ipIsLocalChecker;
@@ -605,7 +608,7 @@ namespace Nowin
             {
                 if (_responseContentLength != ulong.MaxValue && _reqRespStream.ResponseLength != _responseContentLength)
                 {
-                    Callback.StartDisconnect();
+                    CloseConnection();
                     return;
                 }
                 if (_responseIsChunked)
@@ -667,7 +670,7 @@ namespace Nowin
             }
             catch (Exception)
             {
-                Callback.StartDisconnect();
+                CloseConnection();
             }
         }
 
@@ -722,7 +725,7 @@ namespace Nowin
             }
             if (_responseContentLength != ulong.MaxValue && _reqRespStream.ResponseLength > _responseContentLength)
             {
-                Callback.StartDisconnect();
+                CloseConnection();
                 throw new ArgumentOutOfRangeException("len", "Cannot send more bytes than specified in Content-Length header");
             }
             var tcs = _tcsSend;
@@ -808,6 +811,7 @@ namespace Nowin
 
         public void PrepareAccept()
         {
+            _disconnecting = 0;
             Callback.StartAccept(_buffer, StartBufferOffset, ReceiveBufferSize);
         }
 
@@ -840,7 +844,7 @@ namespace Nowin
             {
                 if (_waitingForRequest)
                 {
-                    Callback.StartDisconnect();
+                    CloseConnection();
                 }
                 else
                 {
@@ -943,7 +947,7 @@ namespace Nowin
                 }
                 else
                 {
-                    Callback.StartDisconnect();
+                    CloseConnection();
                 }
             }
         }
@@ -1052,7 +1056,7 @@ namespace Nowin
             if (_responseHeadersSend)
             {
                 _isKeepAlive = false;
-                Callback.StartDisconnect();
+                CloseConnection();
                 return;
             }
             _next.PrepareResponseHeaders();
@@ -1104,7 +1108,7 @@ namespace Nowin
                 else
                 {
                     _isKeepAlive = false;
-                    Callback.StartDisconnect();
+                    CloseConnection();
                 }
                 return;
             }
@@ -1127,7 +1131,8 @@ namespace Nowin
 
         public void CloseConnection()
         {
-            Callback.StartDisconnect();
+            if (Interlocked.CompareExchange(ref _disconnecting, 1, 0) == 0)
+                Callback.StartDisconnect();
         }
 
         public bool HeadersSend
