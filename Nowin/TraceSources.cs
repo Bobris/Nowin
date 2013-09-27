@@ -123,74 +123,88 @@ SAMPLE APP.CONFIG FILE
     <sources>
       <source name="SignalR.SqlMessageBus">
         <listeners>
+          <remove name="Default"/>
           <add name="SignalR.Bus" />
         </listeners>
       </source>
       <source name="SignalR.ServiceBusMessageBus">
         <listeners>
+          <remove name="Default"/>
           <add name="SignalR.Bus" />
         </listeners>
       </source>
       <source name="SignalR.ScaleoutMessageBus">
         <listeners>
+          <remove name="Default"/>
           <add name="SignalR.Bus" />
         </listeners>
       </source>
 
       <source name="SignalR.Transports.WebSocketTransport">
         <listeners>
+          <remove name="Default"/>
           <add name="SignalR.Transports" />
         </listeners>
       </source>
       <source name="SignalR.Transports.ServerSentEventsTransport">
         <listeners>
+          <remove name="Default"/>
           <add name="SignalR.Transports" />
         </listeners>
       </source>
       <source name="SignalR.Transports.ForeverFrameTransport">
         <listeners>
+          <remove name="Default"/>
           <add name="SignalR.Transports" />
         </listeners>
       </source>
       <source name="SignalR.Transports.LongPollingTransport">
         <listeners>
+          <remove name="Default"/>
           <add name="SignalR.Transports" />
         </listeners>
       </source>
       <source name="SignalR.Transports.TransportHeartBeat">
         <listeners>
+          <remove name="Default"/>
           <add name="SignalR.Transports" />
         </listeners>
       </source>
 
       <source name="SignalR.HubDispatcher">
         <listeners>
+          <remove name="Default"/>
           <add name="SignalR.HubDispatcher" />
         </listeners>
       </source>
       <source name="SignalR.Connection">
         <listeners>
+          <remove name="Default"/>
           <add name="SignalR.Connection" />
         </listeners>
       </source>
       <source name="SignalR.PerformanceCounterManager">
         <listeners>
+          <remove name="Default"/>
           <add name="SignalR.PerformanceCounterManager" />
         </listeners>
       </source>
       <source name="SignalR.PersistentConnection">
         <listeners>
+          <remove name="Default"/>
           <add name="SignalR.PersistentConnection" />
         </listeners>
       </source>
 
       <source name="Nowin.Core">
         <listeners>
+          <remove name="Default"/>
           <add name="Nowin.Core" />
         </listeners>
       </source>
       <source name="Nowin.Core.Debug">
         <listeners>
+          <remove name="Default"/>
           <add name="Nowin.Core" />
         </listeners>
       </source>
