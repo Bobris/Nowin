@@ -858,10 +858,10 @@ namespace Nowin
                 }
                 return;
             }
-#if DEBUG
-            Console.WriteLine("======= Offset {0}, Length {1}", offset - StartBufferOffset, length);
-            Console.WriteLine(Encoding.UTF8.GetString(buffer, offset, length));
-#endif
+
+            TraceSources.CoreDebug.TraceInformation("======= Offset {0}, Length {1}", offset - StartBufferOffset, length);
+            TraceSources.CoreDebug.TraceInformation(Encoding.UTF8.GetString(buffer, offset, length));
+
             _receiveBufferFullness = offset + length;
             if (_waitingForRequest)
             {
