@@ -134,7 +134,7 @@ namespace Nowin
 
         public void PrepareForRequest()
         {
-            TraceSources.Main.TraceInformation("ID{0,-5} PrepareForRequest", _handlerId);
+            TraceSources.CoreDebug.TraceInformation("ID{0,-5} PrepareForRequest", _handlerId);
             _inWebSocket = false;
             _webSocketFunc = null;
             _environment.Reset();
@@ -255,7 +255,7 @@ namespace Nowin
 
         void WebSocketAcceptMethod(IDictionary<string, object> dictionary, Func<IDictionary<string, object>, Task> func)
         {
-            TraceSources.Main.TraceInformation("ID{0,-5} WebSocketAcceptMethod", _handlerId);
+            TraceSources.CoreDebug.TraceInformation("ID{0,-5} WebSocketAcceptMethod", _handlerId);
             if (dictionary != null)
             {
                 object value;
@@ -275,7 +275,7 @@ namespace Nowin
 
         public void UpgradedToWebSocket(bool success)
         {
-            TraceSources.Main.TraceInformation("ID{0,-5} UpgradedToWebSocket {1}", _handlerId, success);
+            TraceSources.CoreDebug.TraceInformation("ID{0,-5} UpgradedToWebSocket {1}", _handlerId, success);
             if (!success)
             {
                 Callback.ResponseStatusCode = 500;
@@ -313,7 +313,7 @@ namespace Nowin
 
         async Task WebSocketSendAsyncMethod(ArraySegment<byte> data, int messageType, bool endOfMessage, CancellationToken cancel)
         {
-            TraceSources.Main.TraceInformation("ID{0,-5} WebSocketSendAsyncMethod Len:{1} MessageType:{2} EndOfMessage:{3}", _handlerId, data.Count, messageType, endOfMessage);
+            TraceSources.CoreDebug.TraceInformation("ID{0,-5} WebSocketSendAsyncMethod Len:{1} MessageType:{2} EndOfMessage:{3}", _handlerId, data.Count, messageType, endOfMessage);
             if (!_webSocketNextSendIsStartOfMessage)
             {
                 messageType = 0;
@@ -368,7 +368,7 @@ namespace Nowin
 
         Task<WebSocketReceiveTuple> WebSocketReceiveAsyncMethod(ArraySegment<byte> data, CancellationToken cancel)
         {
-            TraceSources.Main.TraceInformation("ID{0,-5} WebSocketReceiveAsyncMethod buffer:{1}", _handlerId, data.Count);
+            TraceSources.CoreDebug.TraceInformation("ID{0,-5} WebSocketReceiveAsyncMethod buffer:{1}", _handlerId, data.Count);
             _webSocketReceiveSegment = data;
             var tcs = new TaskCompletionSource<WebSocketReceiveTuple>();
             if (_webSocketReceiveState == WebSocketReceiveState.Close || _webSocketReceiveState == WebSocketReceiveState.Closing)
@@ -386,10 +386,10 @@ namespace Nowin
         {
             if (_webSocketReceiveState == WebSocketReceiveState.Close)
             {
-                TraceSources.Main.TraceInformation("ID{0,-5} Ignoring WebSocketCloseAsync closeStatus:{1} desc:{2}", _handlerId, closeStatus, closeDescription);
+                TraceSources.CoreDebug.TraceInformation("ID{0,-5} Ignoring WebSocketCloseAsync closeStatus:{1} desc:{2}", _handlerId, closeStatus, closeDescription);
                 return;
             }
-            TraceSources.Main.TraceInformation("ID{0,-5} WebSocketCloseAsync closeStatus:{1} desc:{2}", _handlerId, closeStatus, closeDescription);
+            TraceSources.CoreDebug.TraceInformation("ID{0,-5} WebSocketCloseAsync closeStatus:{1} desc:{2}", _handlerId, closeStatus, closeDescription);
             await _sendLock.WaitAsync(cancel);
             try
             {
@@ -477,7 +477,7 @@ namespace Nowin
                         _webSocketEnv.Add("websocket.ClientCloseStatus", 0);
                         _webSocketEnv.Add("websocket.ClientCloseDescription", "");
                     }
-                    TraceSources.Main.TraceInformation(
+                    TraceSources.CoreDebug.TraceInformation(
                         "ID{0,-5} Received WebSocketClose Status:{1} Desc:{2}",
                         _handlerId,
                         _webSocketEnv["websocket.ClientCloseStatus"],
@@ -512,7 +512,7 @@ namespace Nowin
                     if (tcs != null)
                     {
                         _webSocketReceiveTcs = null;
-                        TraceSources.Main.TraceInformation("ID{0,-5} Received WebSocketFrame Opcode:{1} Last:{2} Length:{3}", _handlerId, _webSocketFrameOpcode, _webSocketFrameLast, _webSocketReceiveCount);
+                        TraceSources.CoreDebug.TraceInformation("ID{0,-5} Received WebSocketFrame Opcode:{1} Last:{2} Length:{3}", _handlerId, _webSocketFrameOpcode, _webSocketFrameLast, _webSocketReceiveCount);
                         tcs.SetResult(new WebSocketReceiveTuple(_webSocketFrameOpcode, _webSocketFrameLast, _webSocketReceiveCount));
                     }
                     _webSocketReceiveState = WebSocketReceiveState.Header;
@@ -523,7 +523,7 @@ namespace Nowin
                     if (tcs != null)
                     {
                         _webSocketReceiveTcs = null;
-                        TraceSources.Main.TraceInformation("ID{0,-5} Received WebSocketFrame Opcode:{1} Last:{2} Length:{3}", _handlerId, _webSocketFrameOpcode, false, _webSocketReceiveCount);
+                        TraceSources.CoreDebug.TraceInformation("ID{0,-5} Received WebSocketFrame Opcode:{1} Last:{2} Length:{3}", _handlerId, _webSocketFrameOpcode, false, _webSocketReceiveCount);
                         tcs.SetResult(new WebSocketReceiveTuple(_webSocketFrameOpcode, false, _webSocketReceiveCount));
                     }
                 }

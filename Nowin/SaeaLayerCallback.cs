@@ -49,7 +49,7 @@ namespace Nowin
         static void IoCompleted(object sender, SocketAsyncEventArgs e)
         {
             var self = (SaeaLayerCallback)e.UserToken;
-            TraceSources.Main.TraceInformation("ID{0,-5} IoCompleted {1} {2} {3} {4}", self._handlerId, e.LastOperation, e.Offset, e.BytesTransferred, e.SocketError);
+            TraceSources.CoreDebug.TraceInformation("ID{0,-5} IoCompleted {1} {2} {3} {4}", self._handlerId, e.LastOperation, e.Offset, e.BytesTransferred, e.SocketError);
             switch (e.LastOperation)
             {
                 case SocketAsyncOperation.Accept:
@@ -149,7 +149,7 @@ namespace Nowin
 
         public void StartAccept(byte[] buffer, int offset, int length)
         {
-            TraceSources.Main.TraceInformation("ID{0,-5} start accept {1} {2}", _handlerId, offset, length);
+            TraceSources.CoreDebug.TraceInformation("ID{0,-5} start accept {1} {2}", _handlerId, offset, length);
             int oldState, newState;
             do
             {
@@ -172,7 +172,7 @@ namespace Nowin
             if (!willRaiseEvent)
             {
                 var e = _receiveEvent;
-                TraceSources.Main.TraceInformation("ID{0,-5} Sync Accept {1} {2} {3} {4}", _handlerId, e.LastOperation, e.Offset, e.BytesTransferred, e.SocketError);
+                TraceSources.CoreDebug.TraceInformation("ID{0,-5} Sync Accept {1} {2} {3} {4}", _handlerId, e.LastOperation, e.Offset, e.BytesTransferred, e.SocketError);
                 ProcessAccept();
             }
         }
@@ -185,7 +185,7 @@ namespace Nowin
 
         public void StartReceive(byte[] buffer, int offset, int length)
         {
-            TraceSources.Main.TraceInformation("ID{0,-5} start receive {1} {2}", _handlerId, offset, length);
+            TraceSources.CoreDebug.TraceInformation("ID{0,-5} start receive {1} {2}", _handlerId, offset, length);
             int oldState, newState;
             do
             {
@@ -208,14 +208,14 @@ namespace Nowin
             if (!willRaiseEvent)
             {
                 var e = _receiveEvent;
-                TraceSources.Main.TraceInformation("ID{0,-5} Sync Receive {1} {2} {3} {4}", _handlerId, e.LastOperation, e.Offset, e.BytesTransferred, e.SocketError);
+                TraceSources.CoreDebug.TraceInformation("ID{0,-5} Sync Receive {1} {2} {3} {4}", _handlerId, e.LastOperation, e.Offset, e.BytesTransferred, e.SocketError);
                 ProcessReceive();
             }
         }
 
         public void StartSend(byte[] buffer, int offset, int length)
         {
-            TraceSources.Main.TraceInformation("ID{0,-5} start send {1} {2}", _handlerId, offset, length);
+            TraceSources.CoreDebug.TraceInformation("ID{0,-5} start send {1} {2}", _handlerId, offset, length);
             int oldState, newState;
             do
             {
@@ -238,14 +238,14 @@ namespace Nowin
             if (!willRaiseEvent)
             {
                 var e = _sendEvent;
-                TraceSources.Main.TraceInformation("ID{0,-5} Sync Send {1} {2} {3} {4}", _handlerId, e.LastOperation, e.Offset, e.BytesTransferred, e.SocketError);
+                TraceSources.CoreDebug.TraceInformation("ID{0,-5} Sync Send {1} {2} {3} {4}", _handlerId, e.LastOperation, e.Offset, e.BytesTransferred, e.SocketError);
                 ProcessSend();
             }
         }
 
         public void StartDisconnect()
         {
-            TraceSources.Main.TraceInformation("ID{0,-5} start disconnect", _handlerId);
+            TraceSources.CoreDebug.TraceInformation("ID{0,-5} start disconnect", _handlerId);
             int oldState, newState;
             do
             {
@@ -267,7 +267,7 @@ namespace Nowin
             if (!willRaiseEvent)
             {
                 var e = _disconnectEvent;
-                TraceSources.Main.TraceInformation("ID{0,-5} Sync Disconnect {1} {2} {3} {4}", _handlerId, e.LastOperation, e.Offset, e.BytesTransferred, e.SocketError);
+                TraceSources.CoreDebug.TraceInformation("ID{0,-5} Sync Disconnect {1} {2} {3} {4}", _handlerId, e.LastOperation, e.Offset, e.BytesTransferred, e.SocketError);
                 ProcessDisconnect();
             }
         }

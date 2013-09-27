@@ -859,8 +859,8 @@ namespace Nowin
                 return;
             }
 
-            TraceSources.Main.TraceInformation("======= Offset {0}, Length {1}", offset - StartBufferOffset, length);
-            TraceSources.Main.TraceInformation(Encoding.UTF8.GetString(buffer, offset, length));
+            TraceSources.CoreDebug.TraceInformation("======= Offset {0}, Length {1}", offset - StartBufferOffset, length);
+            TraceSources.CoreDebug.TraceInformation(Encoding.UTF8.GetString(buffer, offset, length));
 
             _receiveBufferFullness = offset + length;
             if (_waitingForRequest)

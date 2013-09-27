@@ -4,7 +4,44 @@ namespace Nowin
 {
     internal static class TraceSources
     {
-        public static readonly DebugTraceSource Main = new DebugTraceSource("Nowin.Main.Debug");
+        public static readonly ReleaseTraceSource Core = new ReleaseTraceSource("Nowin.Core");
+        public static readonly DebugTraceSource CoreDebug = new DebugTraceSource("Nowin.Core.Debug");
+    }
+
+    internal class ReleaseTraceSource : TraceSource
+    {
+        public ReleaseTraceSource(string name) : base(name) { }
+        public ReleaseTraceSource(string name, SourceLevels defaultLevel) : base(name, defaultLevel) { }
+
+        /// <summary>
+        /// Writes a warning message to the trace listeners in the System.Diagnostics.TraceSource.Listeners collection using the specified object array and formatting information.
+        /// </summary>
+        /// <param name="message">The informative message to write.</param>
+        [Conditional("TRACE")]
+        public void TraceWarning(string message) { TraceEvent(TraceEventType.Warning, 0, message); }
+
+        /// <summary>
+        /// Writes a warning message to the trace listeners in the System.Diagnostics.TraceSource.Listeners collection using the specified object array and formatting information.
+        /// </summary>
+        /// <param name="format">A composite format string (see Remarks) that contains text intermixed with zero or more format items, which correspond to objects in the args array.</param>
+        /// <param name="args">An array containing zero or more objects to format.</param>
+        [Conditional("TRACE")]
+        public void TraceWarning(string format, params object[] args) { TraceEvent(TraceEventType.Warning, 0, format, args); }
+
+        /// <summary>
+        /// Writes an error message to the trace listeners in the System.Diagnostics.TraceSource.Listeners collection using the specified object array and formatting information.
+        /// </summary>
+        /// <param name="message">The informative message to write.</param>
+        [Conditional("TRACE")]
+        public void TraceError(string message) { TraceEvent(TraceEventType.Error, 0, message); }
+
+        /// <summary>
+        /// Writes an error message to the trace listeners in the System.Diagnostics.TraceSource.Listeners collection using the specified object array and formatting information.
+        /// </summary>
+        /// <param name="format">A composite format string (see Remarks) that contains text intermixed with zero or more format items, which correspond to objects in the args array.</param>
+        /// <param name="args">An array containing zero or more objects to format.</param>
+        [Conditional("TRACE")]
+        public void TraceError(string format, params object[] args) { TraceEvent(TraceEventType.Error, 0, format, args); }
     }
 
     internal class DebugTraceSource : TraceSource
@@ -147,16 +184,22 @@ SAMPLE APP.CONFIG FILE
         </listeners>
       </source>
 
-      <source name="Nowin.Main.Debug">
+      <source name="Nowin.Core">
         <listeners>
-          <add name="Nowin.Main.Debug" />
+          <add name="Nowin.Core" />
+        </listeners>
+      </source>
+      <source name="Nowin.Core.Debug">
+        <listeners>
+          <add name="Nowin.Core" />
         </listeners>
       </source>
     </sources>
 
     <switches>
       <add name="SignalRSwitch" value="Verbose" />
-      <add name="Nowin.Main.Debug" value="Verbose" />
+      <add name="Nowin.Core" value="Verbose" />
+      <add name="Nowin.Core.Debug" value="Verbose" />
     </switches>
 
     <sharedListeners>
@@ -181,9 +224,9 @@ SAMPLE APP.CONFIG FILE
            type="System.Diagnostics.TextWriterTraceListener" 
            initializeData="SignalR.PersistentConnection.log" />
 
-      <add name="Nowin.Main.Debug"
+      <add name="Nowin.Core"
            type="System.Diagnostics.TextWriterTraceListener" 
-           initializeData="Nowin.Main.Debug.log" />
+           initializeData="Nowin.Core.log" />
     </sharedListeners>
 
   </system.diagnostics>
