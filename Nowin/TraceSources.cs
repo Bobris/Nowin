@@ -4,7 +4,7 @@ namespace Nowin
 {
     internal static class TraceSources
     {
-        public static readonly DebugTraceSource Main = new DebugTraceSource("Nowin.Main");
+        public static readonly DebugTraceSource Main = new DebugTraceSource("Nowin.Main.Debug");
     }
 
     internal class DebugTraceSource : TraceSource
@@ -17,7 +17,7 @@ namespace Nowin
         /// </summary>
         /// <param name="message">The informative message to write.</param>
         [Conditional("DEBUG")]
-        public new void TraceInformation(string message) { TraceEvent(TraceEventType.Information, 0, message, null); }
+        public new void TraceInformation(string message) { TraceEvent(TraceEventType.Information, 0, message); }
 
         /// <summary>
         /// Writes an informational message to the trace listeners in the System.Diagnostics.TraceSource.Listeners collection using the specified object array and formatting information.
@@ -32,7 +32,7 @@ namespace Nowin
         /// </summary>
         /// <param name="message">The informative message to write.</param>
         [Conditional("DEBUG")]
-        public void TraceWarning(string message) { TraceEvent(TraceEventType.Warning, 0, message, null); }
+        public void TraceWarning(string message) { TraceEvent(TraceEventType.Warning, 0, message); }
 
         /// <summary>
         /// Writes a warning message to the trace listeners in the System.Diagnostics.TraceSource.Listeners collection using the specified object array and formatting information.
@@ -47,7 +47,7 @@ namespace Nowin
         /// </summary>
         /// <param name="message">The informative message to write.</param>
         [Conditional("DEBUG")]
-        public void TraceError(string message) { TraceEvent(TraceEventType.Error, 0, message, null); }
+        public void TraceError(string message) { TraceEvent(TraceEventType.Error, 0, message); }
 
         /// <summary>
         /// Writes an error message to the trace listeners in the System.Diagnostics.TraceSource.Listeners collection using the specified object array and formatting information.
@@ -147,16 +147,16 @@ SAMPLE APP.CONFIG FILE
         </listeners>
       </source>
 
-      <source name="Nowin.Main">
+      <source name="Nowin.Main.Debug">
         <listeners>
-          <add name="Nowin.Main" />
+          <add name="Nowin.Main.Debug" />
         </listeners>
       </source>
     </sources>
 
     <switches>
       <add name="SignalRSwitch" value="Verbose" />
-      <add name="Nowin.Main" value="Verbose" />
+      <add name="Nowin.Main.Debug" value="Verbose" />
     </switches>
 
     <sharedListeners>
@@ -181,9 +181,9 @@ SAMPLE APP.CONFIG FILE
            type="System.Diagnostics.TextWriterTraceListener" 
            initializeData="SignalR.PersistentConnection.log" />
 
-      <add name="Nowin.Main"
+      <add name="Nowin.Main.Debug"
            type="System.Diagnostics.TextWriterTraceListener" 
-           initializeData="Nowin.Main.log" />
+           initializeData="Nowin.Main.Debug.log" />
     </sharedListeners>
 
   </system.diagnostics>
