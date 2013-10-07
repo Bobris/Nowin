@@ -14,5 +14,6 @@ namespace Nowin
         int BufferSize { get; }
         Func<IDictionary<string, object>, Task> OwinApp { get; }
         IDictionary<string, object> OwinCapabilities { get; }
+        string ServerHeader { get; }
     }
 }

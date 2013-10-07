@@ -8,13 +8,17 @@ namespace Nowin
         internal const int AdditionalSpace = 16;
         readonly int _receiveBufferSize;
         readonly bool _isSsl;
+        readonly string _serverName;
         readonly IIpIsLocalChecker _ipIsLocalChecker;
         readonly ILayerFactory _next;
         readonly ThreadLocal<char[]> _charBuffer;
-        public Transport2HttpFactory(int receiveBufferSize, bool isSsl, IIpIsLocalChecker ipIsLocalChecker, ILayerFactory next)
+        static readonly IDateHeaderValueProvider DateProvider = new DateHeaderValueProvider();
+
+        public Transport2HttpFactory(int receiveBufferSize, bool isSsl, string serverName, IIpIsLocalChecker ipIsLocalChecker, ILayerFactory next)
         {
             _receiveBufferSize = receiveBufferSize;
             _isSsl = isSsl;
+            _serverName = serverName;
             _ipIsLocalChecker = ipIsLocalChecker;
             _next = next;
             _charBuffer = new ThreadLocal<char[]>(()=>new char[receiveBufferSize]);
@@ -47,7 +51,7 @@ namespace Nowin
         public ILayerHandler Create(byte[] buffer, int offset, int commonOffset, int handlerId)
         {
             var nextHandler = (IHttpLayerHandler)_next.Create(buffer, offset + MyPerConnectionBufferSize(), commonOffset + MyCommonBufferSize(), handlerId);
-            return new Transport2HttpHandler(nextHandler, _isSsl, _ipIsLocalChecker, buffer, offset, _receiveBufferSize, commonOffset, _charBuffer, handlerId);
+            return new Transport2HttpHandler(nextHandler, _isSsl, _serverName, DateProvider, _ipIsLocalChecker, buffer, offset, _receiveBufferSize, commonOffset, _charBuffer, handlerId);
         }
     }
 }

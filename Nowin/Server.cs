@@ -55,7 +55,7 @@ namespace Nowin
             _ipIsLocalChecker = new IpIsLocalChecker();
             _connectionAllocationStrategy = _parameters.ConnectionAllocationStrategy;
             var isSsl = _parameters.Certificate != null;
-            _layerFactory = new Transport2HttpFactory(_parameters.BufferSize, isSsl, _ipIsLocalChecker, _layerFactory);
+            _layerFactory = new Transport2HttpFactory(_parameters.BufferSize, isSsl, _parameters.ServerHeader, _ipIsLocalChecker, _layerFactory);
             if (isSsl)
             {
                 _layerFactory = new SslTransportFactory(_parameters.Certificate, _layerFactory);

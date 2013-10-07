@@ -38,6 +38,8 @@ namespace NowinTests
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
             Assert.NotNull(response.Content.Headers.ContentLength);
             Assert.AreEqual(0, response.Content.Headers.ContentLength.Value);
+            Assert.AreEqual("Nowin", response.Headers.Server.First().Product.Name);
+            Assert.True(response.Headers.Date.HasValue);
         }
 
         [Test]
@@ -589,10 +591,10 @@ namespace NowinTests
                 var response = client.GetAsync(HttpClientAddress).Result;
                 Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
                 Assert.AreEqual("OK", response.ReasonPhrase);
-                Assert.AreEqual(0, response.Headers.Count());
+                Assert.AreEqual(2, response.Headers.Count());
                 Assert.False(response.Headers.TransferEncodingChunked.HasValue);
-                Assert.False(response.Headers.Date.HasValue);
-                Assert.AreEqual(0, response.Headers.Server.Count);
+                Assert.True(response.Headers.Date.HasValue);
+                Assert.AreEqual(1, response.Headers.Server.Count);
                 Assert.AreEqual("", response.Content.ReadAsStringAsync().Result);
             }
         }
@@ -633,7 +635,7 @@ namespace NowinTests
                 var client = new HttpClient();
                 var response = client.GetAsync(HttpClientAddress).Result;
                 Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-                Assert.AreEqual(3, response.Headers.Count());
+                Assert.AreEqual(5, response.Headers.Count());
 
                 Assert.AreEqual(2, response.Headers.GetValues("Custom1").Count());
                 Assert.AreEqual("value1a", response.Headers.GetValues("Custom1").First());
@@ -657,6 +659,8 @@ namespace NowinTests
                     responseHeaders.Add("KEEP-alive", new[] { "TRUE" });
                     responseHeaders.Add("content-length", new[] { "0" });
                     responseHeaders.Add("www-Authenticate", new[] { "Basic", "NTLM" });
+                    responseHeaders.Add("server", new[] { "cool" });
+
                     return Task.Delay(0);
                 });
 
@@ -665,9 +669,10 @@ namespace NowinTests
                 var client = new HttpClient();
                 var response = client.GetAsync(HttpClientAddress).Result;
                 Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-                Assert.AreEqual(2, response.Headers.Count());
+                Assert.AreEqual(4, response.Headers.Count());
                 Assert.AreEqual(0, response.Content.Headers.ContentLength);
                 Assert.AreEqual(2, response.Headers.WwwAuthenticate.Count());
+                Assert.AreEqual("cool", response.Headers.Server.First().Product.Name);
 
                 // The client does not expose KeepAlive
             }
@@ -690,7 +695,7 @@ namespace NowinTests
                 var client = new HttpClient();
                 var response = client.GetAsync(HttpClientAddress).Result;
                 Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-                Assert.AreEqual(1, response.Headers.Count());
+                Assert.AreEqual(3, response.Headers.Count());
                 Assert.AreEqual("", response.Headers.TransferEncoding.ToString());
                 Assert.False(response.Headers.TransferEncodingChunked.HasValue);
                 Assert.AreEqual("close", response.Headers.Connection.First()); // Normalized by server

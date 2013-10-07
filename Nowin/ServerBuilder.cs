@@ -14,6 +14,7 @@ namespace Nowin
         int _bufferSize;
         Func<IDictionary<string, object>, Task> _app;
         IDictionary<string, object> _capabilities;
+        string _serverHeader = "Nowin";
 
         public static ServerBuilder New()
         {
@@ -77,6 +78,12 @@ namespace Nowin
             return this;
         }
 
+        public ServerBuilder SetServerHeader(string value)
+        {
+            _serverHeader = value;
+            return this;
+        }
+
         public INowinServer Build()
         {
             return new Server(this);
@@ -130,5 +137,7 @@ namespace Nowin
         {
             get { return _capabilities; }
         }
+
+        public string ServerHeader { get { return _serverHeader; }}
     }
 }

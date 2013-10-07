@@ -28,6 +28,8 @@ namespace Nowin
         public bool RequestIsChunked;
         bool _responseHeadersSend;
         readonly bool _isSsl;
+        readonly string _serverName;
+        readonly IDateHeaderValueProvider _dateProvider;
         readonly IIpIsLocalChecker _ipIsLocalChecker;
         readonly ReqRespStream _reqRespStream;
         volatile TaskCompletionSource<bool> _tcsSend;
@@ -74,8 +76,10 @@ namespace Nowin
         bool _isWebSocket;
         bool _startedReceiveData;
         int _disconnecting;
+        bool _serverNameOverwrite;
+        bool _dateOverwrite;
 
-        public Transport2HttpHandler(IHttpLayerHandler next, bool isSsl, IIpIsLocalChecker ipIsLocalChecker, byte[] buffer, int startBufferOffset, int receiveBufferSize, int constantsOffset, ThreadLocal<char[]> charBuffer, int handlerId)
+        public Transport2HttpHandler(IHttpLayerHandler next, bool isSsl, string serverName, IDateHeaderValueProvider dateProvider, IIpIsLocalChecker ipIsLocalChecker, byte[] buffer, int startBufferOffset, int receiveBufferSize, int constantsOffset, ThreadLocal<char[]> charBuffer, int handlerId)
         {
             _next = next;
             StartBufferOffset = startBufferOffset;
@@ -86,6 +90,8 @@ namespace Nowin
             _handlerId = handlerId;
             _buffer = buffer;
             _isSsl = isSsl;
+            _serverName = serverName;
+            _dateProvider = dateProvider;
             _ipIsLocalChecker = ipIsLocalChecker;
             _cancellation = new CancellationTokenSource();
             _reqRespStream = new ReqRespStream(this);
@@ -468,7 +474,7 @@ namespace Nowin
 
         void FillResponse(bool finished)
         {
-            _next.PrepareResponseHeaders();
+            PrepareResponseHeaders();
             var status = _statusCode;
             if (status < 200 || status > 999)
             {
@@ -518,6 +524,18 @@ namespace Nowin
             if (!_isKeepAlive)
             {
                 HeaderAppend("Connection: close\r\n");
+            }
+            if (!_serverNameOverwrite)
+            {
+                HeaderAppend("Server: ");
+                HeaderAppend(_serverName);
+                HeaderAppendCrLf();
+            }
+            if (!_dateOverwrite)
+            {
+                HeaderAppend("Date: ");
+                HeaderAppend(_dateProvider.Value);
+                HeaderAppendCrLf();
             }
             foreach (var header in _responseHeaders)
             {
@@ -1043,12 +1061,26 @@ namespace Nowin
 
         public void AddResponseHeader(string name, string value)
         {
+            CheckForHeaderOverwrite(name);
             _responseHeaders.Add(new KeyValuePair<string, object>(name, value));
         }
 
         public void AddResponseHeader(string name, IEnumerable<string> values)
         {
+            CheckForHeaderOverwrite(name);
             _responseHeaders.Add(new KeyValuePair<string, object>(name, values));
+        }
+
+        void CheckForHeaderOverwrite(string name)
+        {
+            if (name.Length == 4 && name.Equals("Date", StringComparison.OrdinalIgnoreCase))
+            {
+                _dateOverwrite = true;
+            }
+            else if (name.Length == 6 && name.Equals("Server", StringComparison.OrdinalIgnoreCase))
+            {
+                _serverNameOverwrite = true;
+            }
         }
 
         public void UpgradeToWebSocket()
@@ -1059,7 +1091,7 @@ namespace Nowin
                 CloseConnection();
                 return;
             }
-            _next.PrepareResponseHeaders();
+            PrepareResponseHeaders();
             _isKeepAlive = false;
             _responseHeaderPos = 0;
             HeaderAppend("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ");
@@ -1096,6 +1128,13 @@ namespace Nowin
             }
             _isWebSocket = true;
             Callback.StartSend(_buffer, StartBufferOffset + ReceiveBufferSize, _responseHeaderPos);
+        }
+
+        void PrepareResponseHeaders()
+        {
+            _dateOverwrite = false;
+            _serverNameOverwrite = false;
+            _next.PrepareResponseHeaders();
         }
 
         public void ResponseFinished()

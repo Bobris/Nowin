@@ -45,7 +45,9 @@
     <Compile Include="ChunkedDecoder.cs" />
     <Compile Include="ConnectionAllocationStrategy.cs" />
     <Compile Include="ConnectionBlock.cs" />
+    <Compile Include="DateHeaderValueProvider.cs" />
     <Compile Include="DictionaryExtensions.cs" />
+    <Compile Include="IDateHeaderValueProvider.cs" />
     <Compile Include="IHttpLayerCallback.cs" />
     <Compile Include="IHttpLayerHandler.cs" />
     <Compile Include="IIpIsLocalChecker.cs" />
