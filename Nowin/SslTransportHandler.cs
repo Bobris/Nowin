@@ -56,7 +56,7 @@ namespace Nowin
 
             public void FinishReceive(int length)
             {
-                if (length==-1)
+                if (length == -1)
                     _tcsReceive.SetCanceled();
                 else
                     _tcsReceive.SetResult(length);
@@ -251,7 +251,7 @@ namespace Nowin
             _ssl.ReadAsync(buffer, offset, length).ContinueWith((t, selfObject) =>
             {
                 var self = (SslTransportHandler)selfObject;
-                if (t.IsFaulted || t.IsCanceled)
+                if (t.IsFaulted || t.IsCanceled || t.Result == 0)
                     self._next.FinishReceive(null, 0, -1);
                 else
                     self._next.FinishReceive(self._recvBuffer, self._recvOffset, t.Result);
