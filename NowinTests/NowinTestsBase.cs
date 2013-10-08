@@ -802,6 +802,32 @@ namespace NowinTests
         }
 
         [Test]
+        public void TwiceSmallResponseBodyWorks()
+        {
+            var listener = CreateServer(
+                env =>
+                {
+                    var responseStream = env.Get<Stream>("owin.ResponseBody");
+                    responseStream.Write(new byte[10], 0, 10);
+                    return Task.Delay(0);
+                });
+
+            using (listener)
+            {
+                var client = new HttpClient();
+                var response = client.GetAsync(HttpClientAddress).Result;
+                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+                Assert.AreEqual(10, response.Content.ReadAsByteArrayAsync().Result.Length);
+                response.Dispose();
+                client.Dispose();
+                client = new HttpClient();
+                response = client.GetAsync(HttpClientAddress).Result;
+                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+                Assert.AreEqual(10, response.Content.ReadAsByteArrayAsync().Result.Length);
+            }
+        }
+
+        [Test]
         public void LargeResponseBodyWith100AsyncWritesWorks()
         {
             OwinApp app = async env =>
