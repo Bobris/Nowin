@@ -431,6 +431,39 @@ namespace Nowin
                         pos = p + 5;
                         return "POST";
                     }
+                    if (buffer[p + 1] == 'U' && buffer[p + 2] == 'T' && buffer[p + 3] == ' ')
+                    {
+                        pos = p + 4;
+                        return "PUT";
+                    }
+                    break;
+                case (byte)'H':
+                    if (buffer[p + 1] == 'E' && buffer[p + 2] == 'A' && buffer[p + 3] == 'D' && buffer[p + 4] == ' ')
+                    {
+                        pos = p + 5;
+                        return "HEAD";
+                    }
+                    break;
+                case (byte)'D':
+                    if (buffer[p + 1] == 'E' && buffer[p + 2] == 'L' && buffer[p + 3] == 'E' && buffer[p + 4] == 'T' && buffer[p + 5] == 'E' && buffer[p + 6] == ' ')
+                    {
+                        pos = p + 7;
+                        return "DELETE";
+                    }
+                    break;
+                case (byte)'T':
+                    if (buffer[p + 1] == 'R' && buffer[p + 2] == 'A' && buffer[p + 3] == 'C' && buffer[p + 4] == 'E' && buffer[p + 5] == ' ')
+                    {
+                        pos = p + 6;
+                        return "TRACE";
+                    }
+                    break;
+                case (byte)'O':
+                    if (buffer[p + 1] == 'P' && buffer[p + 2] == 'T' && buffer[p + 3] == 'I' && buffer[p + 4] == 'O' && buffer[p + 5] == 'N' && buffer[p + 6] == 'S' && buffer[p + 7] == ' ')
+                    {
+                        pos = p + 8;
+                        return "OPTIONS";
+                    }
                     break;
                 case (byte)' ':
                     {
@@ -457,6 +490,7 @@ namespace Nowin
                     pos = p;
                     break;
                 }
+                p++;
             }
             return StringFromLatin1(buffer, start, p);
         }

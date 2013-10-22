@@ -352,6 +352,23 @@ namespace NowinTests
         }
 
         [Test]
+        [TestCase("GET")]
+        [TestCase("POST")]
+        [TestCase("PUT")]
+        [TestCase("DELETE")]
+        [TestCase("HEAD")]
+        [TestCase("OPTIONS")]
+        [TestCase("TRACE")]
+        [TestCase("NOWIN")]
+        public void HttpMethodWorks(string name)
+        {
+            var listener = CreateServerSync(
+                env => Assert.AreEqual(name, env.Get<string>("owin.RequestMethod")));
+            var request = new HttpRequestMessage(new HttpMethod(name), HttpClientAddress);
+            SendRequest(listener, request);
+        }
+
+        [Test]
         public void HeadersPostChunkedRequest()
         {
             const string requestBody = SampleContent;
