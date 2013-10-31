@@ -164,7 +164,7 @@ namespace Nowin
         public Task WaitForFinishingLastRequest()
         {
             if (_lastRequestFinished == null)
-                return Task.Delay(0);
+                return null;
             return _lastRequestFinished.Task;
         }
 
