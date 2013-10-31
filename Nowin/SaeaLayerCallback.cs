@@ -258,7 +258,10 @@ namespace Nowin
             try
             {
                 StopExecutionContextFlow();
-                willRaiseEvent = _socket.DisconnectAsync(_disconnectEvent);
+                var s = _socket;
+                if (s == null)
+                    return;
+                willRaiseEvent = s.DisconnectAsync(_disconnectEvent);
             }
             catch (ObjectDisposedException)
             {

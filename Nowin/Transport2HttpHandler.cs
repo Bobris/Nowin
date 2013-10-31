@@ -863,6 +863,19 @@ namespace Nowin
 
         public void PrepareAccept()
         {
+            var t = _next.WaitForFinishingLastRequest();
+            if (t == null || t.IsCompleted)
+            {
+                RealPrepareAccept();
+            }
+            else
+            {
+                t.ContinueWith((_, o) => ((Transport2HttpHandler)o).RealPrepareAccept(), this);
+            }
+        }
+
+        void RealPrepareAccept()
+        {
             _disconnecting = 0;
             Callback.StartAccept(_buffer, StartBufferOffset, ReceiveBufferSize);
         }
@@ -1173,6 +1186,13 @@ namespace Nowin
 
         public void ResponseFinished()
         {
+            if (_statusCode == 599)
+            {
+                _cancellation.Cancel();
+                _isKeepAlive = false;
+                CloseConnection();
+                return;
+            }
             if (_statusCode == 500 || _cancellation.IsCancellationRequested)
             {
                 _cancellation.Cancel();

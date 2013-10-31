@@ -80,16 +80,22 @@ namespace Nowin
         byte _webSocketMask3;
         bool _webSocketFrameLast;
         bool _webSocketNextSendIsStartOfMessage;
+        bool _disconnected;
         byte _webSocketFrameOpcode;
         int _webSocketReceiveCount;
         int _maskIndex;
         int _webSocketReceiving;
         int _webSocketSendBufferUsedSize;
+        volatile TaskCompletionSource<bool> _lastRequestFinished;
         readonly SemaphoreSlim _sendLock = new SemaphoreSlim(1);
         readonly Dictionary<string, object> _webSocketEnv;
         TaskCompletionSource<object> _webSocketTcsReceivedClose;
-        readonly List<KeyValuePair<Action<object>, object>> _onHeadersList = new List<KeyValuePair<Action<object>, object>>();
+
+        readonly List<KeyValuePair<Action<object>, object>> _onHeadersList =
+            new List<KeyValuePair<Action<object>, object>>();
+
         public readonly Action<Action<object>, object> OnSendingHeadersAction;
+        public readonly Action DisconnectAction;
 
         public IHttpLayerCallback Callback { set; internal get; }
 
@@ -120,6 +126,29 @@ namespace Nowin
                     {"websocket.Version", "1.0"},
                     {"websocket.CallCancelled", null}
                 };
+            DisconnectAction = () =>
+                {
+                    _disconnected = true;
+                    StartWaitingTillEndOfAppFunc();
+                    Callback.CloseConnection();
+                };
+        }
+
+        void StartWaitingTillEndOfAppFunc()
+        {
+            if (_lastRequestFinished == null)
+            {
+#pragma warning disable 420
+                Interlocked.CompareExchange(ref _lastRequestFinished, new TaskCompletionSource<bool>(), null);
+#pragma warning restore 420
+            }
+        }
+
+        void ReportFinishOfAppFunc()
+        {
+            var tcs = _lastRequestFinished;
+            if (tcs != null)
+                tcs.SetResult(true);
         }
 
         void OnSendingHeadersMethod(Action<object> action, object state)
@@ -132,9 +161,18 @@ namespace Nowin
         {
         }
 
+        public Task WaitForFinishingLastRequest()
+        {
+            if (_lastRequestFinished == null)
+                return Task.Delay(0);
+            return _lastRequestFinished.Task;
+        }
+
         public void PrepareForRequest()
         {
             TraceSources.CoreDebug.TraceInformation("ID{0,-5} PrepareForRequest", _handlerId);
+            _lastRequestFinished = null;
+            _disconnected = false;
             _inWebSocket = false;
             _webSocketFunc = null;
             _environment.Reset();
@@ -165,21 +203,32 @@ namespace Nowin
             _overwrittenResponseHeaders = RespHeaders;
             if (!Callback.IsWebSocketReq)
                 _environment.RemoveWebSocketAcceptFunc();
-            var task = _app(_environment);
-            if (task.IsCompleted)
+            try
             {
-                if (_inWebSocket) return;
-                if (task.IsFaulted || task.IsCanceled)
+                var task = _app(_environment);
+                if (task.IsCompleted)
                 {
-                    Callback.ResponseStatusCode = 500;
-                    Callback.ResponseReasonPhase = null;
+                    if (_disconnected || _inWebSocket)
+                    {
+                        ReportFinishOfAppFunc();
+                        return;
+                    }
+                    if (task.IsFaulted || task.IsCanceled)
+                    {
+                        Callback.ResponseStatusCode = 500;
+                        Callback.ResponseReasonPhase = null;
+                    }
+                    Callback.ResponseFinished();
+                    ReportFinishOfAppFunc();
+                    return;
                 }
-                Callback.ResponseFinished();
-                return;
-            }
-            task.ContinueWith((t, o) =>
+                task.ContinueWith((t, o) =>
                 {
-                    if (((OwinHandler)o)._inWebSocket) return;
+                    if (((OwinHandler)o)._disconnected || ((OwinHandler)o)._inWebSocket)
+                    {
+                        ReportFinishOfAppFunc();
+                        return;
+                    }
                     var callback = ((OwinHandler)o).Callback;
                     if (t.IsFaulted || t.IsCanceled)
                     {
@@ -187,7 +236,20 @@ namespace Nowin
                         callback.ResponseReasonPhase = null;
                     }
                     callback.ResponseFinished();
+                    ReportFinishOfAppFunc();
                 }, this);
+            }
+            catch (Exception)
+            {
+                if (_disconnected || _inWebSocket)
+                {
+                    ReportFinishOfAppFunc();
+                    return;
+                }
+                Callback.ResponseStatusCode = 500;
+                Callback.ResponseReasonPhase = null;
+                Callback.ResponseFinished();
+            }
         }
 
         public void PrepareResponseHeaders()
@@ -267,6 +329,7 @@ namespace Nowin
             }
             _webSocketFunc = func;
             _inWebSocket = true;
+            StartWaitingTillEndOfAppFunc();
             _webSocketReceiveState = WebSocketReceiveState.Header;
             _webSocketNextSendIsStartOfMessage = true;
             _webSocketSendBufferUsedSize = 0;

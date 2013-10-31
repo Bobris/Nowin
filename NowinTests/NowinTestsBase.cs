@@ -1065,6 +1065,49 @@ namespace NowinTests
         }
 
         [Test]
+        public void CommonDisconnectDoesNotSendHeaders()
+        {
+            var listener = CreateServer(
+                env =>
+                {
+                    var disconnectAction = env.Get<Action>("common.Disconnect");
+                    disconnectAction();
+                    throw new Exception("disconnect");
+                });
+
+            using (listener)
+            {
+                var client = new HttpClient();
+                Assert.Throws<AggregateException>(() => client.GetAsync(HttpClientAddress).Wait());
+            }
+        }
+
+        [Test]
+        public void CommonDisconnectWaitsWithNextRequest()
+        {
+            var insideDelay = false;
+            var listener = CreateServer(
+                async env =>
+                {
+                    Assert.False(insideDelay);
+                    var disconnectAction = env.Get<Action>("common.Disconnect");
+                    disconnectAction();
+                    insideDelay = true;
+                    await Task.Delay(100);
+                    insideDelay = false;
+                    throw new Exception("disconnect");
+                });
+
+            using (listener)
+            {
+                var client = new HttpClient();
+                Assert.Throws<AggregateException>(() => client.GetAsync(HttpClientAddress).Wait());
+                Assert.True(insideDelay);
+                Assert.Throws<AggregateException>(() => client.GetAsync(HttpClientAddress).Wait());
+            }
+        }
+
+        [Test]
         public void DoubleOnSendingHeadersWorks()
         {
             var listener = CreateServer(
@@ -1074,10 +1117,10 @@ namespace NowinTests
 
                     env.Get<Action<Action<object>, object>>("server.OnSendingHeaders")(state => responseHeaders["custom-header"] = new[] { (string)state }, "customvalue");
                     env.Get<Action<Action<object>, object>>("server.OnSendingHeaders")(state =>
-                        {
-                            responseHeaders["custom-header"] = new[] { "badvalue" };
-                            responseHeaders["custom-header2"] = new[] { "goodvalue" };
-                        }, null);
+                    {
+                        responseHeaders["custom-header"] = new[] { "badvalue" };
+                        responseHeaders["custom-header2"] = new[] { "goodvalue" };
+                    }, null);
 
                     return Task.Delay(0);
                 });
