@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>Nowin</id>
+    <version>0.11.0.0</version>
+    <authors>Boris Letocha</authors>
+    <owners>Boris Letocha</owners>
+    <licenseUrl>http://www.opensource.org/licenses/mit-license.php</licenseUrl>
+    <projectUrl>http://github.com/Bobris/Nowin</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Fast Owin Web server in pure .Net without reliance on HttpListener or Win8, includes WebSockets and SSL support</description>
+    <summary>Owin Web server in pure .Net</summary>
+    <copyright>Boris Letocha</copyright>
+    <tags>webserver owin http websockets</tags>
+  </metadata>
+</package>

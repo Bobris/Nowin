@@ -5,6 +5,7 @@ using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNet.SignalR;
+using Microsoft.Owin.Cors;
 using Owin;
 using Microsoft.Owin.Builder;
 
@@ -50,7 +51,35 @@ namespace SampleOwinApp
     {
         public void Configuration(IAppBuilder app)
         {
-            app.MapSignalR();
+            if (true)
+            {
+                app.Map("/signalr", map =>
+                {
+                    // Setup the CORS middleware to run before SignalR.
+                    // By default this will allow all origins. You can 
+                    // configure the set of origins and/or http verbs by
+                    // providing a cors options with a different policy.
+                    map.UseCors(CorsOptions.AllowAll);
+                    var hubConfiguration = new HubConfiguration
+                    {
+                        EnableDetailedErrors = true
+                        //EnableJSONP = true
+                        // You can enable JSONP by uncommenting line below.
+                        // JSONP requests are insecure but some older browsers (and some
+                        // versions of IE) require JSONP to work cross domain
+                        // EnableJSONP = true
+                    };
+                    // Run the SignalR pipeline. We're not using MapSignalR
+                    // since this branch already runs under the "/signalr"
+                    // path.
+                    map.RunSignalR(hubConfiguration);
+                });
+            }
+            else
+            {
+                //app.UseCors(CorsOptions.AllowAll);
+                app.MapSignalR(); // replaced by the above
+            }
             app.Map("/echo", a => a.Run(c =>
             {
                 var accept = c.Get<WebSocketAccept>("websocket.Accept");
@@ -78,7 +107,7 @@ namespace SampleOwinApp
             }));
             app.Run(c =>
                 {
-                    var path = c.Request.Path;
+                    var path = c.Request.Path.Value;
                     if (path == "/")
                     {
                         c.Response.StatusCode = 200;

@@ -32,9 +32,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Fix, Version=0.3.3.13, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Fix.0.3.3.13\lib\net40\Fix.dll</HintPath>
+    <Reference Include="Flux">
+      <HintPath>..\packages\Flux.0.5.0.52302\lib\net40\Flux.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

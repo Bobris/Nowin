@@ -9,7 +9,6 @@ namespace Flux
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
-    using Fix;
     using AppFunc = System.Func< // Call
         System.Collections.Generic.IDictionary<string, object>, // Environment
         System.Threading.Tasks.Task>; // Completion

@@ -29,7 +29,7 @@ namespace OwinHostingSample
         {
             app.Run(context =>
             {
-                if (context.Request.Path == "/")
+                if (context.Request.Path.Value == "/")
                 {
                     context.Response.ContentType = "text/plain";
                     return context.Response.WriteAsync("Hello World!");
