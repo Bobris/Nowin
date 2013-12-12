@@ -921,13 +921,14 @@ namespace NowinTests
         [Test]
         public void LargeResponseBodyWithFlushAnd1WriteWorks()
         {
-            OwinApp app = async env =>
+            OwinApp app = env =>
             {
                 var responseStream = env.Get<Stream>("owin.ResponseBody");
                 responseStream.Flush();
                 var pos = 0;
                 var buffer = PrepareLargeResponseBuffer(ref pos, 100000);
                 responseStream.Write(buffer, 0, buffer.Length);
+                return Task.Delay(0);
             };
             CheckLargeBody(app);
         }

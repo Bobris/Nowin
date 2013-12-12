@@ -16,9 +16,7 @@ Features it supports:
 - By default settings maximum size of request and response headers are 8KB.
 - Published in Nuget for easy use. No dependencies.
 
-Other Owin .Net server samples also included. Some parts of these samples source code are modified from Katana project.
-
-Sample: (uses Microsoft.Owin.Hosting nuget from http://www.myget.org/f/aspnetwebstacknightly/)
+Sample: (uses Microsoft.Owin.Hosting nuget)
 
     static class Program
     {
