@@ -1201,6 +1201,8 @@ namespace Nowin
                 else
                 {
                     _isKeepAlive = false;
+
+                    SendHttpResponseAndPrepareForNext();
                     CloseConnection();
                 }
                 return;
