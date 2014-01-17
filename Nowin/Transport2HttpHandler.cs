@@ -1088,6 +1088,7 @@ namespace Nowin
 
         public int ResponseStatusCode
         {
+            get { return _statusCode; }
             set { _statusCode = value; }
         }
 
@@ -1201,8 +1202,11 @@ namespace Nowin
                 else
                 {
                     _isKeepAlive = false;
-
-                    SendHttpResponseAndPrepareForNext();
+                    if (_statusCode == 500)
+                    {
+                        SendHttpResponseAndPrepareForNext();
+                        return;
+                    }
                     CloseConnection();
                 }
                 return;

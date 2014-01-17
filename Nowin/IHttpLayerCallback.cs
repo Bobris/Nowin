@@ -23,7 +23,7 @@ namespace Nowin
         bool IsLocal { get; }
         bool IsWebSocketReq { get; }
 
-        int ResponseStatusCode { set; }
+        int ResponseStatusCode { get; set; }
         string ResponseReasonPhase { set; }
         ulong ResponseContentLength { set; }
         bool KeepAlive { set; }

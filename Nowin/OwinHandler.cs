@@ -213,11 +213,7 @@ namespace Nowin
                         ReportFinishOfAppFunc();
                         return;
                     }
-                    if (task.IsFaulted || task.IsCanceled)
-                    {
-                        Callback.ResponseStatusCode = 500;
-                        Callback.ResponseReasonPhase = null;
-                    }
+                    SetReponseStatusCodeForFails(task, Callback);
                     Callback.ResponseFinished();
                     ReportFinishOfAppFunc();
                     return;
@@ -230,11 +226,7 @@ namespace Nowin
                         return;
                     }
                     var callback = ((OwinHandler)o).Callback;
-                    if (t.IsFaulted || t.IsCanceled)
-                    {
-                        callback.ResponseStatusCode = 500;
-                        callback.ResponseReasonPhase = null;
-                    }
+                    SetReponseStatusCodeForFails(t, callback);
                     callback.ResponseFinished();
                     ReportFinishOfAppFunc();
                 }, this);
@@ -246,9 +238,20 @@ namespace Nowin
                     ReportFinishOfAppFunc();
                     return;
                 }
-                Callback.ResponseStatusCode = 500;
+                if (!Callback.HeadersSend || Callback.ResponseStatusCode != 500)
+                    Callback.ResponseStatusCode = Callback.HeadersSend ? 599 : 500;
                 Callback.ResponseReasonPhase = null;
                 Callback.ResponseFinished();
+            }
+        }
+
+        static void SetReponseStatusCodeForFails(Task t, IHttpLayerCallback callback)
+        {
+            if (t.IsFaulted || t.IsCanceled)
+            {
+                if (!t.IsFaulted || !callback.HeadersSend || callback.ResponseStatusCode != 500)
+                    callback.ResponseStatusCode = callback.HeadersSend ? 599 : 500;
+                callback.ResponseReasonPhase = null;
             }
         }
 

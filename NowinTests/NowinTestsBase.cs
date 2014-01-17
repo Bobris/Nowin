@@ -148,6 +148,24 @@ namespace NowinTests
         }
 
         [Test]
+        public void Error500IsAllowedToFinishWhenThrowing()
+        {
+            var listener = CreateServer(
+                env =>
+                {
+                    env["owin.ResponseStatusCode"] = 500;
+                    var responseStream = env.Get<Stream>("owin.ResponseBody");
+                    responseStream.WriteByte((byte)'A');
+                    responseStream.Flush();
+
+                    throw new InvalidOperationException();
+                });
+            var response = SendGetRequest(listener, HttpClientAddress);
+            Assert.AreEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+            Assert.AreEqual("A", response.Content.ReadAsStringAsync().Result);
+        }
+
+        [Test]
         public void ConnectionClosedAfterStartReturningResponseAndAsyncThrowing()
         {
             var callCancelled = false;
