@@ -63,3 +63,5 @@ Https sample using builder:
         Console.WriteLine("Listening on port 8888. Enter to exit.");
         Console.ReadLine();
     }
+
+*If running on OSX/Linux and MonoDevelop/Xamarin, to use the above sample please select external console in your project options by going to Options / Run / General / Run on external console*
