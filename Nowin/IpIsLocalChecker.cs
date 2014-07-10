@@ -13,8 +13,9 @@ namespace Nowin
         {
             var host = Dns.GetHostEntry(Dns.GetHostName());
             _dict = host.AddressList.Where(
-                a => a.AddressFamily == AddressFamily.InterNetwork || a.AddressFamily == AddressFamily.InterNetworkV6).
-                ToDictionary(p => p, p => true);
+                a => a.AddressFamily == AddressFamily.InterNetwork || a.AddressFamily == AddressFamily.InterNetworkV6)
+                .Distinct()
+                .ToDictionary(p => p, p => true);
             _dict[IPAddress.Loopback] = true;
             _dict[IPAddress.IPv6Loopback] = true;
         }
