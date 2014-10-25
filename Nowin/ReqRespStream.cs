@@ -105,7 +105,7 @@ namespace Nowin
         {
             var encodedDataAvail = _transport2HttpHandler.ReceiveBufferDataLength;
             var encodedDataOfs = _transport2HttpHandler.StartBufferOffset + _transport2HttpHandler.ReceiveBufferPos;
-            while (encodedDataAvail > 0)
+            while (encodedDataAvail > 0 && _asyncCount > 0)
             {
                 var decodedDataAvail = _chunkedDecoder.DataAvailable;
                 if (decodedDataAvail < 0)
