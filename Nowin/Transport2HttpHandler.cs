@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -23,6 +24,7 @@ namespace Nowin
         bool _waitingForRequest;
         bool _isHttp10;
         bool _isKeepAlive;
+        bool _isMethodHead;
         public bool ShouldSend100Continue;
         public ulong RequestContentLength;
         public bool RequestIsChunked;
@@ -115,6 +117,7 @@ namespace Nowin
             _responseIsChunked = false;
             _responseContentLength = ulong.MaxValue;
             var pos = startBufferOffset;
+            _isMethodHead = false;
             _requestMethod = ParseHttpMethod(buffer, ref pos);
             _requestScheme = _isSsl ? "https" : "http";
             string reqHost;
@@ -441,6 +444,7 @@ namespace Nowin
                     if (buffer[p + 1] == 'E' && buffer[p + 2] == 'A' && buffer[p + 3] == 'D' && buffer[p + 4] == ' ')
                     {
                         pos = p + 5;
+                        _isMethodHead = true;
                         return "HEAD";
                     }
                     break;
@@ -514,7 +518,7 @@ namespace Nowin
             {
                 status = 500;
             }
-            if (finished)
+            if (finished && !_isMethodHead)
             {
                 if (_responseContentLength != ulong.MaxValue && _responseContentLength != _reqRespStream.ResponseLength)
                 {
@@ -645,6 +649,8 @@ namespace Nowin
         {
             var offset = _reqRespStream.ResponseStartOffset;
             var len = _reqRespStream.ResponseLocalPos;
+            if (_isMethodHead)
+                len = 0;
             if (!_responseHeadersSend)
             {
                 FillResponse(true);
@@ -762,6 +768,8 @@ namespace Nowin
                 if (_buffer != buffer) throw new InvalidOperationException();
                 FillResponse(false);
                 if (_responseHeaderPos > ReceiveBufferSize) throw new ArgumentException(string.Format("Response headers are longer({0}) than buffer({1})", _responseHeaderPos, ReceiveBufferSize));
+                if (_isMethodHead)
+                    len = 0;
                 if (_responseIsChunked && len != 0)
                 {
                     WrapInChunk(_buffer, ref startOffset, ref len);
@@ -772,10 +780,17 @@ namespace Nowin
             else if (_responseIsChunked)
             {
                 if (_buffer != buffer) throw new InvalidOperationException();
+                if (_isMethodHead)
+                    len = 0;
                 if (len == 0) return Task.Delay(0);
                 WrapInChunk(_buffer, ref startOffset, ref len);
             }
-            if (_responseContentLength != ulong.MaxValue && _reqRespStream.ResponseLength > _responseContentLength)
+            else
+            {
+                if (_isMethodHead)
+                    return Task.Delay(0);
+            }
+            if (!_isMethodHead && _responseContentLength != ulong.MaxValue && _reqRespStream.ResponseLength > _responseContentLength)
             {
                 CloseConnection();
                 throw new ArgumentOutOfRangeException("len", "Cannot send more bytes than specified in Content-Length header");
