@@ -145,7 +145,7 @@ namespace NowinTests
                     var array = new byte[100000];
                     for (int i = 0; i < 10; i++)
                     {
-                        await stream.WriteAsync(array, 0, array.Length); 
+                        await stream.WriteAsync(array, 0, array.Length);
                         await stream.FlushAsync();
                     }
                     stream.Close();
@@ -157,6 +157,52 @@ namespace NowinTests
                 response.EnsureSuccessStatusCode();
                 Assert.AreEqual(1000000, response.Content.ReadAsByteArrayAsync().Result.Length);
                 Assert.False(callCancelled);
+            }
+        }
+
+        [Test]
+        public void PostEchoAppWithLongChunkedDataTwiceWorks()
+        {
+            var callCancelled = false;
+            var listener = CreateServer(
+                async env =>
+                {
+                    GetCallCancelled(env).Register(() => callCancelled = true);
+                    var requestStream = env.Get<Stream>("owin.RequestBody");
+                    var responseStream = env.Get<Stream>("owin.ResponseBody");
+                    var buffer = new MemoryStream();
+                    await requestStream.CopyToAsync(buffer, 4096);
+                    buffer.Seek(0, SeekOrigin.Begin);
+                    await buffer.CopyToAsync(responseStream, 4096);
+                });
+
+            using (listener)
+            {
+                for (int repeat = 0; repeat < 2; repeat++)
+                {
+                    using (var client = new HttpClient())
+                    {
+                        var request = new HttpRequestMessage(HttpMethod.Put, HttpClientAddress)
+                        {
+                            Content = new PushStreamContent(async (stream, _, __) =>
+                            {
+                                var array = new byte[100000];
+                                for (int i = 0; i < 10; i++)
+                                {
+                                    await stream.WriteAsync(array, 0, array.Length);
+                                    await stream.FlushAsync();
+                                }
+                                stream.Close();
+                            })
+                        };
+                        request.Headers.TransferEncodingChunked = true;
+
+                        var response = client.SendAsync(request).Result;
+                        response.EnsureSuccessStatusCode();
+                        Assert.AreEqual(1000000, response.Content.ReadAsByteArrayAsync().Result.Length);
+                        Assert.False(callCancelled);
+                    }
+                }
             }
         }
 

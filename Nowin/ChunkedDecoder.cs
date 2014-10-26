@@ -26,6 +26,7 @@ namespace Nowin
         {
             _dataAvail = 0;
             _nextAvail = 0;
+            _state = State.InHex;
         }
 
         public int DataAvailable
