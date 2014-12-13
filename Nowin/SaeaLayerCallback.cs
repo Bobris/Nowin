@@ -15,7 +15,8 @@ namespace Nowin
             Receive = 1,
             Send = 2,
             Disconnect = 4,
-            Aborting = 8
+            Aborting = 8,
+            DelayedAccept = 16
         }
         readonly ITransportLayerHandler _handler;
         readonly Socket _listenSocket;
@@ -85,16 +86,22 @@ namespace Nowin
                 oldState = _state;
                 newState = oldState & ~(int)State.Receive;
             } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
-            _server.ReportNewConnectedClient();
-            _socket = _receiveEvent.AcceptSocket;
             if (_receiveEvent.BytesTransferred >= 0 && _receiveEvent.SocketError == SocketError.Success)
             {
-                _handler.FinishAccept(_receiveEvent.Buffer, _receiveEvent.Offset, _receiveEvent.BytesTransferred, _socket.RemoteEndPoint as IPEndPoint, _socket.LocalEndPoint as IPEndPoint);
+                _server.ReportNewConnectedClient();
+                _socket = _receiveEvent.AcceptSocket;
+                _handler.FinishAccept(_receiveEvent.Buffer, _receiveEvent.Offset, _receiveEvent.BytesTransferred,
+                    _socket.RemoteEndPoint as IPEndPoint, _socket.LocalEndPoint as IPEndPoint);
+            }
+            else
+            {
+                _handler.PrepareAccept();
             }
         }
 
         void ProcessReceive()
         {
+            bool postponedAccept;
             var bytesTransferred = _receiveEvent.BytesTransferred;
             if (bytesTransferred > 0 && _receiveEvent.SocketError == SocketError.Success)
             {
@@ -102,7 +109,9 @@ namespace Nowin
                 do
                 {
                     oldState = _state;
-                    newState = oldState & ~(int)State.Receive;
+                    postponedAccept = (oldState & (int)State.DelayedAccept) != 0;
+                    newState = oldState & ~(int)(State.Receive | State.DelayedAccept);
+
                 } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
                 _handler.FinishReceive(_receiveEvent.Buffer, _receiveEvent.Offset, bytesTransferred);
             }
@@ -112,10 +121,12 @@ namespace Nowin
                 do
                 {
                     oldState = _state;
-                    newState = (oldState & ~(int)State.Receive) | (int)State.Aborting;
+                    postponedAccept = (oldState & (int)State.DelayedAccept) != 0;
+                    newState = (oldState & ~(int)(State.Receive | State.DelayedAccept)) | (postponedAccept ? (int)State.Aborting : 0);
                 } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
                 _handler.FinishReceive(null, 0, -1);
             }
+            if (postponedAccept) _handler.PrepareAccept();
         }
 
         void ProcessSend()
@@ -136,15 +147,18 @@ namespace Nowin
 
         void ProcessDisconnect()
         {
+            bool delayedAccept;
             int oldState, newState;
             do
             {
                 oldState = _state;
+                delayedAccept = (oldState & (int) State.Receive) != 0;
                 newState = (oldState & ~(int)(State.Disconnect | State.Aborting));
             } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
             _socket = null;
             _server.ReportDisconnectedClient();
-            _handler.PrepareAccept();
+            if (!delayedAccept)
+                _handler.PrepareAccept();
         }
 
         public void StartAccept(byte[] buffer, int offset, int length)
