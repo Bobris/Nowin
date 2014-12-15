@@ -23,7 +23,7 @@ namespace NowinTests
 
         protected override string HttpClientAddress
         {
-            get { return "https://localhost:8080/"; }
+            get { return "https://localhost:8082/"; }
         }
 
         protected override string ExpectedRequestScheme
@@ -34,7 +34,7 @@ namespace NowinTests
         protected override IDisposable CreateServer(Func<IDictionary<string, object>, Task> app)
         {
             var server = ServerBuilder.New()
-                .SetEndPoint(new IPEndPoint(IPAddress.Loopback, 8080))
+                .SetEndPoint(new IPEndPoint(IPAddress.Loopback, 8082))
                 .SetCertificate(_certificate)
                 .SetOwinApp(app)
                 .SetConnectionAllocationStrategy(new ConnectionAllocationStrategy(1, 0, 1, 0))

@@ -14,7 +14,7 @@ namespace NowinTests
     using OwinApp = Func<IDictionary<string, object>, Task>;
     public abstract class NowinTestsBase
     {
-        const string HostValue = "localhost:8080";
+        const string HostValue = "localhost:8082";
         const string SampleContent = "Hello World";
 
         protected abstract string HttpClientAddress { get; }

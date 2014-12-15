@@ -22,9 +22,9 @@ namespace Nowin
         readonly Socket _listenSocket;
         readonly Server _server;
         readonly int _handlerId;
-        readonly SocketAsyncEventArgs _receiveEvent = new SocketAsyncEventArgs();
-        readonly SocketAsyncEventArgs _sendEvent = new SocketAsyncEventArgs();
-        readonly SocketAsyncEventArgs _disconnectEvent = new SocketAsyncEventArgs();
+        SocketAsyncEventArgs _receiveEvent;
+        SocketAsyncEventArgs _sendEvent;
+        SocketAsyncEventArgs _disconnectEvent;
         Socket _socket;
 #pragma warning disable 420
         volatile int _state;
@@ -35,6 +35,15 @@ namespace Nowin
             _listenSocket = listenSocket;
             _server = server;
             _handlerId = handlerId;
+            RecreateSaeas();
+            handler.Callback = this;
+        }
+
+        void RecreateSaeas()
+        {
+            _receiveEvent = new SocketAsyncEventArgs();
+            _sendEvent = new SocketAsyncEventArgs();
+            _disconnectEvent = new SocketAsyncEventArgs();
             _receiveEvent.Completed += IoCompleted;
             _sendEvent.Completed += IoCompleted;
             _disconnectEvent.Completed += IoCompleted;
@@ -44,7 +53,6 @@ namespace Nowin
             _receiveEvent.UserToken = this;
             _sendEvent.UserToken = this;
             _disconnectEvent.UserToken = this;
-            handler.Callback = this;
         }
 
         static void IoCompleted(object sender, SocketAsyncEventArgs e)
@@ -86,15 +94,19 @@ namespace Nowin
                 oldState = _state;
                 newState = oldState & ~(int)State.Receive;
             } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
-            if (_receiveEvent.BytesTransferred >= 0 && _receiveEvent.SocketError == SocketError.Success)
+            var bytesTransfered = _receiveEvent.BytesTransferred;
+            var socketError = _receiveEvent.SocketError;
+            if (bytesTransfered >= 0 && socketError == SocketError.Success)
             {
-                _server.ReportNewConnectedClient();
                 _socket = _receiveEvent.AcceptSocket;
-                _handler.FinishAccept(_receiveEvent.Buffer, _receiveEvent.Offset, _receiveEvent.BytesTransferred,
+                _server.ReportNewConnectedClient();
+                _handler.FinishAccept(_receiveEvent.Buffer, _receiveEvent.Offset, bytesTransfered,
                     _socket.RemoteEndPoint as IPEndPoint, _socket.LocalEndPoint as IPEndPoint);
             }
             else
             {
+                // Current socket could be corrupted Windows returns InvalidArguments nonsense.
+                RecreateSaeas();
                 _handler.PrepareAccept();
             }
         }
