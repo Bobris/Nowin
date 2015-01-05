@@ -134,7 +134,7 @@ namespace Nowin
                 {
                     oldState = _state;
                     postponedAccept = (oldState & (int)State.DelayedAccept) != 0;
-                    newState = (oldState & ~(int)(State.Receive | State.DelayedAccept)) | (postponedAccept ? (int)State.Aborting : 0);
+                    newState = (oldState & ~(int)(State.Receive | State.DelayedAccept));
                 } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
                 _handler.FinishReceive(null, 0, -1);
             }
@@ -165,7 +165,7 @@ namespace Nowin
             {
                 oldState = _state;
                 delayedAccept = (oldState & (int) State.Receive) != 0;
-                newState = (oldState & ~(int)(State.Disconnect | State.Aborting));
+                newState = (oldState & ~(int)(State.Disconnect | State.Aborting)) | (delayedAccept ? (int)State.DelayedAccept : 0);
             } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
             _socket = null;
             _server.ReportDisconnectedClient();
@@ -182,7 +182,7 @@ namespace Nowin
                 oldState = _state;
                 if ((oldState & (int)State.Receive) != 0)
                     throw new InvalidOperationException("Already receiving or accepting");
-                newState = oldState | (int)State.Receive;
+                newState = oldState | (int)State.Receive & ~(int)State.Aborting;
             } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
             _receiveEvent.SetBuffer(buffer, offset, length);
             bool willRaiseEvent;
