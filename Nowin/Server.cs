@@ -84,7 +84,12 @@ namespace Nowin
             {
                 _connectionAllocationStrategy = new FinishingAllocationStrategy();
             }
-            ListenSocket.Close();
+
+            if (ListenSocket != null)
+            {
+                ListenSocket.Close();
+            }
+
             foreach (var block in _blocks)
             {
                 block.Stop();
