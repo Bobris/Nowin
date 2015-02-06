@@ -52,7 +52,12 @@ namespace Nowin
                 var builder = ServerBuilder.New().SetOwinApp(app);
                 int port;
                 if (!int.TryParse(address.Get<string>("port"), out port)) throw new ArgumentException("port must be number from 0 to 65535");
-                builder.SetPort(port);
+                string host = address.Get<string>("host");
+                if (string.IsNullOrWhiteSpace(host)) throw new ArgumentException("host must be specified");
+                IPAddress ipAddress;
+                if (!IPAddress.TryParse(host,out ipAddress)) throw new ArgumentException("host must be a valid ip address");
+                var endpoint = new IPEndPoint(ipAddress, port);
+                builder.SetEndPoint(endpoint);
                 builder.SetOwinCapabilities(capabilities);
                 var certificate = address.Get<X509Certificate>("certificate");
                 if (certificate != null)
