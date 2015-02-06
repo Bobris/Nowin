@@ -56,6 +56,7 @@ namespace Nowin
                 if (string.IsNullOrWhiteSpace(host))
                 {
                     builder.SetPort(port);
+                    endpoints.Add(new IPEndPoint(IPAddress.Loopback, port));
                 }
                 else
                 {
@@ -66,13 +67,13 @@ namespace Nowin
                     }
                     var endpoint = new IPEndPoint(ipAddress, port);
                     builder.SetEndPoint(endpoint);
+                    endpoints.Add(endpoint);
                 }
                 builder.SetOwinCapabilities(capabilities);
                 var certificate = address.Get<X509Certificate>("certificate");
                 if (certificate != null)
                     builder.SetCertificate(certificate);
                 servers.Add(builder.Build());
-                endpoints.Add(new IPEndPoint(IPAddress.Loopback, port));
             }
 
             var disposer = new Disposer(servers.Cast<IDisposable>().ToArray());
