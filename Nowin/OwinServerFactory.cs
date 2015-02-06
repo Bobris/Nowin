@@ -52,13 +52,28 @@ namespace Nowin
                 var builder = ServerBuilder.New().SetOwinApp(app);
                 int port;
                 if (!int.TryParse(address.Get<string>("port"), out port)) throw new ArgumentException("port must be number from 0 to 65535");
-                builder.SetPort(port);
+                string host = address.Get<string>("host");
+                if (string.IsNullOrWhiteSpace(host))
+                {
+                    builder.SetPort(port);
+                    endpoints.Add(new IPEndPoint(IPAddress.Loopback, port));
+                }
+                else
+                {
+                    IPAddress ipAddress;
+                    if (!IPAddress.TryParse(host, out ipAddress))
+                    {
+                        throw new ArgumentException("host must be a valid ip address");
+                    }
+                    var endpoint = new IPEndPoint(ipAddress, port);
+                    builder.SetEndPoint(endpoint);
+                    endpoints.Add(endpoint);
+                }
                 builder.SetOwinCapabilities(capabilities);
                 var certificate = address.Get<X509Certificate>("certificate");
                 if (certificate != null)
                     builder.SetCertificate(certificate);
                 servers.Add(builder.Build());
-                endpoints.Add(new IPEndPoint(IPAddress.Loopback,port));
             }
 
             var disposer = new Disposer(servers.Cast<IDisposable>().ToArray());
@@ -73,7 +88,7 @@ namespace Nowin
                 {
                     var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.IP);
                     socket.Connect(ipEndPoint);
-                    socket.Close();                    
+                    socket.Close();
                 }
             }
             catch (Exception)
