@@ -105,7 +105,7 @@ namespace SampleOwinApp
 
                 return Task.Delay(0);
             }));
-            app.Run(c =>
+            app.Run(async c =>
                 {
                     var path = c.Request.Path.Value;
                     if (path == "/")
@@ -113,23 +113,38 @@ namespace SampleOwinApp
                         c.Response.StatusCode = 200;
                         c.Response.ContentType = "text/plain";
                         c.Response.Write("Hello World!");
-                        return Task.Delay(0);
+                        return;
+                    }
+                    if (path == "/sse")
+                    {
+                        c.Response.StatusCode = 200;
+                        c.Response.ContentType = "text/event-stream";
+                        c.Response.Headers.Add("Cache-Control", new[] { "no-cache" });
+                        for (int i = 0; i < 10; i++)
+                        {
+                            await c.Response.WriteAsync("data: " + i.ToString() + "\n\n");
+                            await c.Response.Body.FlushAsync();
+                            await Task.Delay(500);
+                        }
+                        await c.Response.WriteAsync("data: Finish!\n\n");
+                        return;
                     }
                     if (path.Contains(".."))
                     {
                         // hackers ..
                         c.Response.StatusCode = 500;
-                        return Task.Delay(0);
+                        return;
                     }
                     var p = Path.Combine(@"..\..\..\SampleOwinApp\", path.Substring(1));
                     if (File.Exists(p))
                     {
                         c.Response.StatusCode = 200;
                         c.Response.ContentType = p.EndsWith(".js") ? "application/javascript" : "text/html";
-                        return c.Response.WriteAsync(File.ReadAllBytes(p));
+                        await c.Response.WriteAsync(File.ReadAllBytes(p));
+                        return;
                     }
                     c.Response.StatusCode = 404;
-                    return Task.Delay(0);
+                    return;
                 });
         }
     }
