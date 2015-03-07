@@ -248,19 +248,28 @@ namespace Nowin
             _recvBuffer = buffer;
             _recvOffset = offset;
             _recvLength = length;
-            _ssl.ReadAsync(buffer, offset, length).ContinueWith((t, selfObject) =>
+            try
             {
-                var self = (SslTransportHandler)selfObject;
-                if (t.IsFaulted || t.IsCanceled || t.Result == 0)
-                    self._next.FinishReceive(null, 0, -1);
-                else
-                    self._next.FinishReceive(self._recvBuffer, self._recvOffset, t.Result);
-            }, this);
+                _ssl.ReadAsync(buffer, offset, length).ContinueWith((t, selfObject) =>
+                {
+                    var self = (SslTransportHandler)selfObject;
+                    if (t.IsFaulted || t.IsCanceled || t.Result == 0)
+                        self._next.FinishReceive(null, 0, -1);
+                    else
+                        self._next.FinishReceive(self._recvBuffer, self._recvOffset, t.Result);
+                }, this);
+            }
+            catch (Exception)
+            {
+                _next.FinishReceive(null, 0, -1);
+            }
         }
 
         public void StartSend(byte[] buffer, int offset, int length)
         {
-            _ssl.WriteAsync(buffer, offset, length).ContinueWith((t, selfObject) =>
+            try
+            {
+                _ssl.WriteAsync(buffer, offset, length).ContinueWith((t, selfObject) =>
                 {
                     var self = (SslTransportHandler)selfObject;
                     if (t.IsCanceled)
@@ -276,6 +285,11 @@ namespace Nowin
                         self._next.FinishSend(null);
                     }
                 }, this);
+            }
+            catch (Exception ex)
+            {
+                _next.FinishSend(ex);
+            }
         }
 
         public void StartDisconnect()
