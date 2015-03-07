@@ -3,14 +3,12 @@ using System.Collections.Generic;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using NUnit.Framework;
 using Nowin;
 
 // Heavily inspired by Katana project OwinHttpListener tests
 
 namespace NowinTests
 {
-    [TestFixture]
     public class NowinTestsSecure : NowinTestsBase
     {
         readonly X509Certificate _certificate;
@@ -38,6 +36,7 @@ namespace NowinTests
                 .SetCertificate(_certificate)
                 .SetOwinApp(app)
                 .SetConnectionAllocationStrategy(new ConnectionAllocationStrategy(1, 0, 1, 0))
+                .SetRetrySocketBindingTime(TimeSpan.FromSeconds(2))
                 .Start();
             return server;
         }

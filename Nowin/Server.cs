@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Concurrent;
 using System.Net.Sockets;
 using System.Text;
@@ -61,7 +62,20 @@ namespace Nowin
                 _layerFactory = new SslTransportFactory(_parameters.Certificate, _layerFactory);
             }
             ListenSocket = new Socket(_parameters.EndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-            ListenSocket.Bind(_parameters.EndPoint);
+            var start = DateTime.UtcNow;
+            while (true)
+            {
+                try
+                {
+                    ListenSocket.Bind(_parameters.EndPoint);
+                    break;
+                }
+                catch
+                {
+                    if (start + _parameters.RetrySocketBindingTime <= DateTime.UtcNow) throw;
+                }
+                Thread.Sleep(50);
+            }
             ListenSocket.Listen(100);
             var initialConnectionCount = _connectionAllocationStrategy.CalculateNewConnectionCount(0, 0);
             AllocatedConnections = initialConnectionCount;
@@ -87,7 +101,7 @@ namespace Nowin
 
             if (ListenSocket != null)
             {
-                ListenSocket.Close();
+                ListenSocket.Dispose();
             }
 
             foreach (var block in _blocks)

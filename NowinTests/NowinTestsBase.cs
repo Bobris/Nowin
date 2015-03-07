@@ -7,7 +7,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using NUnit.Framework;
+using Xunit;
 
 namespace NowinTests
 {
@@ -22,7 +22,7 @@ namespace NowinTests
 
         readonly OwinApp _appThrow = env => { throw new InvalidOperationException(); };
 
-        [Test]
+        [Fact]
         public void NowinTrivial()
         {
             using (CreateServer(_appThrow))
@@ -30,19 +30,19 @@ namespace NowinTests
             }
         }
 
-        [Test]
+        [Fact]
         public void EmptyAppRespondOk()
         {
             var listener = CreateServer(env => Task.Delay(0));
             var response = SendGetRequest(listener, HttpClientAddress);
-            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.NotNull(response.Content.Headers.ContentLength);
-            Assert.AreEqual(0, response.Content.Headers.ContentLength.Value);
-            Assert.AreEqual("Nowin", response.Headers.Server.First().Product.Name);
+            Assert.Equal(0, response.Content.Headers.ContentLength.Value);
+            Assert.Equal("Nowin", response.Headers.Server.First().Product.Name);
             Assert.True(response.Headers.Date.HasValue);
         }
 
-        [Test]
+        [Fact]
         public void EmptyAppAnd2Requests()
         {
             var listener = CreateServer(env => Task.Delay(0));
@@ -50,23 +50,23 @@ namespace NowinTests
             {
                 var client = new HttpClient();
                 string result = client.GetStringAsync(HttpClientAddress).Result;
-                Assert.AreEqual("", result);
+                Assert.Equal("", result);
                 result = client.GetStringAsync(HttpClientAddress).Result;
-                Assert.AreEqual("", result);
+                Assert.Equal("", result);
             }
         }
 
-        [Test]
+        [Fact]
         public void ThrowAppRespond500()
         {
             var listener = CreateServer(_appThrow);
             var response = SendGetRequest(listener, HttpClientAddress);
-            Assert.AreEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+            Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
             Assert.NotNull(response.Content.Headers.ContentLength);
-            Assert.AreEqual(0, response.Content.Headers.ContentLength.Value);
+            Assert.Equal(0, response.Content.Headers.ContentLength.Value);
         }
 
-        [Test]
+        [Fact]
         public void AsyncThrowAppRespond500()
         {
             var callCancelled = false;
@@ -79,13 +79,13 @@ namespace NowinTests
                 });
 
             var response = SendGetRequest(listener, HttpClientAddress);
-            Assert.AreEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+            Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
             Assert.NotNull(response.Content.Headers.ContentLength);
-            Assert.AreEqual(0, response.Content.Headers.ContentLength.Value);
+            Assert.Equal(0, response.Content.Headers.ContentLength.Value);
             Assert.True(callCancelled);
         }
 
-        [Test]
+        [Fact]
         public void PostEchoAppWorks()
         {
             var callCancelled = false;
@@ -113,13 +113,13 @@ namespace NowinTests
                 var response = client.PostAsync(HttpClientAddress, new StringContent(dataString)).Result;
                 response.EnsureSuccessStatusCode();
                 Assert.NotNull(response.Content.Headers.ContentLength);
-                Assert.AreEqual(dataString.Length, response.Content.Headers.ContentLength.Value);
-                Assert.AreEqual(dataString, response.Content.ReadAsStringAsync().Result);
+                Assert.Equal(dataString.Length, response.Content.Headers.ContentLength.Value);
+                Assert.Equal(dataString, response.Content.ReadAsStringAsync().Result);
                 Assert.False(callCancelled);
             }
         }
 
-        [Test]
+        [Fact]
         public void PostEchoAppWithLongChunkedDataWorks()
         {
             var callCancelled = false;
@@ -155,12 +155,12 @@ namespace NowinTests
 
                 var response = client.SendAsync(request).Result;
                 response.EnsureSuccessStatusCode();
-                Assert.AreEqual(1000000, response.Content.ReadAsByteArrayAsync().Result.Length);
+                Assert.Equal(1000000, response.Content.ReadAsByteArrayAsync().Result.Length);
                 Assert.False(callCancelled);
             }
         }
 
-        [Test]
+        [Fact]
         public void PostEchoAppWithLongChunkedDataTwiceWorks()
         {
             var callCancelled = false;
@@ -199,14 +199,14 @@ namespace NowinTests
 
                         var response = client.SendAsync(request).Result;
                         response.EnsureSuccessStatusCode();
-                        Assert.AreEqual(1000000, response.Content.ReadAsByteArrayAsync().Result.Length);
+                        Assert.Equal(1000000, response.Content.ReadAsByteArrayAsync().Result.Length);
                         Assert.False(callCancelled);
                     }
                 }
             }
         }
 
-        [Test]
+        [Fact]
         public void ConnectionClosedAfterStartReturningResponseAndThrowing()
         {
             bool callCancelled = false;
@@ -234,7 +234,7 @@ namespace NowinTests
             }
         }
 
-        [Test]
+        [Fact]
         public void Error500IsAllowedToFinishWhenThrowing()
         {
             var listener = CreateServer(
@@ -248,11 +248,11 @@ namespace NowinTests
                     throw new InvalidOperationException();
                 });
             var response = SendGetRequest(listener, HttpClientAddress);
-            Assert.AreEqual(HttpStatusCode.InternalServerError, response.StatusCode);
-            Assert.AreEqual("A", response.Content.ReadAsStringAsync().Result);
+            Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+            Assert.Equal("A", response.Content.ReadAsStringAsync().Result);
         }
 
-        [Test]
+        [Fact]
         public void ConnectionClosedAfterStartReturningResponseAndAsyncThrowing()
         {
             var callCancelled = false;
@@ -283,28 +283,28 @@ namespace NowinTests
             }
         }
 
-        [Test]
-        [TestCase("", "/", "")]
-        [TestCase("path?query", "/path", "query")]
-        [TestCase("pathBase/path?query", "/pathBase/path", "query")]
+        [Theory]
+        [InlineData("", "/", "")]
+        [InlineData("path?query", "/path", "query")]
+        [InlineData("pathBase/path?query", "/pathBase/path", "query")]
         public void PathAndQueryParsing(string clientString, string expectedPath, string expectedQuery)
         {
             clientString = HttpClientAddress + clientString;
             var listener = CreateServerSync(env =>
                 {
-                    Assert.AreEqual("", env["owin.RequestPathBase"]);
-                    Assert.AreEqual(expectedPath, env["owin.RequestPath"]);
-                    Assert.AreEqual(expectedQuery, env["owin.RequestQueryString"]);
+                    Assert.Equal("", env["owin.RequestPathBase"]);
+                    Assert.Equal(expectedPath, env["owin.RequestPath"]);
+                    Assert.Equal(expectedQuery, env["owin.RequestQueryString"]);
                 });
             using (listener)
             {
                 var client = new HttpClient();
                 var result = client.GetAsync(clientString).Result;
-                Assert.AreEqual(HttpStatusCode.OK, result.StatusCode);
+                Assert.Equal(HttpStatusCode.OK, result.StatusCode);
             }
         }
 
-        [Test]
+        [Fact]
         public void CallParametersEmptyGetRequest()
         {
             var listener = CreateServerSync(
@@ -320,7 +320,7 @@ namespace NowinTests
             SendGetRequest(listener, HttpClientAddress);
         }
 
-        [Test]
+        [Fact]
         public void EnvironmentEmptyGetRequest()
         {
             var listener = CreateServerSync(
@@ -328,34 +328,34 @@ namespace NowinTests
                 {
                     object ignored;
                     Assert.True(env.TryGetValue("owin.RequestMethod", out ignored));
-                    Assert.AreEqual("GET", env["owin.RequestMethod"]);
+                    Assert.Equal("GET", env["owin.RequestMethod"]);
 
                     Assert.True(env.TryGetValue("owin.RequestPath", out ignored));
-                    Assert.AreEqual("/SubPath", env["owin.RequestPath"]);
+                    Assert.Equal("/SubPath", env["owin.RequestPath"]);
 
                     Assert.True(env.TryGetValue("owin.RequestPathBase", out ignored));
-                    Assert.AreEqual("", env["owin.RequestPathBase"]);
+                    Assert.Equal("", env["owin.RequestPathBase"]);
 
                     Assert.True(env.TryGetValue("owin.RequestProtocol", out ignored));
-                    Assert.AreEqual("HTTP/1.1", env["owin.RequestProtocol"]);
+                    Assert.Equal("HTTP/1.1", env["owin.RequestProtocol"]);
 
                     Assert.True(env.TryGetValue("owin.RequestQueryString", out ignored));
-                    Assert.AreEqual("QueryString", env["owin.RequestQueryString"]);
+                    Assert.Equal("QueryString", env["owin.RequestQueryString"]);
 
                     Assert.True(env.TryGetValue("owin.RequestScheme", out ignored));
-                    Assert.AreEqual(ExpectedRequestScheme, env["owin.RequestScheme"]);
+                    Assert.Equal(ExpectedRequestScheme, env["owin.RequestScheme"]);
 
                     Assert.True(env.TryGetValue("owin.Version", out ignored));
-                    Assert.AreEqual("1.0", env["owin.Version"]);
+                    Assert.Equal("1.0", env["owin.Version"]);
 
                     Assert.True(env.TryGetValue("server.IsLocal", out ignored));
-                    Assert.AreEqual(true, env["server.IsLocal"]);
+                    Assert.Equal(true, env["server.IsLocal"]);
 
                     Assert.True(env.TryGetValue("server.RemoteIpAddress", out ignored));
-                    Assert.AreEqual("127.0.0.1", env["server.RemoteIpAddress"]);
+                    Assert.Equal("127.0.0.1", env["server.RemoteIpAddress"]);
 
                     Assert.True(env.TryGetValue("server.LocalIpAddress", out ignored));
-                    Assert.AreEqual("127.0.0.1", env["server.LocalIpAddress"]);
+                    Assert.Equal("127.0.0.1", env["server.LocalIpAddress"]);
 
                     Assert.True(env.TryGetValue("server.RemotePort", out ignored));
                     Assert.True(env.TryGetValue("server.LocalPort", out ignored));
@@ -363,10 +363,10 @@ namespace NowinTests
                     Assert.False(env.TryGetValue("websocket.Accept", out ignored));
                 });
 
-            Assert.AreEqual(HttpStatusCode.OK, SendGetRequest(listener, HttpClientAddress + "SubPath?QueryString").StatusCode);
+            Assert.Equal(HttpStatusCode.OK, SendGetRequest(listener, HttpClientAddress + "SubPath?QueryString").StatusCode);
         }
 
-        [Test]
+        [Fact]
         public void EnvironmentPost10Request()
         {
             var listener = CreateServerSync(
@@ -374,25 +374,25 @@ namespace NowinTests
                 {
                     object ignored;
                     Assert.True(env.TryGetValue("owin.RequestMethod", out ignored));
-                    Assert.AreEqual("POST", env["owin.RequestMethod"]);
+                    Assert.Equal("POST", env["owin.RequestMethod"]);
 
                     Assert.True(env.TryGetValue("owin.RequestPath", out ignored));
-                    Assert.AreEqual("/SubPath", env["owin.RequestPath"]);
+                    Assert.Equal("/SubPath", env["owin.RequestPath"]);
 
                     Assert.True(env.TryGetValue("owin.RequestPathBase", out ignored));
-                    Assert.AreEqual("", env["owin.RequestPathBase"]);
+                    Assert.Equal("", env["owin.RequestPathBase"]);
 
                     Assert.True(env.TryGetValue("owin.RequestProtocol", out ignored));
-                    Assert.AreEqual("HTTP/1.0", env["owin.RequestProtocol"]);
+                    Assert.Equal("HTTP/1.0", env["owin.RequestProtocol"]);
 
                     Assert.True(env.TryGetValue("owin.RequestQueryString", out ignored));
-                    Assert.AreEqual("QueryString", env["owin.RequestQueryString"]);
+                    Assert.Equal("QueryString", env["owin.RequestQueryString"]);
 
                     Assert.True(env.TryGetValue("owin.RequestScheme", out ignored));
-                    Assert.AreEqual(ExpectedRequestScheme, env["owin.RequestScheme"]);
+                    Assert.Equal(ExpectedRequestScheme, env["owin.RequestScheme"]);
 
                     Assert.True(env.TryGetValue("owin.Version", out ignored));
-                    Assert.AreEqual("1.0", env["owin.Version"]);
+                    Assert.Equal("1.0", env["owin.Version"]);
                 });
 
             var request = new HttpRequestMessage(HttpMethod.Post, HttpClientAddress + "SubPath?QueryString")
@@ -403,7 +403,7 @@ namespace NowinTests
             SendRequest(listener, request);
         }
 
-        [Test]
+        [Fact]
         public void HeadersEmptyGetRequest()
         {
             var listener = CreateServerSync(
@@ -413,14 +413,14 @@ namespace NowinTests
 
                     string[] values;
                     Assert.True(requestHeaders.TryGetValue("host", out values));
-                    Assert.AreEqual(1, values.Length);
-                    Assert.AreEqual(HostValue, values[0]);
+                    Assert.Equal(1, values.Length);
+                    Assert.Equal(HostValue, values[0]);
                 });
 
             SendGetRequest(listener, HttpClientAddress);
         }
 
-        [Test]
+        [Fact]
         public void HeadersPostContentLengthRequest()
         {
             const string requestBody = SampleContent;
@@ -433,20 +433,20 @@ namespace NowinTests
                     string[] values;
 
                     Assert.True(requestHeaders.TryGetValue("host", out values));
-                    Assert.AreEqual(1, values.Length);
-                    Assert.AreEqual(HostValue, values[0]);
+                    Assert.Equal(1, values.Length);
+                    Assert.Equal(HostValue, values[0]);
 
                     Assert.True(requestHeaders.TryGetValue("Content-length", out values));
-                    Assert.AreEqual(1, values.Length);
-                    Assert.AreEqual(requestBody.Length.ToString(CultureInfo.InvariantCulture), values[0]);
+                    Assert.Equal(1, values.Length);
+                    Assert.Equal(requestBody.Length.ToString(CultureInfo.InvariantCulture), values[0]);
 
                     Assert.True(requestHeaders.TryGetValue("exPect", out values));
-                    Assert.AreEqual(1, values.Length);
-                    Assert.AreEqual("100-continue", values[0]);
+                    Assert.Equal(1, values.Length);
+                    Assert.Equal("100-continue", values[0]);
 
                     Assert.True(requestHeaders.TryGetValue("Content-Type", out values));
-                    Assert.AreEqual(1, values.Length);
-                    Assert.AreEqual("text/plain; charset=utf-8", values[0]);
+                    Assert.Equal(1, values.Length);
+                    Assert.Equal("text/plain; charset=utf-8", values[0]);
                 });
 
             var request = new HttpRequestMessage(HttpMethod.Post, HttpClientAddress + "SubPath?QueryString")
@@ -456,24 +456,24 @@ namespace NowinTests
             SendRequest(listener, request);
         }
 
-        [Test]
-        [TestCase("GET")]
-        [TestCase("POST")]
-        [TestCase("PUT")]
-        [TestCase("DELETE")]
-        [TestCase("HEAD")]
-        [TestCase("OPTIONS")]
-        [TestCase("TRACE")]
-        [TestCase("NOWIN")]
+        [Theory]
+        [InlineData("GET")]
+        [InlineData("POST")]
+        [InlineData("PUT")]
+        [InlineData("DELETE")]
+        [InlineData("HEAD")]
+        [InlineData("OPTIONS")]
+        [InlineData("TRACE")]
+        [InlineData("NOWIN")]
         public void HttpMethodWorks(string name)
         {
             var listener = CreateServerSync(
-                env => Assert.AreEqual(name, env.Get<string>("owin.RequestMethod")));
+                env => Assert.Equal(name, env.Get<string>("owin.RequestMethod")));
             var request = new HttpRequestMessage(new HttpMethod(name), HttpClientAddress);
             SendRequest(listener, request);
         }
 
-        [Test]
+        [Fact]
         public void HeadersPostChunkedRequest()
         {
             const string requestBody = SampleContent;
@@ -486,20 +486,20 @@ namespace NowinTests
                     string[] values;
 
                     Assert.True(requestHeaders.TryGetValue("host", out values));
-                    Assert.AreEqual(1, values.Length);
-                    Assert.AreEqual(HostValue, values[0]);
+                    Assert.Equal(1, values.Length);
+                    Assert.Equal(HostValue, values[0]);
 
                     Assert.True(requestHeaders.TryGetValue("Transfer-encoding", out values));
-                    Assert.AreEqual(1, values.Length);
-                    Assert.AreEqual("chunked", values[0]);
+                    Assert.Equal(1, values.Length);
+                    Assert.Equal("chunked", values[0]);
 
                     Assert.True(requestHeaders.TryGetValue("exPect", out values));
-                    Assert.AreEqual(1, values.Length);
-                    Assert.AreEqual("100-continue", values[0]);
+                    Assert.Equal(1, values.Length);
+                    Assert.Equal("100-continue", values[0]);
 
                     Assert.True(requestHeaders.TryGetValue("Content-Type", out values));
-                    Assert.AreEqual(1, values.Length);
-                    Assert.AreEqual("text/plain; charset=utf-8", values[0]);
+                    Assert.Equal(1, values.Length);
+                    Assert.Equal("text/plain; charset=utf-8", values[0]);
                 });
 
             var request = new HttpRequestMessage(HttpMethod.Post, HttpClientAddress + "SubPath?QueryString");
@@ -508,7 +508,7 @@ namespace NowinTests
             SendRequest(listener, request);
         }
 
-        [Test]
+        [Fact]
         public void BodyPostContentLengthZero()
         {
             var listener = CreateServerSync(
@@ -518,8 +518,8 @@ namespace NowinTests
                     var requestHeaders = env.Get<IDictionary<string, string[]>>("owin.RequestHeaders");
 
                     Assert.True(requestHeaders.TryGetValue("Content-length", out values));
-                    Assert.AreEqual(1, values.Length);
-                    Assert.AreEqual("0", values[0]);
+                    Assert.Equal(1, values.Length);
+                    Assert.Equal("0", values[0]);
 
                     Assert.NotNull(env.Get<Stream>("owin.RequestBody"));
                 });
@@ -531,7 +531,7 @@ namespace NowinTests
             SendRequest(listener, request);
         }
 
-        [Test]
+        [Fact]
         public void BodyPostContentLengthX()
         {
             var listener = CreateServerSync(
@@ -541,15 +541,15 @@ namespace NowinTests
                     var requestHeaders = env.Get<IDictionary<string, string[]>>("owin.RequestHeaders");
 
                     Assert.True(requestHeaders.TryGetValue("Content-length", out values));
-                    Assert.AreEqual(1, values.Length);
-                    Assert.AreEqual(SampleContent.Length.ToString(CultureInfo.InvariantCulture), values[0]);
+                    Assert.Equal(1, values.Length);
+                    Assert.Equal(SampleContent.Length.ToString(CultureInfo.InvariantCulture), values[0]);
 
                     var requestBody = env.Get<Stream>("owin.RequestBody");
                     Assert.NotNull(requestBody);
 
                     var buffer = new MemoryStream();
                     requestBody.CopyTo(buffer);
-                    Assert.AreEqual(SampleContent.Length, buffer.Length);
+                    Assert.Equal(SampleContent.Length, buffer.Length);
                 });
 
             var request = new HttpRequestMessage(HttpMethod.Post, HttpClientAddress)
@@ -559,7 +559,7 @@ namespace NowinTests
             SendRequest(listener, request);
         }
 
-        [Test]
+        [Fact]
         public void BodyPostChunkedEmpty()
         {
             var listener = CreateServerSync(
@@ -569,15 +569,15 @@ namespace NowinTests
                     var requestHeaders = env.Get<IDictionary<string, string[]>>("owin.RequestHeaders");
 
                     Assert.True(requestHeaders.TryGetValue("Transfer-Encoding", out values));
-                    Assert.AreEqual(1, values.Length);
-                    Assert.AreEqual("chunked", values[0]);
+                    Assert.Equal(1, values.Length);
+                    Assert.Equal("chunked", values[0]);
 
                     var requestBody = env.Get<Stream>("owin.RequestBody");
                     Assert.NotNull(requestBody);
 
                     var buffer = new MemoryStream();
                     requestBody.CopyTo(buffer);
-                    Assert.AreEqual(0, buffer.Length);
+                    Assert.Equal(0, buffer.Length);
                 });
 
             var request = new HttpRequestMessage(HttpMethod.Post, HttpClientAddress);
@@ -586,7 +586,7 @@ namespace NowinTests
             SendRequest(listener, request);
         }
 
-        [Test]
+        [Fact]
         public void BodyPostChunkedX()
         {
             var listener = CreateServerSync(
@@ -596,15 +596,15 @@ namespace NowinTests
                     var requestHeaders = env.Get<IDictionary<string, string[]>>("owin.RequestHeaders");
 
                     Assert.True(requestHeaders.TryGetValue("Transfer-Encoding", out values));
-                    Assert.AreEqual(1, values.Length);
-                    Assert.AreEqual("chunked", values[0]);
+                    Assert.Equal(1, values.Length);
+                    Assert.Equal("chunked", values[0]);
 
                     var requestBody = env.Get<Stream>("owin.RequestBody");
                     Assert.NotNull(requestBody);
 
                     var buffer = new MemoryStream();
                     requestBody.CopyTo(buffer);
-                    Assert.AreEqual(SampleContent.Length, buffer.Length);
+                    Assert.Equal(SampleContent.Length, buffer.Length);
                 });
 
             var request = new HttpRequestMessage(HttpMethod.Post, HttpClientAddress);
@@ -613,7 +613,7 @@ namespace NowinTests
             SendRequest(listener, request);
         }
 
-        [Test]
+        [Fact]
         public void BodyPostChunkedXClientCloseConnection()
         {
             var listener = CreateServerSync(
@@ -702,7 +702,7 @@ namespace NowinTests
             }
         }
 
-        [Test]
+        [Fact]
         public void DefaultEmptyResponse()
         {
             var listener = CreateServer(call => Task.Delay(0));
@@ -711,17 +711,17 @@ namespace NowinTests
             {
                 var client = new HttpClient();
                 var response = client.GetAsync(HttpClientAddress).Result;
-                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-                Assert.AreEqual("OK", response.ReasonPhrase);
-                Assert.AreEqual(2, response.Headers.Count());
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                Assert.Equal("OK", response.ReasonPhrase);
+                Assert.Equal(2, response.Headers.Count());
                 Assert.False(response.Headers.TransferEncodingChunked.HasValue);
                 Assert.True(response.Headers.Date.HasValue);
-                Assert.AreEqual(1, response.Headers.Server.Count);
-                Assert.AreEqual("", response.Content.ReadAsStringAsync().Result);
+                Assert.Equal(1, response.Headers.Server.Count);
+                Assert.Equal("", response.Content.ReadAsStringAsync().Result);
             }
         }
 
-        [Test]
+        [Fact]
         public void SurviveNullResponseHeaders()
         {
             var listener = CreateServer(
@@ -735,11 +735,11 @@ namespace NowinTests
             {
                 var client = new HttpClient();
                 var response = client.GetAsync(HttpClientAddress).Result;
-                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             }
         }
 
-        [Test]
+        [Fact]
         public void CustomHeadersArePassedThrough()
         {
             var listener = CreateServer(
@@ -756,21 +756,21 @@ namespace NowinTests
             {
                 var client = new HttpClient();
                 var response = client.GetAsync(HttpClientAddress).Result;
-                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-                Assert.AreEqual(5, response.Headers.Count());
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                Assert.Equal(5, response.Headers.Count());
 
-                Assert.AreEqual(2, response.Headers.GetValues("Custom1").Count());
-                Assert.AreEqual("value1a", response.Headers.GetValues("Custom1").First());
-                Assert.AreEqual("value1b", response.Headers.GetValues("Custom1").Skip(1).First());
-                Assert.AreEqual(1, response.Headers.GetValues("Custom2").Count());
-                Assert.AreEqual("value2a, value2b", response.Headers.GetValues("Custom2").First());
-                Assert.AreEqual(2, response.Headers.GetValues("Custom3").Count());
-                Assert.AreEqual("value3a, value3b", response.Headers.GetValues("Custom3").First());
-                Assert.AreEqual("value3c", response.Headers.GetValues("Custom3").Skip(1).First());
+                Assert.Equal(2, response.Headers.GetValues("Custom1").Count());
+                Assert.Equal("value1a", response.Headers.GetValues("Custom1").First());
+                Assert.Equal("value1b", response.Headers.GetValues("Custom1").Skip(1).First());
+                Assert.Equal(1, response.Headers.GetValues("Custom2").Count());
+                Assert.Equal("value2a, value2b", response.Headers.GetValues("Custom2").First());
+                Assert.Equal(2, response.Headers.GetValues("Custom3").Count());
+                Assert.Equal("value3a, value3b", response.Headers.GetValues("Custom3").First());
+                Assert.Equal("value3c", response.Headers.GetValues("Custom3").Skip(1).First());
             }
         }
 
-        [Test]
+        [Fact]
         public void ReservedHeadersArePassedThrough()
         {
             var listener = CreateServer(
@@ -790,17 +790,17 @@ namespace NowinTests
             {
                 var client = new HttpClient();
                 var response = client.GetAsync(HttpClientAddress).Result;
-                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-                Assert.AreEqual(4, response.Headers.Count());
-                Assert.AreEqual(0, response.Content.Headers.ContentLength);
-                Assert.AreEqual(2, response.Headers.WwwAuthenticate.Count());
-                Assert.AreEqual("cool", response.Headers.Server.First().Product.Name);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                Assert.Equal(4, response.Headers.Count());
+                Assert.Equal(0, response.Content.Headers.ContentLength);
+                Assert.Equal(2, response.Headers.WwwAuthenticate.Count());
+                Assert.Equal("cool", response.Headers.Server.First().Product.Name);
 
                 // The client does not expose KeepAlive
             }
         }
 
-        [Test]
+        [Fact]
         public void ConnectionHeaderIsHonoredAndTransferEncodingIngnored()
         {
             var listener = CreateServer(
@@ -816,17 +816,17 @@ namespace NowinTests
             {
                 var client = new HttpClient();
                 var response = client.GetAsync(HttpClientAddress).Result;
-                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-                Assert.AreEqual(3, response.Headers.Count());
-                Assert.AreEqual("", response.Headers.TransferEncoding.ToString());
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                Assert.Equal(3, response.Headers.Count());
+                Assert.Equal("", response.Headers.TransferEncoding.ToString());
                 Assert.False(response.Headers.TransferEncodingChunked.HasValue);
-                Assert.AreEqual("close", response.Headers.Connection.First()); // Normalized by server
+                Assert.Equal("close", response.Headers.Connection.First()); // Normalized by server
                 Assert.NotNull(response.Headers.ConnectionClose);
                 Assert.True(response.Headers.ConnectionClose.Value);
             }
         }
 
-        [Test]
+        [Fact]
         public void BadContentLengthIs500()
         {
             var listener = CreateServer(
@@ -841,13 +841,13 @@ namespace NowinTests
             {
                 var client = new HttpClient();
                 var response = client.GetAsync(HttpClientAddress).Result;
-                Assert.AreEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+                Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
                 Assert.NotNull(response.Content.Headers.ContentLength);
-                Assert.AreEqual(0, response.Content.Headers.ContentLength.Value);
+                Assert.Equal(0, response.Content.Headers.ContentLength.Value);
             }
         }
 
-        [Test]
+        [Fact]
         public void CustomReasonPhraseSupported()
         {
             var listener = CreateServer(
@@ -861,12 +861,12 @@ namespace NowinTests
             {
                 var client = new HttpClient();
                 var response = client.GetAsync(HttpClientAddress).Result;
-                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-                Assert.AreEqual(SampleContent, response.ReasonPhrase);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                Assert.Equal(SampleContent, response.ReasonPhrase);
             }
         }
 
-        [Test]
+        [Fact]
         public void BadReasonPhraseIs500()
         {
             var listener = CreateServer(
@@ -880,11 +880,11 @@ namespace NowinTests
             {
                 var client = new HttpClient();
                 var response = client.GetAsync(HttpClientAddress).Result;
-                Assert.AreEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+                Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
             }
         }
 
-        [Test]
+        [Fact]
         public void ResponseProtocolIsIgnored()
         {
             var listener = CreateServer(
@@ -898,12 +898,12 @@ namespace NowinTests
             {
                 var client = new HttpClient();
                 var response = client.GetAsync(HttpClientAddress).Result;
-                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-                Assert.AreEqual(new Version(1, 1), response.Version);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                Assert.Equal(new Version(1, 1), response.Version);
             }
         }
 
-        [Test]
+        [Fact]
         public void SmallResponseBodyWorks()
         {
             var listener = CreateServer(
@@ -918,12 +918,12 @@ namespace NowinTests
             {
                 var client = new HttpClient();
                 var response = client.GetAsync(HttpClientAddress).Result;
-                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-                Assert.AreEqual(10, response.Content.ReadAsByteArrayAsync().Result.Length);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                Assert.Equal(10, response.Content.ReadAsByteArrayAsync().Result.Length);
             }
         }
 
-        [Test]
+        [Fact]
         public void TwiceSmallResponseBodyWorks()
         {
             var listener = CreateServer(
@@ -938,18 +938,18 @@ namespace NowinTests
             {
                 var client = new HttpClient();
                 var response = client.GetAsync(HttpClientAddress).Result;
-                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-                Assert.AreEqual(10, response.Content.ReadAsByteArrayAsync().Result.Length);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                Assert.Equal(10, response.Content.ReadAsByteArrayAsync().Result.Length);
                 response.Dispose();
                 client.Dispose();
                 client = new HttpClient();
                 response = client.GetAsync(HttpClientAddress).Result;
-                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-                Assert.AreEqual(10, response.Content.ReadAsByteArrayAsync().Result.Length);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                Assert.Equal(10, response.Content.ReadAsByteArrayAsync().Result.Length);
             }
         }
 
-        [Test]
+        [Fact]
         public void HeadMethodEmptyBodyWithContentLength()
         {
             var listener = CreateServer(
@@ -966,14 +966,14 @@ namespace NowinTests
                 {
                     var request = new HttpRequestMessage(HttpMethod.Head, HttpClientAddress);
                     var response = client.SendAsync(request).Result;
-                    Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-                    Assert.AreEqual(10, response.Content.Headers.ContentLength);
+                    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                    Assert.Equal(10, response.Content.Headers.ContentLength);
                     response.Dispose();
                 }
             }
         }
 
-        [Test]
+        [Fact]
         public void HeadMethodWithLongBodyWillNotSendIt()
         {
             var listener = CreateServer(
@@ -991,14 +991,14 @@ namespace NowinTests
                 {
                     var request = new HttpRequestMessage(HttpMethod.Head, HttpClientAddress);
                     var response = client.SendAsync(request).Result;
-                    Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-                    Assert.AreEqual(10, response.Content.Headers.ContentLength);
+                    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                    Assert.Equal(10, response.Content.Headers.ContentLength);
                     response.Dispose();
                 }
             }
         }
 
-        [Test]
+        [Fact]
         public void HeadMethodWithLongBodyWillNotSendItUnknownLength()
         {
             var listener = CreateServer(
@@ -1014,15 +1014,15 @@ namespace NowinTests
                 {
                     var request = new HttpRequestMessage(HttpMethod.Head, HttpClientAddress);
                     var response = client.SendAsync(request).Result;
-                    Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-                    Assert.AreEqual(0, response.Content.Headers.ContentLength);
+                    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                    Assert.Equal(0, response.Content.Headers.ContentLength);
                     Assert.True(response.Headers.TransferEncodingChunked.HasValue);
                     response.Dispose();
                 }
             }
         }
 
-        [Test]
+        [Fact]
         public void HeadMethodWithoutBodyWillBeChunkedBecauseOfUnknownLength()
         {
             var listener = CreateServer(
@@ -1034,15 +1034,15 @@ namespace NowinTests
                 {
                     var request = new HttpRequestMessage(HttpMethod.Head, HttpClientAddress);
                     var response = client.SendAsync(request).Result;
-                    Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-                    Assert.AreEqual(0, response.Content.Headers.ContentLength);
+                    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                    Assert.Equal(0, response.Content.Headers.ContentLength);
                     Assert.True(response.Headers.TransferEncodingChunked.HasValue);
                     response.Dispose();
                 }
             }
         }
 
-        [Test]
+        [Fact]
         public void LargeResponseBodyWith100AsyncWritesWorks()
         {
             OwinApp app = async env =>
@@ -1058,7 +1058,7 @@ namespace NowinTests
             CheckLargeBody(app);
         }
 
-        [Test]
+        [Fact]
         public void LargeResponseBodyWith1AsyncWriteWorks()
         {
             OwinApp app = async env =>
@@ -1071,7 +1071,7 @@ namespace NowinTests
             CheckLargeBody(app);
         }
 
-        [Test]
+        [Fact]
         public void LargeResponseBodyWith100WritesWorks()
         {
             OwinApp app = async env =>
@@ -1088,7 +1088,7 @@ namespace NowinTests
             CheckLargeBody(app);
         }
 
-        [Test]
+        [Fact]
         public void LargeResponseBodyWith1WriteWorks()
         {
             OwinApp app = async env =>
@@ -1102,7 +1102,7 @@ namespace NowinTests
             CheckLargeBody(app);
         }
 
-        [Test]
+        [Fact]
         public void LargeResponseBodyWithFlushAsyncAnd1WriteWorks()
         {
             OwinApp app = async env =>
@@ -1116,7 +1116,7 @@ namespace NowinTests
             CheckLargeBody(app);
         }
 
-        [Test]
+        [Fact]
         public void LargeResponseBodyWithFlushAnd1WriteWorks()
         {
             OwinApp app = env =>
@@ -1131,7 +1131,7 @@ namespace NowinTests
             CheckLargeBody(app);
         }
 
-        [Test]
+        [Fact]
         public void LargeResponseBodyWithFlushAnd1WriteAsyncWorks()
         {
             OwinApp app = async env =>
@@ -1163,18 +1163,18 @@ namespace NowinTests
             {
                 var client = new HttpClient();
                 var response = client.GetAsync(HttpClientAddress).Result;
-                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
                 var result = response.Content.ReadAsByteArrayAsync().Result;
-                Assert.AreEqual(100000, result.Length);
+                Assert.Equal(100000, result.Length);
                 for (var i = 0; i < result.Length; i++)
                 {
-                    if (result[i] != (i & 0xff)) Assert.Fail("Response is wrong on {0} byte", i);
+                    if (result[i] != (i & 0xff)) Assert.True(false,string.Format("Response is wrong on {0} byte", i));
                 }
             }
         }
 
 
-        [Test]
+        [Fact]
         public void BodySmallerThanContentLengthClosesConnection()
         {
             var listener = CreateServer(
@@ -1194,7 +1194,7 @@ namespace NowinTests
             }
         }
 
-        [Test]
+        [Fact]
         public void BodyLargerThanContentLengthClosesConnection()
         {
             var listener = CreateServer(
@@ -1214,7 +1214,7 @@ namespace NowinTests
             }
         }
 
-        [Test]
+        [Fact]
         public void StatusesLessThan200AreInvalid()
         {
             var listener = CreateServer(
@@ -1228,11 +1228,11 @@ namespace NowinTests
             {
                 var client = new HttpClient();
                 var response = client.PostAsync(HttpClientAddress, new StringContent(SampleContent)).Result;
-                Assert.AreEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+                Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
             }
         }
 
-        [Test]
+        [Fact]
         public void BasicOnSendingHeadersWorks()
         {
             var listener = CreateServer(
@@ -1256,14 +1256,14 @@ namespace NowinTests
             {
                 var client = new HttpClient();
                 var response = client.PostAsync(HttpClientAddress, new StringContent(SampleContent)).Result;
-                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-                Assert.AreEqual("Custom", response.ReasonPhrase);
-                Assert.AreEqual("customvalue", response.Headers.GetValues("custom-header").First());
-                Assert.AreEqual(10, response.Content.ReadAsByteArrayAsync().Result.Length);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                Assert.Equal("Custom", response.ReasonPhrase);
+                Assert.Equal("customvalue", response.Headers.GetValues("custom-header").First());
+                Assert.Equal(10, response.Content.ReadAsByteArrayAsync().Result.Length);
             }
         }
 
-        [Test]
+        [Fact]
         public void CommonDisconnectDoesNotSendHeaders()
         {
             var listener = CreateServer(
@@ -1281,7 +1281,7 @@ namespace NowinTests
             }
         }
 
-        [Test]
+        [Fact]
         public void CommonDisconnectWaitsWithNextRequest()
         {
             var insideDelay = false;
@@ -1306,7 +1306,7 @@ namespace NowinTests
             }
         }
 
-        [Test]
+        [Fact]
         public void DoubleOnSendingHeadersWorks()
         {
             var listener = CreateServer(
@@ -1328,9 +1328,9 @@ namespace NowinTests
             {
                 var client = new HttpClient();
                 var response = client.PostAsync(HttpClientAddress, new StringContent(SampleContent)).Result;
-                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-                Assert.AreEqual("customvalue", response.Headers.GetValues("custom-header").First());
-                Assert.AreEqual("goodvalue", response.Headers.GetValues("custom-header2").First());
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                Assert.Equal("customvalue", response.Headers.GetValues("custom-header").First());
+                Assert.Equal("goodvalue", response.Headers.GetValues("custom-header2").First());
             }
         }
 

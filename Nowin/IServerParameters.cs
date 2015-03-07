@@ -15,5 +15,6 @@ namespace Nowin
         Func<IDictionary<string, object>, Task> OwinApp { get; }
         IDictionary<string, object> OwinCapabilities { get; }
         string ServerHeader { get; }
+        TimeSpan RetrySocketBindingTime { get; }
     }
 }

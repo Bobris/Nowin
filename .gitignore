@@ -18,3 +18,4 @@ TestResults
 *.crunchsolution.cache
 *.DotSettings
 /Nowin.sln.ide
+.vs

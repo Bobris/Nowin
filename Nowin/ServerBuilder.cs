@@ -15,6 +15,7 @@ namespace Nowin
         Func<IDictionary<string, object>, Task> _app;
         IDictionary<string, object> _capabilities;
         string _serverHeader = "Nowin";
+        private TimeSpan _retrySocketBindingTime;
 
         public static ServerBuilder New()
         {
@@ -27,6 +28,11 @@ namespace Nowin
             return this;
         }
 
+        public ServerBuilder SetRetrySocketBindingTime(TimeSpan value)
+        {
+            _retrySocketBindingTime = value;
+            return this;
+        }
         public ServerBuilder SetPort(int port)
         {
             if (port < IPEndPoint.MinPort || port > IPEndPoint.MaxPort) throw new ArgumentOutOfRangeException("port", port, "must be in range of <0,65535>");
@@ -139,5 +145,14 @@ namespace Nowin
         }
 
         public string ServerHeader { get { return _serverHeader; }}
+
+        public TimeSpan RetrySocketBindingTime
+        {
+            get
+            {
+                return _retrySocketBindingTime;
+                throw new NotImplementedException();
+            }
+        }
     }
 }
