@@ -22,7 +22,6 @@ namespace Nowin
         readonly Socket _listenSocket;
         readonly Server _server;
         readonly int _handlerId;
-        private readonly ExecutionContextFlow _contextFlow;
         SocketAsyncEventArgs _receiveEvent;
         SocketAsyncEventArgs _sendEvent;
         SocketAsyncEventArgs _disconnectEvent;

@@ -15,7 +15,7 @@ namespace NowinSample
             OwinServerFactory.Initialize(owinbuilder.Properties);
             new SampleOwinApp.Startup().Configuration(owinbuilder);
             var builder = ServerBuilder.New().SetPort(8888).SetOwinApp(owinbuilder.Build()).SetOwinCapabilities((IDictionary<string, object>)owinbuilder.Properties[OwinKeys.ServerCapabilitiesKey])
-                .SetExecutionContextFlow(ExecutionContextFlow.SuppressOnAsync);
+                .SetExecutionContextFlow(ExecutionContextFlow.SuppressAlways);
             //builder.SetCertificate(new X509Certificate2("../../../sslcert/test.pfx", "nowin"));
             var builder2 = ServerBuilder.New().SetPort(9999).SetOwinApp(owinbuilder.Build()).SetOwinCapabilities((IDictionary<string, object>)owinbuilder.Properties[OwinKeys.ServerCapabilitiesKey]);
             using (var server = builder.Build())
