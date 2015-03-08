@@ -22,19 +22,22 @@ namespace Nowin
         readonly Socket _listenSocket;
         readonly Server _server;
         readonly int _handlerId;
+        private readonly ExecutionContextFlow _contextFlow;
         SocketAsyncEventArgs _receiveEvent;
         SocketAsyncEventArgs _sendEvent;
         SocketAsyncEventArgs _disconnectEvent;
         Socket _socket;
 #pragma warning disable 420
         volatile int _state;
+        private Func<IDisposable> _contextSuppresser;
 
-        public SaeaLayerCallback(ITransportLayerHandler handler, Socket listenSocket, Server server, int handlerId)
+        public SaeaLayerCallback(ITransportLayerHandler handler, Socket listenSocket, Server server, int handlerId, ExecutionContextFlow contextFlow)
         {
             _handler = handler;
             _listenSocket = listenSocket;
             _server = server;
             _handlerId = handlerId;
+            _contextSuppresser = ExecutionContextFlowSuppresser.CreateContextSuppresser(contextFlow);
             RecreateSaeas();
             handler.Callback = this;
         }
@@ -164,7 +167,7 @@ namespace Nowin
             do
             {
                 oldState = _state;
-                delayedAccept = (oldState & (int) State.Receive) != 0;
+                delayedAccept = (oldState & (int)State.Receive) != 0;
                 newState = (oldState & ~(int)(State.Disconnect | State.Aborting)) | (delayedAccept ? (int)State.DelayedAccept : 0);
             } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
             _socket = null;
@@ -188,8 +191,8 @@ namespace Nowin
             bool willRaiseEvent;
             try
             {
-                StopExecutionContextFlow();
-                willRaiseEvent = _listenSocket.AcceptAsync(_receiveEvent);
+                using (StopExecutionContextFlow())
+                    willRaiseEvent = _listenSocket.AcceptAsync(_receiveEvent);
             }
             catch (ObjectDisposedException)
             {
@@ -203,10 +206,9 @@ namespace Nowin
             }
         }
 
-        void StopExecutionContextFlow()
-        {
-            if (!ExecutionContext.IsFlowSuppressed())
-                ExecutionContext.SuppressFlow();
+        IDisposable StopExecutionContextFlow()
+        {;
+            return _contextSuppresser();
         }
 
         public void StartReceive(byte[] buffer, int offset, int length)
@@ -224,8 +226,8 @@ namespace Nowin
             bool willRaiseEvent;
             try
             {
-                StopExecutionContextFlow();
-                willRaiseEvent = _socket.ReceiveAsync(_receiveEvent);
+                using (StopExecutionContextFlow())
+                    willRaiseEvent = _socket.ReceiveAsync(_receiveEvent);
             }
             catch (ObjectDisposedException)
             {
@@ -254,8 +256,8 @@ namespace Nowin
             bool willRaiseEvent;
             try
             {
-                StopExecutionContextFlow();
-                willRaiseEvent = _socket.SendAsync(_sendEvent);
+                using (StopExecutionContextFlow())
+                    willRaiseEvent = _socket.SendAsync(_sendEvent);
             }
             catch (ObjectDisposedException)
             {
@@ -283,11 +285,13 @@ namespace Nowin
             bool willRaiseEvent;
             try
             {
-                StopExecutionContextFlow();
-                var s = _socket;
-                if (s == null)
-                    return;
-                willRaiseEvent = s.DisconnectAsync(_disconnectEvent);
+               using(StopExecutionContextFlow())
+               {
+                   var s = _socket;
+                   if (s == null)
+                       return;
+                   willRaiseEvent = s.DisconnectAsync(_disconnectEvent);
+               }
             }
             catch (ObjectDisposedException)
             {

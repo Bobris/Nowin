@@ -8,6 +8,7 @@ namespace Nowin
 {
     internal interface IServerParameters
     {
+        ExecutionContextFlow ContextFlow { get; }
         IConnectionAllocationStrategy ConnectionAllocationStrategy { get; }
         IPEndPoint EndPoint { get; }
         X509Certificate Certificate { get; }

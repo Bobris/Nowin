@@ -92,6 +92,8 @@ namespace Nowin
             get { return AllocatedConnections; }
         }
 
+        public ExecutionContextFlow ContextFlow { get { return _parameters.ContextFlow; } }
+
         public void Dispose()
         {
             lock (_newConnectionLock)
