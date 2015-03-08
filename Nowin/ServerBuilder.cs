@@ -15,6 +15,7 @@ namespace Nowin
         Func<IDictionary<string, object>, Task> _app;
         IDictionary<string, object> _capabilities;
         string _serverHeader = "Nowin";
+        private ExecutionContextFlow _contextFlow  = ExecutionContextFlow.SuppressAlways;
         private TimeSpan _retrySocketBindingTime;
 
         public static ServerBuilder New()
@@ -84,6 +85,12 @@ namespace Nowin
             return this;
         }
 
+        public ServerBuilder SetExecutionContextFlow(ExecutionContextFlow flow)
+        {
+            _contextFlow = flow;
+            return this;
+        }
+
         public ServerBuilder SetServerHeader(string value)
         {
             _serverHeader = value;
@@ -100,6 +107,11 @@ namespace Nowin
             var s = new Server(this);
             s.Start();
             return s;
+        }
+
+        public ExecutionContextFlow ContextFlow
+        {
+            get { return _contextFlow; }
         }
 
         IConnectionAllocationStrategy IServerParameters.ConnectionAllocationStrategy

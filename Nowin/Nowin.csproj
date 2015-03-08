@@ -47,6 +47,8 @@
     <Compile Include="ConnectionBlock.cs" />
     <Compile Include="DateHeaderValueProvider.cs" />
     <Compile Include="DictionaryExtensions.cs" />
+    <Compile Include="ExecutionContextFlow.cs" />
+    <Compile Include="ExecutionContextFlowSuppresser.cs" />
     <Compile Include="IDateHeaderValueProvider.cs" />
     <Compile Include="IHttpLayerCallback.cs" />
     <Compile Include="IHttpLayerHandler.cs" />
@@ -54,6 +56,7 @@
     <Compile Include="INowinServer.cs" />
     <Compile Include="IpIsLocalChecker.cs" />
     <Compile Include="IServerParameters.cs" />
+    <Compile Include="NullDisposable.cs" />
     <Compile Include="TraceSources.cs" />
     <Compile Include="OwinEnvironment.cs" />
     <Compile Include="OwinEnvironment.Generated.cs">
