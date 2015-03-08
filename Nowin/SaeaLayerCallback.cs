@@ -206,7 +206,7 @@ namespace Nowin
         }
 
         IDisposable StopExecutionContextFlow()
-        {;
+        {
             return _contextSuppresser();
         }
 
