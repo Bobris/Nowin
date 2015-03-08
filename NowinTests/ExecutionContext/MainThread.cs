@@ -4,7 +4,7 @@ using System.Runtime.Remoting.Messaging;
 using System.Threading;
 using System.Threading.Tasks;
 using Nowin;
-using NUnit.Framework;
+using Xunit;
 
 namespace NowinTests.ExecutionContext_Tests
 {
@@ -15,10 +15,10 @@ namespace NowinTests.ExecutionContext_Tests
             if (ExecutionContext.IsFlowSuppressed())
                 ExecutionContext.RestoreFlow();
         }
-
-        [TestCase(ExecutionContextFlow.SuppressAlways)]
-        [TestCase(ExecutionContextFlow.Flow)]
-        [TestCase(ExecutionContextFlow.SuppressOnAsync)]
+        [Theory]
+        [InlineData(ExecutionContextFlow.SuppressAlways)]
+        [InlineData(ExecutionContextFlow.Flow)]
+        [InlineData(ExecutionContextFlow.SuppressOnAsync)]
         public void ExecutionContextOnSetupThread(ExecutionContextFlow flow)
         {
             ResetExecutionContextFlowForTestThread();
@@ -30,14 +30,15 @@ namespace NowinTests.ExecutionContext_Tests
                 .Build();
             server.Start();
             server.Dispose();
-            Assert.AreEqual(
+            Assert.Equal(
                 "test.value",
                 CallContext.LogicalGetData("test.data") as string);
         }
 
-        [TestCase(ExecutionContextFlow.SuppressAlways, null)]
-        [TestCase(ExecutionContextFlow.Flow, "test.value")]
-        [TestCase(ExecutionContextFlow.SuppressOnAsync, "test.value")]
+        [Theory]
+        [InlineData(ExecutionContextFlow.SuppressAlways, null)]
+        [InlineData(ExecutionContextFlow.Flow, "test.value")]
+        [InlineData(ExecutionContextFlow.SuppressOnAsync, "test.value")]
         public void ExecutionContextFlowFromSetupThread(ExecutionContextFlow flow, string expectedLogicalContextValue)
         {
             ResetExecutionContextFlowForTestThread();
@@ -54,12 +55,13 @@ namespace NowinTests.ExecutionContext_Tests
 
             var separateThreadValue = Task.Factory.StartNew(() => CallContext.LogicalGetData("test.data") as string);
             //Assert.True(ExecutionContext.IsFlowSuppressed());
-            Assert.AreEqual(expectedLogicalContextValue, separateThreadValue.Result);
+            Assert.Equal(expectedLogicalContextValue, separateThreadValue.Result);
         }
 
-        [TestCase(ExecutionContextFlow.Flow, "test.value")]
-        [TestCase(ExecutionContextFlow.SuppressAlways, null)]
-        [TestCase(ExecutionContextFlow.SuppressOnAsync, null)]
+        [Theory]
+        [InlineData(ExecutionContextFlow.Flow, "test.value")]
+        [InlineData(ExecutionContextFlow.SuppressAlways, null)]
+        [InlineData(ExecutionContextFlow.SuppressOnAsync, null)]
         public void ExecutionContextFlowToOwinApp(ExecutionContextFlow flow, string expectedValue)
         {
             ResetExecutionContextFlowForTestThread();
@@ -76,7 +78,7 @@ namespace NowinTests.ExecutionContext_Tests
             var response = new HttpClient().GetAsync("http://localhost:8082").Result;
             server.Dispose();
 
-            Assert.AreEqual(expectedValue, applicationValue);
+            Assert.Equal(expectedValue, applicationValue);
         }
 
         private static Task AppReadingLogicalCallContext(out string applicationValue)
