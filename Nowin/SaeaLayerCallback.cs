@@ -18,6 +18,7 @@ namespace Nowin
             Aborting = 8,
             DelayedAccept = 16
         }
+
         readonly ITransportLayerHandler _handler;
         readonly Socket _listenSocket;
         readonly Server _server;
@@ -26,7 +27,7 @@ namespace Nowin
         SocketAsyncEventArgs _sendEvent;
         SocketAsyncEventArgs _disconnectEvent;
         Socket _socket;
-#pragma warning disable 420
+        #pragma warning disable 420
         volatile int _state;
         private Func<IDisposable> _contextSuppresser;
 
@@ -140,7 +141,8 @@ namespace Nowin
                 } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
                 _handler.FinishReceive(null, 0, -1);
             }
-            if (postponedAccept) _handler.PrepareAccept();
+            if (postponedAccept)
+                _handler.PrepareAccept();
         }
 
         void ProcessSend()
@@ -169,6 +171,7 @@ namespace Nowin
                 delayedAccept = (oldState & (int)State.Receive) != 0;
                 newState = (oldState & ~(int)(State.Disconnect | State.Aborting)) | (delayedAccept ? (int)State.DelayedAccept : 0);
             } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
+            _socket.Dispose();
             _socket = null;
             _server.ReportDisconnectedClient();
             if (!delayedAccept)
@@ -284,13 +287,13 @@ namespace Nowin
             bool willRaiseEvent;
             try
             {
-               using(StopExecutionContextFlow())
-               {
-                   var s = _socket;
-                   if (s == null)
-                       return;
-                   willRaiseEvent = s.DisconnectAsync(_disconnectEvent);
-               }
+                using (StopExecutionContextFlow())
+                {
+                    var s = _socket;
+                    if (s == null)
+                        return;
+                    willRaiseEvent = s.DisconnectAsync(_disconnectEvent);
+                }
             }
             catch (ObjectDisposedException)
             {
