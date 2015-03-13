@@ -9,6 +9,13 @@ namespace Nowin
 {
     public class SaeaLayerCallback : ITransportLayerCallback, IDisposable
     {
+        static bool _runtimeCorrectlyImplementsDisconnectReuseSocket;
+
+        static SaeaLayerCallback()
+        {
+            _runtimeCorrectlyImplementsDisconnectReuseSocket = Type.GetType("Mono.Runtime") == null;
+        }
+
         [Flags]
         enum State
         {
@@ -44,28 +51,35 @@ namespace Nowin
 
         void RecreateSaeas()
         {
+            DisposeEventArgs();
             _receiveEvent = new SocketAsyncEventArgs();
             _sendEvent = new SocketAsyncEventArgs();
             _disconnectEvent = new SocketAsyncEventArgs();
             _receiveEvent.Completed += IoCompleted;
             _sendEvent.Completed += IoCompleted;
             _disconnectEvent.Completed += IoCompleted;
-
-            if (IsRunningOnMono())
-            {
-                _receiveEvent.DisconnectReuseSocket = false;
-                _sendEvent.DisconnectReuseSocket = false;
-                _disconnectEvent.DisconnectReuseSocket = false;
-            }
-            else
-            {
-                _receiveEvent.DisconnectReuseSocket = true;
-                _sendEvent.DisconnectReuseSocket = true;
-                _disconnectEvent.DisconnectReuseSocket = true;
-            }
+            _receiveEvent.DisconnectReuseSocket = _runtimeCorrectlyImplementsDisconnectReuseSocket;
+            _sendEvent.DisconnectReuseSocket = _runtimeCorrectlyImplementsDisconnectReuseSocket;
+            _disconnectEvent.DisconnectReuseSocket = _runtimeCorrectlyImplementsDisconnectReuseSocket;
             _receiveEvent.UserToken = this;
             _sendEvent.UserToken = this;
             _disconnectEvent.UserToken = this;
+        }
+
+        private void DisposeEventArgs()
+        {
+            if (_receiveEvent != null)
+            {
+                _receiveEvent.Dispose();
+            }
+            if (_sendEvent != null)
+            {
+                _sendEvent.Dispose();
+            }
+            if (_disconnectEvent != null)
+            {
+                _disconnectEvent.Dispose();
+            }
         }
 
         static void IoCompleted(object sender, SocketAsyncEventArgs e)
@@ -181,7 +195,8 @@ namespace Nowin
                 delayedAccept = (oldState & (int)State.Receive) != 0;
                 newState = (oldState & ~(int)(State.Disconnect | State.Aborting)) | (delayedAccept ? (int)State.DelayedAccept : 0);
             } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
-            _socket.Dispose();
+            if (!_runtimeCorrectlyImplementsDisconnectReuseSocket)
+                _socket.Dispose();
             _socket = null;
             _server.ReportDisconnectedClient();
             if (!delayedAccept)
@@ -319,16 +334,12 @@ namespace Nowin
 
         public void Dispose()
         {
+            DisposeEventArgs();
             var s = _socket;
             if (s != null)
             {
                 s.Dispose();
             }
-        }
-
-        public static bool IsRunningOnMono()
-        {
-            return Type.GetType("Mono.Runtime") != null;
         }
     }
 }
