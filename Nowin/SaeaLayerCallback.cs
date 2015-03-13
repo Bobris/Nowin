@@ -196,7 +196,11 @@ namespace Nowin
                 newState = (oldState & ~(int)(State.Disconnect | State.Aborting)) | (delayedAccept ? (int)State.DelayedAccept : 0);
             } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
             if (!_runtimeCorrectlyImplementsDisconnectReuseSocket)
+            {
+                _receiveEvent.AcceptSocket = null;
+                _socket.Close();
                 _socket.Dispose();
+            }
             _socket = null;
             _server.ReportDisconnectedClient();
             if (!delayedAccept)
