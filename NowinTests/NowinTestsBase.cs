@@ -119,6 +119,25 @@ namespace NowinTests
             }
         }
 
+        class BigHttpContent : HttpContent
+        {
+            protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
+            {
+                var array = new byte[100000];
+                for (int i = 0; i < 10; i++)
+                {
+                    await stream.WriteAsync(array, 0, array.Length);
+                    await stream.FlushAsync();
+                }
+            }
+
+            protected override bool TryComputeLength(out long length)
+            {
+                length = -1;
+                return false;
+            }
+        }
+
         [Fact]
         public void PostEchoAppWithLongChunkedDataWorks()
         {
@@ -140,16 +159,7 @@ namespace NowinTests
                 var client = new HttpClient();
                 var request = new HttpRequestMessage(HttpMethod.Put, HttpClientAddress)
                 {
-                    Content = new PushStreamContent(async (stream, _, __) =>
-                {
-                    var array = new byte[100000];
-                    for (int i = 0; i < 10; i++)
-                    {
-                        await stream.WriteAsync(array, 0, array.Length);
-                        await stream.FlushAsync();
-                    }
-                    stream.Close();
-                })
+                    Content = new BigHttpContent()
                 };
                 request.Headers.TransferEncodingChunked = true;
 
@@ -184,16 +194,7 @@ namespace NowinTests
                     {
                         var request = new HttpRequestMessage(HttpMethod.Put, HttpClientAddress)
                         {
-                            Content = new PushStreamContent(async (stream, _, __) =>
-                            {
-                                var array = new byte[100000];
-                                for (int i = 0; i < 10; i++)
-                                {
-                                    await stream.WriteAsync(array, 0, array.Length);
-                                    await stream.FlushAsync();
-                                }
-                                stream.Close();
-                            })
+                            Content = new BigHttpContent()
                         };
                         request.Headers.TransferEncodingChunked = true;
 
