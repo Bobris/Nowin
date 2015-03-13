@@ -27,6 +27,7 @@ namespace NowinTests.ExecutionContext_Tests
             var server = new ServerBuilder()
                 .SetEndPoint(new IPEndPoint(IPAddress.Loopback, 8082))
                 .SetExecutionContextFlow(flow)
+                .SetRetrySocketBindingTime(System.TimeSpan.FromSeconds(4))
                 .Build();
             server.Start();
             server.Dispose();
@@ -48,6 +49,7 @@ namespace NowinTests.ExecutionContext_Tests
             var server = new ServerBuilder()
                 .SetEndPoint(new IPEndPoint(IPAddress.Loopback, 8082))
                 .SetExecutionContextFlow(flow)
+                .SetRetrySocketBindingTime(System.TimeSpan.FromSeconds(4))
                 .Build();
             server.Start();
             server.Dispose();
@@ -73,9 +75,13 @@ namespace NowinTests.ExecutionContext_Tests
                 .SetEndPoint(new IPEndPoint(IPAddress.Loopback, 8082))
                 .SetExecutionContextFlow(flow)
                 .SetOwinApp(env=> AppReadingLogicalCallContext(out applicationValue))
+                .SetRetrySocketBindingTime(System.TimeSpan.FromSeconds(4))
                 .Build();
             server.Start();
-            var response = new HttpClient().GetAsync("http://localhost:8082").Result;
+            using (var httpClient = new HttpClient())
+            {
+                var response = httpClient.GetAsync("http://localhost:8082").Result;
+            }
             server.Dispose();
 
             Assert.Equal(expectedValue, applicationValue);

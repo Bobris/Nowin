@@ -24,7 +24,7 @@ namespace NowinTests
                 .SetEndPoint(new IPEndPoint(IPAddress.Loopback, 8082))
                 .SetOwinApp(app)
                 .SetConnectionAllocationStrategy(new ConnectionAllocationStrategy(1, 0, 1, 0))
-                .SetRetrySocketBindingTime(TimeSpan.FromSeconds(2))
+                .SetRetrySocketBindingTime(TimeSpan.FromSeconds(4))
                 .Start();
             return server;
         }
