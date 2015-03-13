@@ -50,9 +50,19 @@ namespace Nowin
             _receiveEvent.Completed += IoCompleted;
             _sendEvent.Completed += IoCompleted;
             _disconnectEvent.Completed += IoCompleted;
-            _receiveEvent.DisconnectReuseSocket = true;
-            _sendEvent.DisconnectReuseSocket = true;
-            _disconnectEvent.DisconnectReuseSocket = true;
+
+            if (IsRunningOnMono())
+            {
+                _receiveEvent.DisconnectReuseSocket = false;
+                _sendEvent.DisconnectReuseSocket = false;
+                _disconnectEvent.DisconnectReuseSocket = false;
+            }
+            else
+            {
+                _receiveEvent.DisconnectReuseSocket = true;
+                _sendEvent.DisconnectReuseSocket = true;
+                _disconnectEvent.DisconnectReuseSocket = true;
+            }
             _receiveEvent.UserToken = this;
             _sendEvent.UserToken = this;
             _disconnectEvent.UserToken = this;
@@ -314,6 +324,11 @@ namespace Nowin
             {
                 s.Dispose();
             }
+        }
+
+        public static bool IsRunningOnMono()
+        {
+            return Type.GetType("Mono.Runtime") != null;
         }
     }
 }
