@@ -18,6 +18,7 @@ namespace Nowin
             Aborting = 8,
             DelayedAccept = 16
         }
+
         readonly ITransportLayerHandler _handler;
         readonly Socket _listenSocket;
         readonly Server _server;
@@ -26,7 +27,7 @@ namespace Nowin
         SocketAsyncEventArgs _sendEvent;
         SocketAsyncEventArgs _disconnectEvent;
         Socket _socket;
-#pragma warning disable 420
+        #pragma warning disable 420
         volatile int _state;
         private Func<IDisposable> _contextSuppresser;
 
@@ -49,9 +50,19 @@ namespace Nowin
             _receiveEvent.Completed += IoCompleted;
             _sendEvent.Completed += IoCompleted;
             _disconnectEvent.Completed += IoCompleted;
-            _receiveEvent.DisconnectReuseSocket = true;
-            _sendEvent.DisconnectReuseSocket = true;
-            _disconnectEvent.DisconnectReuseSocket = true;
+
+            if (IsRunningOnMono())
+            {
+                _receiveEvent.DisconnectReuseSocket = false;
+                _sendEvent.DisconnectReuseSocket = false;
+                _disconnectEvent.DisconnectReuseSocket = false;
+            }
+            else
+            {
+                _receiveEvent.DisconnectReuseSocket = true;
+                _sendEvent.DisconnectReuseSocket = true;
+                _disconnectEvent.DisconnectReuseSocket = true;
+            }
             _receiveEvent.UserToken = this;
             _sendEvent.UserToken = this;
             _disconnectEvent.UserToken = this;
@@ -140,7 +151,8 @@ namespace Nowin
                 } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
                 _handler.FinishReceive(null, 0, -1);
             }
-            if (postponedAccept) _handler.PrepareAccept();
+            if (postponedAccept)
+                _handler.PrepareAccept();
         }
 
         void ProcessSend()
@@ -169,6 +181,7 @@ namespace Nowin
                 delayedAccept = (oldState & (int)State.Receive) != 0;
                 newState = (oldState & ~(int)(State.Disconnect | State.Aborting)) | (delayedAccept ? (int)State.DelayedAccept : 0);
             } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
+            _socket.Dispose();
             _socket = null;
             _server.ReportDisconnectedClient();
             if (!delayedAccept)
@@ -284,13 +297,13 @@ namespace Nowin
             bool willRaiseEvent;
             try
             {
-               using(StopExecutionContextFlow())
-               {
-                   var s = _socket;
-                   if (s == null)
-                       return;
-                   willRaiseEvent = s.DisconnectAsync(_disconnectEvent);
-               }
+                using (StopExecutionContextFlow())
+                {
+                    var s = _socket;
+                    if (s == null)
+                        return;
+                    willRaiseEvent = s.DisconnectAsync(_disconnectEvent);
+                }
             }
             catch (ObjectDisposedException)
             {
@@ -311,6 +324,11 @@ namespace Nowin
             {
                 s.Dispose();
             }
+        }
+
+        public static bool IsRunningOnMono()
+        {
+            return Type.GetType("Mono.Runtime") != null;
         }
     }
 }
