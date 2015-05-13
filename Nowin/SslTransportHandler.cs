@@ -4,6 +4,7 @@ using System.IO;
 using System.Net;
 using System.Net.Security;
 using System.Runtime.ExceptionServices;
+using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,6 +15,7 @@ namespace Nowin
     {
         readonly ITransportLayerHandler _next;
         readonly X509Certificate _serverCertificate;
+        readonly SslProtocols _protocols;
         SslStream _ssl;
         Task _authenticateTask;
         byte[] _recvBuffer;
@@ -23,8 +25,9 @@ namespace Nowin
         IPEndPoint _remoteEndPoint;
         IPEndPoint _localEndPoint;
 
-        public SslTransportHandler(ITransportLayerHandler next, X509Certificate serverCertificate)
+        public SslTransportHandler(ITransportLayerHandler next, X509Certificate serverCertificate, SslProtocols protocols)
         {
+            _protocols = protocols;
             _next = next;
             _serverCertificate = serverCertificate;
             _inputStream = new InputStream(this);
@@ -203,7 +206,7 @@ namespace Nowin
             try
             {
                 _ssl = new SslStream(_inputStream, true);
-                _authenticateTask = _ssl.AuthenticateAsServerAsync(_serverCertificate).ContinueWith((t, selfObject) =>
+                _authenticateTask = _ssl.AuthenticateAsServerAsync(_serverCertificate, false, _protocols, false).ContinueWith((t, selfObject) =>
                 {
                     var self = (SslTransportHandler)selfObject;
                     if (t.IsFaulted || t.IsCanceled)

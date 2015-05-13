@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 
@@ -11,6 +12,7 @@ namespace Nowin
         IConnectionAllocationStrategy _connectionAllocationStrategy;
         IPEndPoint _endPoint;
         X509Certificate _certificate;
+        SslProtocols _protocols = SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12;
         int _bufferSize;
         Func<IDictionary<string, object>, Task> _app;
         IDictionary<string, object> _capabilities;
@@ -63,6 +65,12 @@ namespace Nowin
         public ServerBuilder SetCertificate(X509Certificate certificate)
         {
             _certificate = certificate;
+            return this;
+        }
+
+        public ServerBuilder SetProtocols(SslProtocols protocols)
+        {
+            _protocols = protocols;
             return this;
         }
 
@@ -163,7 +171,14 @@ namespace Nowin
             get
             {
                 return _retrySocketBindingTime;
-                throw new NotImplementedException();
+            }
+        }
+
+        public SslProtocols Protocols
+        {
+            get
+            {
+                return _protocols;
             }
         }
     }

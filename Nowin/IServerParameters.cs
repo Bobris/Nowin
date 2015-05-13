@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 
@@ -17,5 +18,6 @@ namespace Nowin
         IDictionary<string, object> OwinCapabilities { get; }
         string ServerHeader { get; }
         TimeSpan RetrySocketBindingTime { get; }
+        SslProtocols Protocols { get; }
     }
 }
