@@ -31,6 +31,53 @@ namespace NowinTests
         }
 
         [Fact]
+        public void TooManyCookiesReturnsBadRequest()
+        {
+            var listener = CreateServer(env => Task.Delay(0));
+            HttpResponseMessage response;
+            using (listener)
+            {
+                var cookieContainer = new CookieContainer();
+
+                var handler = new WebRequestHandler
+                {
+                    ServerCertificateValidationCallback = (a, b, c, d) => true,
+                    ClientCertificateOptions = ClientCertificateOption.Automatic,
+                    CookieContainer = cookieContainer
+                };
+
+                string signinMessageCookieValue =
+                    "QAAANCMnd8BFdERjHoAwE_Cl-sBAAAAa4ZDCDenmUyKVkQePQm0tQAAAAACAAAAAAADZgAAwAAAABAAAAB1ylI7UbGpVqudfDeuj73fAAAAAASAAACgAAAAEAAAAEV5JAn2-ToGAfj_8kX8t5cIAwAAaH8KSaDGwal8NHo44jVF3czgOVvggha8D49gtkG5nuHG16Wg-i8STQ2oRMrKfKTy00a9rlHqemUb9Qugy87UqR6KCGueQf5IraNdpfyqBqqF4NGEIJOPdgcETC9GcuAcxXsVM5oNTu1WF55KBpDLbGkrfoI_5g5oA5DLYM3ichmVqz9WStSrwVgEKze_MNjxw3Ruq4qCNbevn8nZs-NC_7AYrv6LzYNOd9oLBoJhpkX6AuWombgggtDRsugcVnzDkC63pqsRtWnPL28VaGjYamQUSJjB7WM5go4pq_tM9OGOcX2wseGHsafNa3_LIr5TnJOifkufcWmQrEwJT_DpJAXUm7kBc-YYhD618AksRWFnjJ6b6zomxwTrNwLXzcFHB5YRTKM49NFlO0hBIcpD-JvYhK_1X58UtQiLQedwkv9xGdz8B0xnXDe_XuzlyYRWQg6TFwUEh9r0paGR-ttuoqB_uRh9gYHZhLjWumdDAkg5M4uYyM4mkX1yLxyUKDp46upLjvDjK_yGoTwJ6chO78PLkqg15fDfsp4sOzH4mWBNu9of2vEWnG2G9qB4ijUcD4iqRbtp7sspEelj2hCUWcUuwHxTWzPqiHdmyx-cRfRtS3d0gU03xwakz33y-4-jLo9_g0ND4ERwTaf7eitQmvaig1ILV1y7XyiZ89e-AzFm1q7eAzApFoU5E133FZTwlAIv-WraVCKmX06qOGfVue1Z2tYH5WT52fYKIOKjlS_zMQI1IgsjfxVU73UrzFV8pAoAw76jzEo5dico4Ehrwa6jdFZ8QAgYVfFJa44BiQs1Nk5EMjFt9tr91Fp0XLwBVGZuNMnlVDs-UTSA_xyVGq7MPTYX98aczQW86hzoAX3GmzlkXAJA5JwAMWpV4sC7zlfqaYN34LdfV7PdMka1dtIu5kfammRqWLRCU6Hq0WNgTezrjrITL8LT8x894nnYl75D3g_9xqE9mi81Dp5ziNdh32wJW2uA-RjN5pT4PfwFEdntp__D7HjQWuDl5bg7g82uvhrPuucUAAAAtnJ6YVQTrZeN_2lsyKPenDYZW14";
+
+                var openIdConnectNonce = "QVFBQUFOQ01uZDhCRmRFUmpIb0F3RV9DbC1zQkFBQUFhNFpEQ0Rlbm1VeUtWa1FlUFFtMHRRQUFBQUFDQUFBQUFBQURaZ0FBd0FBQUFCQUFBQUNiZUNpSWFfWHdZbWd5ak1NNE5CMmZBQUFBQUFTQUFBQ2dBQUFBRUFBQUFPTl9qNkRaZjJmSGdEbVExTjlJZkxDQUFBQUF4Q3EwQXZiQVktd1lLX0pQYVprR2V2aFpOMnNhRWE1MTNtSndfekJnUkJtOXViZXRNZ1I1OU9yWjZPM0pIc3VhQ25CTl9hRVJBSklVUF9PX29sS0V3a240Q3l4eTlnbXJlNzRCVmM4TGZIUFVYUXhSTmpnLThFekgxZG1LMEc2d0w4R0d2TXlqS1BxRHJpMFgtUFFrRW84dXppdTVtNk1BRHZKalFtb1BMVFFVQUFBQWhHQ1MxYWFROVBQaS1aNmQyZjB4aHAwQnpPRQ%3D%3D";
+
+
+                cookieContainer.Add(new Cookie("SignInMessage.91431d224c53cb8dbd4ff3c9817c63e1", signinMessageCookieValue, "", "localhost"));
+                cookieContainer.Add(new Cookie("SignInMessage.91431d224c53cb8dbd4ff3c9817c63e2", signinMessageCookieValue, "", "localhost"));
+                cookieContainer.Add(new Cookie("SignInMessage.91431d224c53cb8dbd4ff3c9817c63e3", signinMessageCookieValue, "", "localhost"));
+                cookieContainer.Add(new Cookie("SignInMessage.91431d224c53cb8dbd4ff3c9817c63e4", signinMessageCookieValue, "", "localhost"));
+                cookieContainer.Add(new Cookie("SignInMessage.91431d224c53cb8dbd4ff3c9817c63e5", signinMessageCookieValue, "", "localhost"));
+                cookieContainer.Add(new Cookie("OpenIdConnect.nonce.b3Ccpijv%2F67GFS37gwl5rSPNSHVQ%2B8ZziQfKjG67eOo%31", openIdConnectNonce, "" ,"localhost"));
+                cookieContainer.Add(new Cookie("OpenIdConnect.nonce.b3Ccpijv%2F67GFS37gwl5rSPNSHVQ%2B8ZziQfKjG67eOo%32", openIdConnectNonce, "", "localhost"));
+                cookieContainer.Add(new Cookie("OpenIdConnect.nonce.b3Ccpijv%2F67GFS37gwl5rSPNSHVQ%2B8ZziQfKjG67eOo%33", openIdConnectNonce, "", "localhost"));
+                cookieContainer.Add(new Cookie("OpenIdConnect.nonce.b3Ccpijv%2F67GFS37gwl5rSPNSHVQ%2B8ZziQfKjG67eOo%34", openIdConnectNonce, "", "localhost"));
+                cookieContainer.Add(new Cookie("OpenIdConnect.nonce.b3Ccpijv%2F67GFS37gwl5rSPNSHVQ%2B8ZziQfKjG67eOo%35", openIdConnectNonce, "" ,"localhost"));
+
+                using (var client = new HttpClient(handler))
+                {
+                    response = client.GetAsync(HttpClientAddress, HttpCompletionOption.ResponseContentRead).Result;
+                }
+            }
+
+            
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.NotNull(response.Content.Headers.ContentLength);
+            Assert.Equal(0, response.Content.Headers.ContentLength.Value);
+            Assert.Equal("Nowin", response.Headers.Server.First().Product.Name);
+            Assert.True(response.Headers.Date.HasValue);
+        }
+
+        [Fact]
         public void EmptyAppRespondOk()
         {
             var listener = CreateServer(env => Task.Delay(0));
