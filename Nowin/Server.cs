@@ -10,7 +10,6 @@ namespace Nowin
     public class Server : INowinServer
     {
         internal static readonly byte[] Status100Continue = Encoding.UTF8.GetBytes("HTTP/1.1 100 Continue\r\n\r\n");
-        internal static readonly byte[] Status500InternalServerError = Encoding.UTF8.GetBytes("HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n");
 
         readonly IServerParameters _parameters;
 

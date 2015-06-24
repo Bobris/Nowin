@@ -128,7 +128,8 @@ namespace Nowin
             ShouldSend100Continue = false;
             RequestContentLength = 0;
             RequestIsChunked = false;
-            if (!ParseHttpHeaders(buffer, pos, posOfReqEnd)) throw new Exception("Request headers cannot be parsed");
+            if (!ParseHttpHeaders(buffer, pos, posOfReqEnd))
+                throw new Exception("Request headers cannot be parsed");
         }
 
         bool ParseHttpHeaders(byte[] buffer, int pos, int posOfReqEnd)
@@ -712,19 +713,21 @@ namespace Nowin
             }
         }
 
-        void SendInternalServerError()
+        void SendInternalServerError(string response = "500 Internal Server Error")
         {
             var tcs = _tcsSend;
             if (tcs != null)
             {
-                tcs.Task.ContinueWith(_ => SendInternalServerError());
+                tcs.Task.ContinueWith(_ => SendInternalServerError(response));
                 return;
             }
             _isKeepAlive = false;
             _lastPacket = true;
             try
             {
-                Callback.StartSend(Server.Status500InternalServerError, 0, Server.Status500InternalServerError.Length);
+                response = "HTTP/1.1 " + response + "\r\nServer: " + _serverName + "\r\nDate: " + _dateProvider.Value + "\r\nContent-Length: 0\r\n\r\n";
+                var resbytes = Encoding.UTF8.GetBytes(response);
+                Callback.StartSend(resbytes, 0, resbytes.Length);
             }
             catch (Exception)
             {
@@ -955,7 +958,7 @@ namespace Nowin
                         StartNextReceive();
                         return;
                     }
-                    SendInternalServerError();
+                    SendInternalServerError("400 Bad Request (Request Header too long)");
                     return;
                 }
                 _waitingForRequest = false;
