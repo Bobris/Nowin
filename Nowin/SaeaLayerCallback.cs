@@ -123,19 +123,32 @@ namespace Nowin
             } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
             var bytesTransfered = _receiveEvent.BytesTransferred;
             var socketError = _receiveEvent.SocketError;
+            
             if (bytesTransfered >= 0 && socketError == SocketError.Success)
             {
                 _socket = _receiveEvent.AcceptSocket;
-                _server.ReportNewConnectedClient();
-                _handler.FinishAccept(_receiveEvent.Buffer, _receiveEvent.Offset, bytesTransfered,
-                    _socket.RemoteEndPoint as IPEndPoint, _socket.LocalEndPoint as IPEndPoint);
+                IPEndPoint remoteEndpoint = null;
+                IPEndPoint localEndpoint = null;
+                try
+                {
+                    remoteEndpoint = _socket.RemoteEndPoint as IPEndPoint;
+                    localEndpoint = _socket.LocalEndPoint as IPEndPoint;
+                }
+                catch (SocketException) //"The socket is not connected" is intentionally ignored
+                { }
+
+                if (remoteEndpoint != null && localEndpoint != null)
+                {
+                    _server.ReportNewConnectedClient();
+                    _handler.FinishAccept(_receiveEvent.Buffer, _receiveEvent.Offset, bytesTransfered,
+                        remoteEndpoint, localEndpoint);
+                    return;
+                }
             }
-            else
-            {
-                // Current socket could be corrupted Windows returns InvalidArguments nonsense.
-                RecreateSaeas();
-                _handler.PrepareAccept();
-            }
+
+            // Current socket could be corrupted Windows returns InvalidArguments nonsense.
+            RecreateSaeas();
+            _handler.PrepareAccept();
         }
 
         void ProcessReceive()
