@@ -210,7 +210,7 @@ namespace Nowin
                 {
                     var self = (SslTransportHandler)selfObject;
                     if (t.IsFaulted || t.IsCanceled)
-                        self._next.FinishAccept(null, 0, 0, null, null);
+                        self.Callback.StartDisconnect();
                     else
                         self._ssl.ReadAsync(self._recvBuffer, self._recvOffset, self._recvLength).ContinueWith((t2, selfObject2) =>
                         {
