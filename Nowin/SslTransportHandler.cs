@@ -216,7 +216,7 @@ namespace Nowin
                         {
                             var self2 = (SslTransportHandler)selfObject2;
                             if (t2.IsFaulted || t2.IsCanceled)
-                                self2._next.FinishAccept(null, 0, 0, null, null);
+                                self.Callback.StartDisconnect();
                             else
                                 self2._next.FinishAccept(self2._recvBuffer, self2._recvOffset, t2.Result, self2._remoteEndPoint, self2._localEndPoint);
                         }, self);
