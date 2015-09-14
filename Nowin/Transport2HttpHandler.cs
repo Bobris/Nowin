@@ -323,11 +323,11 @@ namespace Nowin
                         switch (SearchForFirstSpaceOrEndOfLine(buffer, ref p))
                         {
                             case (byte)' ':
-                                reqQueryString = StringFromLatin1(buffer, start, p);
+                                reqQueryString = ParsePath(buffer, start, p);
                                 pos = p + 1;
                                 return;
                             case 13:
-                                reqQueryString = StringFromLatin1(buffer, start, p);
+                                reqQueryString = ParsePath(buffer, start, p);
                                 pos = p;
                                 return;
                             default:
@@ -356,6 +356,9 @@ namespace Nowin
         {
             var chs = GetCharBuffer();
             var used = 0;
+            var cch = 0;
+            var cchacc = 0;
+            var cchlen = 0;
             while (start < end)
             {
                 var ch = buffer[start++];
@@ -377,12 +380,56 @@ namespace Nowin
                         chs[used++] = (char)buffer[start - 1];
                         continue;
                     }
-                    chs[used++] = (char)(v1 * 16 + v2);
+                    cch = (char)(v1 * 16 + v2);
                 }
                 else
                 {
-                    chs[used++] = (char)ch;
+                    cch = ch;
                 }
+                if (cchlen == 0)
+                {
+                    if (cch < 194 || cch >= 245)
+                    {
+                        chs[used++] = (char)cch;
+                    }
+                    else if (cch < 224)
+                    {
+                        cchlen = 1;
+                        cchacc = cch - 192;
+                    }
+                    else if (cch < 240)
+                    {
+                        cchlen = 2;
+                        cchacc = cch - 224;
+                    }
+                    else
+                    {
+                        cchlen = 3;
+                        cchacc = cch - 240;
+                    }
+                }
+                else
+                {
+                    cchlen--;
+                    cchacc = cchacc * 64 + (cch & 63);
+                    if (cchlen == 0)
+                    {
+                        if (cchacc < 0x10000)
+                        {
+                            chs[used++] = (char)cchacc;
+                        }
+                        else
+                        {
+                            cchacc -= 0x10000;
+                            chs[used++] = (char)(0xD800 + (cchacc >> 10));
+                            chs[used++] = (char)(0xDC00 + (cchacc & 0x3ff));
+                        }
+                    }
+                }
+            }
+            if (cchlen>0)
+            {
+                chs[used++] = '?';
             }
             return new string(chs, 0, used);
         }
