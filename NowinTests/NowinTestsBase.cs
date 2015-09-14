@@ -335,6 +335,7 @@ namespace NowinTests
         [InlineData("", "/", "")]
         [InlineData("path?query", "/path", "query")]
         [InlineData("pathBase/path?query", "/pathBase/path", "query")]
+        [InlineData("é?ù", "/é", "ù")]
         public void PathAndQueryParsing(string clientString, string expectedPath, string expectedQuery)
         {
             clientString = HttpClientAddress + clientString;
