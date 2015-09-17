@@ -380,7 +380,11 @@ namespace Nowin
                         chs[used++] = (char)buffer[start - 1];
                         continue;
                     }
-                    cch = (char)(v1 * 16 + v2);
+
+                    chs[used++] = '%';
+                    chs[used++] = (char)buffer[start - 2];
+                    chs[used++] = (char)buffer[start - 1];
+                    continue;
                 }
                 else
                 {
