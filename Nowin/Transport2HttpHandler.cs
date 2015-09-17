@@ -381,10 +381,14 @@ namespace Nowin
                         continue;
                     }
 
-                    chs[used++] = '%';
-                    chs[used++] = (char)buffer[start - 2];
-                    chs[used++] = (char)buffer[start - 1];
-                    continue;
+                    if (v1 < 8) // Leave ASCII encoded
+                    {
+                        chs[used++] = '%';
+                        chs[used++] = (char)buffer[start - 2];
+                        chs[used++] = (char)buffer[start - 1];
+                        continue;
+                    }
+                    cch = ((byte)v1 << 4) + v2;
                 }
                 else
                 {

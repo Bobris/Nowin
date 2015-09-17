@@ -335,7 +335,7 @@ namespace NowinTests
         [InlineData("", "/", "")]
         [InlineData("path?query", "/path", "query")]
         [InlineData("pathBase/path?query", "/pathBase/path", "query")]
-        [InlineData("é?ù", "/%C3%A9", "%C3%B9")]
+        [InlineData("é?ù", "/é", "ù")]
         [InlineData("pathBase/path?query%20ge", "/pathBase/path", "query%20ge")]
         public void PathAndQueryParsing(string clientString, string expectedPath, string expectedQuery)
         {
