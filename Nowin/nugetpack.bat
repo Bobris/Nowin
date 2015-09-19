@@ -1,2 +1,2 @@
-nuget pack -Build -Symbols -Properties Configuration=Release
+nuget pack -Build -Symbols -Properties Configuration=Release Nowin.csproj
 nuget push *.nupkg
