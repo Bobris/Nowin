@@ -301,6 +301,24 @@ namespace NowinTests
         }
 
         [Fact]
+        public void Error500IsAllowedToCustomizeResopnse()
+        {
+            var listener = CreateServer(
+                async env =>
+                {
+                    env["owin.ResponseStatusCode"] = 500;
+                    env["owin.ResponseReasonPhrase"] = "BADorGOOD";
+                    var responseStream = env.Get<Stream>("owin.ResponseBody");
+                    await responseStream.WriteAsync(new byte[] { 65 },0,1);
+                    responseStream.Flush();
+                });
+            var response = SendGetRequest(listener, HttpClientAddress);
+            Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+            Assert.Equal("BADorGOOD", response.ReasonPhrase);
+            Assert.Equal("A", response.Content.ReadAsStringAsync().Result);
+        }
+
+        [Fact]
         public void ConnectionClosedAfterStartReturningResponseAndAsyncThrowing()
         {
             var callCancelled = false;

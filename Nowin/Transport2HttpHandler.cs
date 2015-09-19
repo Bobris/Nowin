@@ -1082,7 +1082,7 @@ namespace Nowin
                         {
                             if (reenter)
                                 Monitor.Enter(_receiveProcessingLock);
-                            ResponseStatusCode = 500;
+                            ResponseStatusCode = 5000; // Means hardcoded 500 Internal Server Error
                             ResponseReasonPhase = null;
                             ResponseFinished();
                             return false;
@@ -1349,19 +1349,15 @@ namespace Nowin
                 CloseConnection();
                 return;
             }
-            if (_statusCode == 500 || _cancellation.IsCancellationRequested)
+            if (_statusCode == 5000 /* uncatched exception */ || _cancellation.IsCancellationRequested)
             {
                 _cancellation.Cancel();
                 if (!_responseHeadersSend)
+                {
                     SendInternalServerError();
+                }
                 else
                 {
-                    _isKeepAlive = false;
-                    if (_statusCode == 500)
-                    {
-                        SendHttpResponseAndPrepareForNext();
-                        return;
-                    }
                     CloseConnection();
                 }
                 return;
