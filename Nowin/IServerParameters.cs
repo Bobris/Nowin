@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Nowin
 {
-    internal interface IServerParameters
+    interface IServerParameters
     {
         ExecutionContextFlow ContextFlow { get; }
         IConnectionAllocationStrategy ConnectionAllocationStrategy { get; }

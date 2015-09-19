@@ -1396,7 +1396,7 @@ namespace NowinTests
             }
         }
 
-        static CancellationToken GetCallCancelled(IDictionary<string, object> env)
+        public static CancellationToken GetCallCancelled(IDictionary<string, object> env)
         {
             return env.Get<CancellationToken>("owin.CallCancelled");
         }

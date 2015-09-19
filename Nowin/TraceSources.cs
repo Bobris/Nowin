@@ -110,92 +110,14 @@ SAMPLE APP.CONFIG FILE
 
     <trace autoflush="true" indentsize="0">
       <listeners>
-        <remove name="Default"/>
         <add name="Global"
-             type="System.Diagnostics.TextWriterTraceListener" 
-             initializeData="Global.log" />
-          <!-- Critical, Error, Warning, Information, Verbose -->
-          <filter type="System.Diagnostics.EventTypeFilter" initializeData="Warning"/>
+             type="System.Diagnostics.TextWriterTraceListener"
+             initializeData="Global.log">
         </add>
       </listeners>
     </trace>
 
     <sources>
-      <source name="SignalR.SqlMessageBus">
-        <listeners>
-          <remove name="Default"/>
-          <add name="SignalR.Bus" />
-        </listeners>
-      </source>
-      <source name="SignalR.ServiceBusMessageBus">
-        <listeners>
-          <remove name="Default"/>
-          <add name="SignalR.Bus" />
-        </listeners>
-      </source>
-      <source name="SignalR.ScaleoutMessageBus">
-        <listeners>
-          <remove name="Default"/>
-          <add name="SignalR.Bus" />
-        </listeners>
-      </source>
-
-      <source name="SignalR.Transports.WebSocketTransport">
-        <listeners>
-          <remove name="Default"/>
-          <add name="SignalR.Transports" />
-        </listeners>
-      </source>
-      <source name="SignalR.Transports.ServerSentEventsTransport">
-        <listeners>
-          <remove name="Default"/>
-          <add name="SignalR.Transports" />
-        </listeners>
-      </source>
-      <source name="SignalR.Transports.ForeverFrameTransport">
-        <listeners>
-          <remove name="Default"/>
-          <add name="SignalR.Transports" />
-        </listeners>
-      </source>
-      <source name="SignalR.Transports.LongPollingTransport">
-        <listeners>
-          <remove name="Default"/>
-          <add name="SignalR.Transports" />
-        </listeners>
-      </source>
-      <source name="SignalR.Transports.TransportHeartBeat">
-        <listeners>
-          <remove name="Default"/>
-          <add name="SignalR.Transports" />
-        </listeners>
-      </source>
-
-      <source name="SignalR.HubDispatcher">
-        <listeners>
-          <remove name="Default"/>
-          <add name="SignalR.HubDispatcher" />
-        </listeners>
-      </source>
-      <source name="SignalR.Connection">
-        <listeners>
-          <remove name="Default"/>
-          <add name="SignalR.Connection" />
-        </listeners>
-      </source>
-      <source name="SignalR.PerformanceCounterManager">
-        <listeners>
-          <remove name="Default"/>
-          <add name="SignalR.PerformanceCounterManager" />
-        </listeners>
-      </source>
-      <source name="SignalR.PersistentConnection">
-        <listeners>
-          <remove name="Default"/>
-          <add name="SignalR.PersistentConnection" />
-        </listeners>
-      </source>
-
       <source name="Nowin.Core">
         <listeners>
           <remove name="Default"/>
@@ -211,35 +133,13 @@ SAMPLE APP.CONFIG FILE
     </sources>
 
     <switches>
-      <add name="SignalRSwitch" value="Verbose" />
       <add name="Nowin.Core" value="Verbose" />
       <add name="Nowin.Core.Debug" value="Verbose" />
     </switches>
 
     <sharedListeners>
-      <add name="SignalR.Bus"
-           type="System.Diagnostics.TextWriterTraceListener" 
-           initializeData="SignalR.Bus.log" />
-
-      <add name="SignalR.Transports"
-           type="System.Diagnostics.TextWriterTraceListener" 
-           initializeData="SignalR.Transports.log" />
-
-      <add name="SignalR.HubDispatcher"
-           type="System.Diagnostics.TextWriterTraceListener" 
-           initializeData="SignalR.HubDispatcher.log" />
-      <add name="SignalR.Connection"
-           type="System.Diagnostics.TextWriterTraceListener" 
-           initializeData="SignalR.Connection.log" />
-      <add name="SignalR.PerformanceCounterManager"
-           type="System.Diagnostics.TextWriterTraceListener" 
-           initializeData="SignalR.PerformanceCounterManager.log" />
-      <add name="SignalR.PersistentConnection"
-           type="System.Diagnostics.TextWriterTraceListener" 
-           initializeData="SignalR.PersistentConnection.log" />
-
       <add name="Nowin.Core"
-           type="System.Diagnostics.TextWriterTraceListener" 
+           type="System.Diagnostics.TextWriterTraceListener"
            initializeData="Nowin.Core.log" />
     </sharedListeners>
 

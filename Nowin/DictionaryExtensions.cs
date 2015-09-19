@@ -1,6 +1,6 @@
 namespace System.Collections.Generic
 {
-    internal static class DictionaryExtensions
+    static class DictionaryExtensions
     {
         internal static T Get<T>(this IDictionary<string, object> dictionary, string key)
         {

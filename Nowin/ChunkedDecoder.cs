@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 namespace Nowin
 {
-    internal struct ChunkedDecoder
+    struct ChunkedDecoder
     {
         long _dataAvail;
         long _nextAvail;

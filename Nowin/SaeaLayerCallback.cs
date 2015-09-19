@@ -66,7 +66,7 @@ namespace Nowin
             _disconnectEvent.UserToken = this;
         }
 
-        private void DisposeEventArgs()
+        void DisposeEventArgs()
         {
             if (_receiveEvent != null)
             {
@@ -296,10 +296,10 @@ namespace Nowin
                     throw new InvalidOperationException("Already sending");
                 newState = oldState | (int)State.Send;
             } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
-            _sendEvent.SetBuffer(buffer, offset, length);
             bool willRaiseEvent;
             try
             {
+                _sendEvent.SetBuffer(buffer, offset, length);
                 using (StopExecutionContextFlow())
                     willRaiseEvent = _socket.SendAsync(_sendEvent);
             }

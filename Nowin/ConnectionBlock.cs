@@ -1,6 +1,6 @@
 namespace Nowin
 {
-    internal class ConnectionBlock
+    class ConnectionBlock
     {
         readonly Server _server;
         readonly int _connectionCount;

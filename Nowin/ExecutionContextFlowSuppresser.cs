@@ -20,18 +20,18 @@ namespace Nowin
                 case ExecutionContextFlow.Flow:
                     return _flow;
                 default:
-                    throw new ArgumentOutOfRangeException("contextFlow");
+                    throw new ArgumentOutOfRangeException(nameof(contextFlow));
             }
         }
 
-        private static IDisposable SuppressAlways()
+        static IDisposable SuppressAlways()
         {
             if (!ExecutionContext.IsFlowSuppressed())
                 ExecutionContext.SuppressFlow();
             return NullDisposable.Instance;
         }
 
-        private static IDisposable SuppressOnAsync()
+        static IDisposable SuppressOnAsync()
         {
             return ExecutionContext.IsFlowSuppressed()
                 ? NullDisposable.Instance
