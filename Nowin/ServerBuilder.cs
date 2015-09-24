@@ -17,8 +17,8 @@ namespace Nowin
         Func<IDictionary<string, object>, Task> _app;
         IDictionary<string, object> _capabilities;
         string _serverHeader = "Nowin";
-        private ExecutionContextFlow _contextFlow  = ExecutionContextFlow.SuppressAlways;
-        private TimeSpan _retrySocketBindingTime;
+        ExecutionContextFlow _contextFlow = ExecutionContextFlow.SuppressAlways;
+        TimeSpan _retrySocketBindingTime;
 
         public static ServerBuilder New()
         {
@@ -76,7 +76,7 @@ namespace Nowin
 
         public ServerBuilder SetBufferSize(int size)
         {
-            if (size < 1024 || size > 65536) throw new ArgumentOutOfRangeException("size", size, "Must be in range <1024,65536>");
+            if (size < 1024 || size > 65536) throw new ArgumentOutOfRangeException(nameof(size), size, "Must be in range <1024,65536>");
             _bufferSize = size;
             return this;
         }
@@ -101,7 +101,10 @@ namespace Nowin
 
         public ServerBuilder SetServerHeader(string value)
         {
-            _serverHeader = value;
+            if (string.IsNullOrWhiteSpace(value))
+                _serverHeader = null;
+            else 
+                _serverHeader = value;
             return this;
         }
 

@@ -627,7 +627,7 @@ namespace Nowin
             {
                 HeaderAppend("Connection: close\r\n");
             }
-            if (!string.IsNullOrWhiteSpace(_serverName) && !_serverNameOverwrite)
+            if (_serverName!=null && !_serverNameOverwrite)
             {
                 HeaderAppend("Server: ");
                 HeaderAppend(_serverName);
