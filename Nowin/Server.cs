@@ -105,7 +105,8 @@ namespace Nowin
                 ListenSocket.Dispose();
             }
 
-            foreach (var block in _blocks)
+            ConnectionBlock block;
+            while (_blocks.TryTake(out block))
             {
                 block.Stop();
             }
