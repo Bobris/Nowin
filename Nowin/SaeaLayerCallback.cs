@@ -231,10 +231,10 @@ namespace Nowin
                     throw new InvalidOperationException("Already receiving or accepting");
                 newState = oldState | (int)State.Receive & ~(int)State.Aborting;
             } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
-            _receiveEvent.SetBuffer(buffer, offset, length);
             bool willRaiseEvent;
             try
             {
+                _receiveEvent.SetBuffer(buffer, offset, length);
                 using (StopExecutionContextFlow())
                     willRaiseEvent = _listenSocket.AcceptAsync(_receiveEvent);
             }
@@ -266,10 +266,10 @@ namespace Nowin
                     throw new InvalidOperationException("Already receiving or accepting");
                 newState = oldState | (int)State.Receive;
             } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
-            _receiveEvent.SetBuffer(buffer, offset, length);
             bool willRaiseEvent;
             try
             {
+                _receiveEvent.SetBuffer(buffer, offset, length);
                 using (StopExecutionContextFlow())
                     willRaiseEvent = _socket.ReceiveAsync(_receiveEvent);
             }
