@@ -19,6 +19,7 @@ namespace Nowin
         string _serverHeader = "Nowin";
         ExecutionContextFlow _contextFlow = ExecutionContextFlow.SuppressAlways;
         TimeSpan _retrySocketBindingTime;
+        bool _clientCertificateRequired = false;
 
         public static ServerBuilder New()
         {
@@ -71,6 +72,12 @@ namespace Nowin
         public ServerBuilder SetProtocols(SslProtocols protocols)
         {
             _protocols = protocols;
+            return this;
+        }
+
+        public ServerBuilder RequireClientCertificate()
+        {
+            _clientCertificateRequired = true;
             return this;
         }
 
@@ -182,6 +189,14 @@ namespace Nowin
             get
             {
                 return _protocols;
+            }
+        }
+
+        public bool ClientCertificateRequired
+        {
+            get
+            {
+                return _clientCertificateRequired;
             }
         }
     }

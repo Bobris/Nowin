@@ -19,5 +19,6 @@ namespace Nowin
         string ServerHeader { get; }
         TimeSpan RetrySocketBindingTime { get; }
         SslProtocols Protocols { get; }
+        bool ClientCertificateRequired { get; }
     }
 }
