@@ -72,7 +72,13 @@ namespace Nowin
                 builder.SetOwinCapabilities(capabilities);
                 var certificate = address.Get<X509Certificate>("certificate");
                 if (certificate != null)
+                {
                     builder.SetCertificate(certificate);
+                    var clientCertificateRequired = address.Get<string>("clientCertificate.required");
+                    bool required;
+                    if (!string.IsNullOrEmpty(clientCertificateRequired) && bool.TryParse(clientCertificateRequired, out required) && required)
+                        builder.RequireClientCertificate();
+                }
                 servers.Add(builder.Build());
             }
 

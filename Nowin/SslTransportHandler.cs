@@ -16,6 +16,7 @@ namespace Nowin
         readonly ITransportLayerHandler _next;
         readonly X509Certificate _serverCertificate;
         readonly SslProtocols _protocols;
+        readonly bool _clientCertificateRequired;
         SslStream _ssl;
         Task _authenticateTask;
         byte[] _recvBuffer;
@@ -25,9 +26,10 @@ namespace Nowin
         IPEndPoint _remoteEndPoint;
         IPEndPoint _localEndPoint;
 
-        public SslTransportHandler(ITransportLayerHandler next, X509Certificate serverCertificate, SslProtocols protocols)
+        public SslTransportHandler(ITransportLayerHandler next, X509Certificate serverCertificate, SslProtocols protocols, bool clientCertificateRequired)
         {
             _protocols = protocols;
+            _clientCertificateRequired = clientCertificateRequired;
             _next = next;
             _serverCertificate = serverCertificate;
             _inputStream = new InputStream(this);
@@ -206,7 +208,7 @@ namespace Nowin
             try
             {
                 _ssl = new SslStream(_inputStream, true);
-                _authenticateTask = _ssl.AuthenticateAsServerAsync(_serverCertificate, false, _protocols, false).ContinueWith((t, selfObject) =>
+                _authenticateTask = _ssl.AuthenticateAsServerAsync(_serverCertificate, _clientCertificateRequired, _protocols, false).ContinueWith((t, selfObject) =>
                 {
                     var self = (SslTransportHandler)selfObject;
                     if (t.IsFaulted || t.IsCanceled)

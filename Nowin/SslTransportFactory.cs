@@ -8,11 +8,13 @@ namespace Nowin
         readonly X509Certificate _certificate;
         readonly ILayerFactory _next;
         readonly SslProtocols _protocols;
+        readonly bool _clientCertificateRequired;
 
-        public SslTransportFactory(X509Certificate certificate, SslProtocols protocols, ILayerFactory next)
+        public SslTransportFactory(X509Certificate certificate, SslProtocols protocols, ILayerFactory next, bool clientCertificateRequired)
         {
             _certificate = certificate;
             _protocols = protocols;
+            _clientCertificateRequired = clientCertificateRequired;
             _next = next;
         }
 
@@ -34,7 +36,7 @@ namespace Nowin
         public ILayerHandler Create(byte[] buffer, int offset, int commonOffset, int handlerId)
         {
             var nextHandler = (ITransportLayerHandler)_next.Create(buffer, offset, commonOffset, handlerId);
-            var handler = new SslTransportHandler(nextHandler, _certificate, _protocols);
+            var handler = new SslTransportHandler(nextHandler, _certificate, _protocols, _clientCertificateRequired);
             return handler;
         }
     }
