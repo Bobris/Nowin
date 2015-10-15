@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -964,11 +965,12 @@ namespace Nowin
             Callback.StartAccept(_buffer, StartBufferOffset, ReceiveBufferSize);
         }
 
-        public void FinishAccept(byte[] buffer, int offset, int length, IPEndPoint remoteEndPoint, IPEndPoint localEndPoint)
+        public void FinishAccept(byte[] buffer, int offset, int length, IPEndPoint remoteEndPoint, IPEndPoint localEndPoint, X509Certificate clientCertificate)
         {
             ResetForNextRequest();
             ReceiveBufferPos = 0;
             _remoteEndPoint = remoteEndPoint;
+            _clientCertificate = clientCertificate;
             _knownIsLocal = false;
             _remoteIpAddress = null;
             _remotePort = null;
@@ -1212,6 +1214,11 @@ namespace Nowin
             get { return _remoteIpAddress ?? (_remoteIpAddress = _remoteEndPoint.Address.ToString()); }
         }
 
+        public X509Certificate ClientCertificate
+        {
+            get { return _clientCertificate; }
+        }
+
         public string RemotePort
         {
             get { return _remotePort ?? (_remotePort = _remoteEndPoint.Port.ToString(CultureInfo.InvariantCulture)); }
@@ -1427,6 +1434,7 @@ namespace Nowin
         }
 
         public int ReceiveBufferPos;
+        private X509Certificate _clientCertificate;
 
         public Task SendData(byte[] buffer, int offset, int length)
         {

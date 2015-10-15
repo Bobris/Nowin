@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -22,6 +23,7 @@ namespace Nowin
         string LocalPort { get; }
         bool IsLocal { get; }
         bool IsWebSocketReq { get; }
+        X509Certificate ClientCertificate { get; }
 
         int ResponseStatusCode { get; set; }
         string ResponseReasonPhase { set; }
@@ -43,6 +45,7 @@ namespace Nowin
         void StartReceiveData();
         int SendDataOffset { get; }
         int SendDataLength { get; }
+
         Task SendData(byte[] buffer, int offset, int length);
     }
 }

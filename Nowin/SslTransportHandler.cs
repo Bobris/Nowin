@@ -200,7 +200,7 @@ namespace Nowin
             _next.PrepareAccept();
         }
 
-        public void FinishAccept(byte[] buffer, int offset, int length, IPEndPoint remoteEndPoint, IPEndPoint localEndPoint)
+        public void FinishAccept(byte[] buffer, int offset, int length, IPEndPoint remoteEndPoint, IPEndPoint localEndPoint, X509Certificate clientCertificate)
         {
             _remoteEndPoint = remoteEndPoint;
             _localEndPoint = localEndPoint;
@@ -220,7 +220,7 @@ namespace Nowin
                             if (t2.IsFaulted || t2.IsCanceled)
                                 self.Callback.StartDisconnect();
                             else
-                                self2._next.FinishAccept(self2._recvBuffer, self2._recvOffset, t2.Result, self2._remoteEndPoint, self2._localEndPoint);
+                                self2._next.FinishAccept(self2._recvBuffer, self2._recvOffset, t2.Result, self2._remoteEndPoint, self2._localEndPoint, _ssl.RemoteCertificate);
                         }, self);
                 }, this);
             }

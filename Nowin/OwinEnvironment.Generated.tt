@@ -24,6 +24,7 @@ var props = new[]
   
 // Common extension keys
   new {Key="common.Disconnect", Type="Action", Name="Disconnect", Get="_handler.DisconnectAction", Set="" },
+  new {Key="ssl.ClientCertificate", Type="X509Certificate", Name="ClientCertificate", Get="_callback.ClientCertificate", Set="" },
 
 // ServerVariable keys
   new {Key="server.Capabilities", Type="IDictionary<string, object>", Name="ServerCapabilities", Get="_handler.Capabilities", Set="" },
