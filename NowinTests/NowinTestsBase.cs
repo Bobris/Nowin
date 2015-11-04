@@ -129,6 +129,7 @@ namespace NowinTests
             Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
             Assert.NotNull(response.Content.Headers.ContentLength);
             Assert.Equal(0, response.Content.Headers.ContentLength.Value);
+            Thread.Sleep(200);
             Assert.True(callCancelled);
         }
 
