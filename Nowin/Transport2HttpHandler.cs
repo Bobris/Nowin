@@ -37,6 +37,8 @@ namespace Nowin
         volatile TaskCompletionSource<bool> _tcsSend;
         CancellationTokenSource _cancellation;
         int _responseHeaderPos;
+        int _acceptCounter;
+        bool _clientClosedConnection;
         bool _lastPacket;
         bool _responseIsChunked;
         ulong _responseContentLength;
@@ -929,8 +931,9 @@ namespace Nowin
 
         public void StartNextReceive()
         {
+            if (_clientClosedConnection) return;
             var shouldStartRecv = false;
-            lock(_receiveProcessingLock)
+            lock (_receiveProcessingLock)
             {
                 shouldStartRecv = ProcessReceive();
             }
@@ -961,7 +964,12 @@ namespace Nowin
 
         void RealPrepareAccept()
         {
-            _disconnecting = 0;
+            lock (_receiveProcessingLock)
+            {
+                _acceptCounter++;
+                _disconnecting = 0;
+                _clientClosedConnection = false;
+            }
             Callback.StartAccept(_buffer, StartBufferOffset, ReceiveBufferSize);
         }
 
@@ -989,6 +997,7 @@ namespace Nowin
         {
             if (length == -1)
             {
+                _clientClosedConnection = true;
                 _receiving = false;
                 if (_waitingForRequest)
                 {
@@ -1057,6 +1066,7 @@ namespace Nowin
                     {
                         _waitingForRequest = false;
                         var reenter = false;
+                        var currentAcceptCounter = _acceptCounter;
                         try
                         {
                             var peqStartBufferOffset = StartBufferOffset + ReceiveBufferPos;
@@ -1079,11 +1089,21 @@ namespace Nowin
                             _next.HandleRequest();
                             reenter = false;
                             Monitor.Enter(_receiveProcessingLock); 
+                            if (currentAcceptCounter != _acceptCounter)
+                            {
+                                // Delayed thread different connection already running this one needs to stop ASAP
+                                return false;
+                            } 
                         }
                         catch (Exception)
                         {
                             if (reenter)
                                 Monitor.Enter(_receiveProcessingLock);
+                            if (currentAcceptCounter != _acceptCounter)
+                            {
+                                // Delayed thread different connection already running this one needs to stop ASAP
+                                return false;
+                            }
                             ResponseStatusCode = 5000; // Means hardcoded 500 Internal Server Error
                             ResponseReasonPhase = null;
                             ResponseFinished();
@@ -1119,7 +1139,7 @@ namespace Nowin
             }
             if (ReceiveBufferDataLength == 0 || _waitingForRequest)
             {
-                if (!_receiving)
+                if (!_receiving && !_clientClosedConnection)
                 {
                     _receiving = true;
                     return true;
@@ -1130,7 +1150,7 @@ namespace Nowin
 
         public void FinishSend(Exception exception)
         {
-            if (exception == null)
+            if (exception == null && !_clientClosedConnection)
             {
                 var tcs = _tcsSend;
                 _tcsSend = null;
@@ -1151,6 +1171,7 @@ namespace Nowin
                 _isKeepAlive = false;
                 if (tcs != null)
                 {
+                    if (exception == null) exception = new EndOfStreamException("Client closed connection");
                     tcs.SetException(exception);
                 }
                 else if (_isWebSocket)
@@ -1162,7 +1183,7 @@ namespace Nowin
             if (_lastPacket)
             {
                 _lastPacket = false;
-                if (_isKeepAlive)
+                if (_isKeepAlive && !_clientClosedConnection)
                 {
                     ResetForNextRequest();
                     StartNextReceive();
