@@ -229,7 +229,7 @@ namespace Nowin
                     return;
                 }
                 if (!Callback.HeadersSend || Callback.ResponseStatusCode != 500)
-                    Callback.ResponseStatusCode = Callback.HeadersSend ? 599 : 500;
+                    Callback.ResponseStatusCode = Callback.HeadersSend ? 599 : 5000;
                 Callback.ResponseReasonPhase = null;
                 Callback.ResponseFinished();
             }
@@ -240,7 +240,7 @@ namespace Nowin
             if (t.IsFaulted || t.IsCanceled)
             {
                 if (!t.IsFaulted || !callback.HeadersSend || callback.ResponseStatusCode != 500)
-                    callback.ResponseStatusCode = callback.HeadersSend ? 599 : 500;
+                    callback.ResponseStatusCode = callback.HeadersSend ? 599 : 5000;
                 callback.ResponseReasonPhase = null;
             }
         }

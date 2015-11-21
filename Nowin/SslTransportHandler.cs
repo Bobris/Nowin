@@ -23,8 +23,6 @@ namespace Nowin
         int _recvOffset;
         int _recvLength;
         readonly InputStream _inputStream;
-        IPEndPoint _remoteEndPoint;
-        IPEndPoint _localEndPoint;
 
         public SslTransportHandler(ITransportLayerHandler next, X509Certificate serverCertificate, SslProtocols protocols, bool clientCertificateRequired)
         {
@@ -179,13 +177,21 @@ namespace Nowin
         public void PrepareAccept()
         {
             _ssl = null;
+            var t = _authenticateTask;
+            _authenticateTask = null;
+            if (t != null && !t.IsCompleted)
+            {
+                t.ContinueWith((t2, next) =>
+                {
+                    ((ITransportLayerHandler)next).PrepareAccept();
+                }, _next);
+                return;
+            }
             _next.PrepareAccept();
         }
 
-        public void FinishAccept(byte[] buffer, int offset, int length, IPEndPoint remoteEndPoint, IPEndPoint localEndPoint, X509Certificate clientCertificate)
+        public void FinishAccept(byte[] buffer, int offset, int length, IPEndPoint remoteEndPoint, IPEndPoint localEndPoint)
         {
-            _remoteEndPoint = remoteEndPoint;
-            _localEndPoint = localEndPoint;
             Debug.Assert(length == 0);
             try
             {
@@ -196,20 +202,19 @@ namespace Nowin
                     if (t.IsFaulted || t.IsCanceled)
                         self.Callback.StartDisconnect();
                     else
-                        self._ssl.ReadAsync(self._recvBuffer, self._recvOffset, self._recvLength).ContinueWith((t2, selfObject2) =>
-                        {
-                            var self2 = (SslTransportHandler)selfObject2;
-                            if (t2.IsFaulted || t2.IsCanceled)
-                                self.Callback.StartDisconnect();
-                            else
-                                self2._next.FinishAccept(self2._recvBuffer, self2._recvOffset, t2.Result, self2._remoteEndPoint, self2._localEndPoint, _ssl.RemoteCertificate);
-                        }, self);
+                        _next.SetRemoteCertificate(_ssl.RemoteCertificate);
                 }, this);
+                _next.FinishAccept(_recvBuffer, _recvOffset, 0, remoteEndPoint, localEndPoint);
             }
             catch (Exception)
             {
                 Callback.StartDisconnect();
             }
+        }
+
+        public void SetRemoteCertificate(X509Certificate remoteCertificate)
+        {
+            throw new InvalidOperationException();
         }
 
         public void FinishReceive(byte[] buffer, int offset, int length)
@@ -237,6 +242,29 @@ namespace Nowin
             _recvLength = length;
             try
             {
+                if (!_authenticateTask.IsCompleted)
+                {
+                    _authenticateTask.ContinueWith((t, selfObject) =>
+                    {
+                        var self = (SslTransportHandler)selfObject;
+                        if (t.IsCanceled || t.IsFaulted)
+                        {
+                            self._next.FinishReceive(null, 0, -1);
+                        }
+                        else
+                        {
+                            _ssl.ReadAsync(self._recvBuffer, self._recvOffset, self._recvLength).ContinueWith((t2, selfObject2) =>
+                            {
+                                var self2 = (SslTransportHandler)selfObject2;
+                                if (t2.IsFaulted || t2.IsCanceled || t2.Result == 0)
+                                    self._next.FinishReceive(null, 0, -1);
+                                else
+                                    self._next.FinishReceive(self2._recvBuffer, self2._recvOffset, t2.Result);
+                            }, self);
+                        }
+                    }, this);
+                    return;
+                }
                 _ssl.ReadAsync(buffer, offset, length).ContinueWith((t, selfObject) =>
                 {
                     var self = (SslTransportHandler)selfObject;
@@ -281,16 +309,7 @@ namespace Nowin
 
         public void StartDisconnect()
         {
-            var t = _authenticateTask;
-            _authenticateTask = null;
-            if (t != null)
-            {
-                t.ContinueWith((t2, callback) => ((ITransportLayerCallback)callback).StartDisconnect(), Callback);
-            }
-            else
-            {
-                Callback.StartDisconnect();
-            }
+            Callback.StartDisconnect();
         }
     }
 }

@@ -116,11 +116,11 @@ namespace NowinTests
         [Fact]
         public void AsyncThrowAppRespond500()
         {
-            var callCancelled = false;
+            var ev = new EventWaitHandle(false,EventResetMode.ManualReset);
             var listener = CreateServer(
                 async env =>
                 {
-                    GetCallCancelled(env).Register(() => callCancelled = true);
+                    GetCallCancelled(env).Register(() => ev.Set());
                     await Task.Delay(1);
                     throw new InvalidOperationException();
                 });
@@ -129,8 +129,7 @@ namespace NowinTests
             Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
             Assert.NotNull(response.Content.Headers.ContentLength);
             Assert.Equal(0, response.Content.Headers.ContentLength.Value);
-            Thread.Sleep(200);
-            Assert.True(callCancelled);
+            ev.WaitOne();
         }
 
         [Fact]
@@ -1359,8 +1358,8 @@ namespace NowinTests
                 {
                     Assert.False(insideDelay);
                     var disconnectAction = env.Get<Action>("common.Disconnect");
-                    disconnectAction();
                     insideDelay = true;
+                    disconnectAction();
                     await Task.Delay(100);
                     insideDelay = false;
                     throw new Exception("disconnect");

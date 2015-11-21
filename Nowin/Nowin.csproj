@@ -49,6 +49,7 @@
     <Compile Include="DictionaryExtensions.cs" />
     <Compile Include="ExecutionContextFlow.cs" />
     <Compile Include="ExecutionContextFlowSuppresser.cs" />
+    <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="IDateHeaderValueProvider.cs" />
     <Compile Include="IHttpLayerCallback.cs" />
     <Compile Include="IHttpLayerHandler.cs" />

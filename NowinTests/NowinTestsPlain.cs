@@ -12,16 +12,11 @@ namespace NowinTests
 {
     public class NowinTestsPlain : NowinTestsBase
     {
-        int Port { get { return 8082; } }
-        protected override string HttpClientAddress
-        {
-            get { return "http://localhost:8082/"; }
-        }
+        int Port => 8082;
 
-        protected override string ExpectedRequestScheme
-        {
-            get { return "http"; }
-        }
+        protected override string HttpClientAddress => "http://localhost:8082/";
+
+        protected override string ExpectedRequestScheme => "http";
 
         protected override IDisposable CreateServer(Func<IDictionary<string, object>, Task> app)
         {
@@ -39,7 +34,7 @@ namespace NowinTests
         {
             var callCancelled = false;
             var finished = false;
-            using (var listener = CreateServer(
+            using (CreateServer(
                 async env =>
                 {
                     GetCallCancelled(env).Register(() => callCancelled = true);
@@ -59,8 +54,8 @@ namespace NowinTests
                     using (var connStream = client.GetStream())
                     {
                         var request = Encoding.UTF8.GetBytes("GET / HTTP/1.1\r\n"
-                                    + "Host: localhost:8080\r\n"
-                                    + "\r\n");
+                                                             + "Host: localhost:8080\r\n"
+                                                             + "\r\n");
                         connStream.Write(request, 0, request.Length);
                         connStream.Flush();
                     }
@@ -75,7 +70,7 @@ namespace NowinTests
         public void ClosingClientConnectionDoesCancelSyncServer()
         {
             var callCancelled = false;
-            using (var listener = CreateServer(
+            using (CreateServer(
                 async env =>
                 {
                     GetCallCancelled(env).Register(() => callCancelled = true);
@@ -92,8 +87,8 @@ namespace NowinTests
                     using (var connStream = client.GetStream())
                     {
                         var request = Encoding.UTF8.GetBytes("GET / HTTP/1.1\r\n"
-                                    + "Host: localhost:8080\r\n"
-                                    + "\r\n");
+                                                             + "Host: localhost:8080\r\n"
+                                                             + "\r\n");
                         connStream.Write(request, 0, request.Length);
                         connStream.Flush();
                     }

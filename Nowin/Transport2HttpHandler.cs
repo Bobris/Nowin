@@ -38,6 +38,7 @@ namespace Nowin
         CancellationTokenSource _cancellation;
         int _responseHeaderPos;
         int _acceptCounter;
+        bool _afterReceiveContinueWithAccept;
         bool _clientClosedConnection;
         bool _lastPacket;
         bool _responseIsChunked;
@@ -546,7 +547,7 @@ namespace Nowin
             {
                 var b = buffer[p];
 
-                if (b == (byte)' ')
+                if (b == ' ')
                 {
                     pos = p + 1;
                     break;
@@ -963,6 +964,11 @@ namespace Nowin
         {
             lock (_receiveProcessingLock)
             {
+                if (_receiving)
+                {
+                    _afterReceiveContinueWithAccept = true;
+                    return;
+                }
                 _acceptCounter++;
                 _disconnecting = 0;
                 _clientClosedConnection = false;
@@ -970,12 +976,11 @@ namespace Nowin
             Callback.StartAccept(_buffer, StartBufferOffset, ReceiveBufferSize);
         }
 
-        public void FinishAccept(byte[] buffer, int offset, int length, IPEndPoint remoteEndPoint, IPEndPoint localEndPoint, X509Certificate clientCertificate)
+        public void FinishAccept(byte[] buffer, int offset, int length, IPEndPoint remoteEndPoint, IPEndPoint localEndPoint)
         {
             ResetForNextRequest();
             ReceiveBufferPos = 0;
             _remoteEndPoint = remoteEndPoint;
-            _clientCertificate = clientCertificate;
             _knownIsLocal = false;
             _remoteIpAddress = null;
             _remotePort = null;
@@ -990,12 +995,27 @@ namespace Nowin
             FinishReceive(buffer, offset, length);
         }
 
+        public void SetRemoteCertificate(X509Certificate remoteCertificate)
+        {
+            _clientCertificate = remoteCertificate;
+        }
+
         public void FinishReceive(byte[] buffer, int offset, int length)
         {
+            TraceSources.CoreDebug.TraceInformation("======= Offset {0}, Length {1}", offset - StartBufferOffset, length);
             if (length == -1)
             {
+                lock (_receiveProcessingLock)
+                {
+                    _receiving = false;
+                }
+                if (_afterReceiveContinueWithAccept)
+                {
+                    _afterReceiveContinueWithAccept = false;
+                    RealPrepareAccept();
+                    return;
+                }
                 _clientClosedConnection = true;
-                _receiving = false;
                 if (_waitingForRequest)
                 {
                     CloseConnection();
@@ -1018,14 +1038,22 @@ namespace Nowin
             }
             Debug.Assert(StartBufferOffset + ReceiveBufferPos == offset || _waitingForRequest);
             Debug.Assert(_receiveBufferFullness == offset);
-            TraceSources.CoreDebug.TraceInformation("======= Offset {0}, Length {1}", offset - StartBufferOffset, length);
             TraceSources.CoreDebug.TraceInformation(Encoding.UTF8.GetString(buffer, offset, length));
-            bool startNextRecv;
+            var startNextRecv = false;
             lock (_receiveProcessingLock)
             {
                 _receiving = false;
-                _receiveBufferFullness = offset + length;
-                startNextRecv = ProcessReceive();
+                if (!_afterReceiveContinueWithAccept)
+                {
+                    _receiveBufferFullness = offset + length;
+                    startNextRecv = ProcessReceive();
+                }
+            }
+            if (_afterReceiveContinueWithAccept)
+            {
+                _afterReceiveContinueWithAccept = false;
+                RealPrepareAccept();
+                return;
             }
             if (startNextRecv)
             {
@@ -1117,7 +1145,11 @@ namespace Nowin
                     }
                     else if (_startedReceiveRequestData)
                     {
-                        _startedReceiveRequestData = _reqRespStream.ProcessDataAndShouldReadMore();
+                        _startedReceiveRequestData = false;
+                        if (_reqRespStream.ProcessDataAndShouldReadMore())
+                        {
+                            _startedReceiveRequestData = true;
+                        }
                     }
                     else
                     {

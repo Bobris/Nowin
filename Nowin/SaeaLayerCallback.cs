@@ -132,7 +132,7 @@ namespace Nowin
                 {
                     _server.ReportNewConnectedClient();
                     _handler.FinishAccept(_receiveEvent.Buffer, _receiveEvent.Offset, bytesTransfered,
-                        remoteEndpoint, localEndpoint, null);
+                        remoteEndpoint, localEndpoint);
                     return;
                 }
             }

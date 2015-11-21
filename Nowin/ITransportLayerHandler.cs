@@ -8,7 +8,8 @@ namespace Nowin
     {
         ITransportLayerCallback Callback { set; }
         void PrepareAccept();
-        void FinishAccept(byte[] buffer, int offset, int length, IPEndPoint remoteEndPoint, IPEndPoint localEndPoint, X509Certificate remoteCertificate);
+        void FinishAccept(byte[] buffer, int offset, int length, IPEndPoint remoteEndPoint, IPEndPoint localEndPoint);
+        void SetRemoteCertificate(X509Certificate remoteCertificate);
 
         // length==-1 for connection closed
         void FinishReceive(byte[] buffer, int offset, int length);
