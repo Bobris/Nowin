@@ -87,14 +87,7 @@ namespace Nowin
                     _nextAvail = 0;
                     break;
                 case State.AfterLF2:
-                    if (b == 13)
-                    {
-                        _state = State.AfterCR3;
-                    }
-                    else
-                    {
-                        _state = State.InTrailer;
-                    }
+                    _state = b == 13 ? State.AfterCR3 : State.InTrailer;
                     break;
                 case State.InTrailer:
                     if (b == 13)

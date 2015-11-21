@@ -15,8 +15,9 @@ namespace Nowin
             _owinCapabilities = owinCapabilities;
         }
 
-        public int PerConnectionBufferSize { get { return 0; } }
-        public int CommonBufferSize { get { return 0; } }
+        public int PerConnectionBufferSize => 0;
+        public int CommonBufferSize => 0;
+
         public void InitCommonBuffer(byte[] buffer, int offset)
         {
         }

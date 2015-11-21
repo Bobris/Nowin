@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Nowin
 {
-    internal class ReqRespStream : Stream
+    class ReqRespStream : Stream
     {
         readonly Transport2HttpHandler _transport2HttpHandler;
         readonly byte[] _buf;
@@ -89,7 +89,7 @@ namespace Nowin
                 ProcessChunkedDataInternal();
                 return;
             }
-            var len = Math.Min(_asyncCount, _transport2HttpHandler.ReceiveBufferDataLength);
+            var len = Math.Min(_asyncCount, _transport2HttpHandler.ReceiveDataLength);
             if (len > 0)
             {
                 Array.Copy(_buf, _transport2HttpHandler.StartBufferOffset + _transport2HttpHandler.ReceiveBufferPos, _asyncBuffer, _asyncOffset, len);
@@ -103,7 +103,7 @@ namespace Nowin
 
         void ProcessChunkedDataInternal()
         {
-            var encodedDataAvail = _transport2HttpHandler.ReceiveBufferDataLength;
+            var encodedDataAvail = _transport2HttpHandler.ReceiveDataLength;
             var encodedDataOfs = _transport2HttpHandler.StartBufferOffset + _transport2HttpHandler.ReceiveBufferPos;
             while (encodedDataAvail > 0 && _asyncCount > 0)
             {
@@ -160,32 +160,16 @@ namespace Nowin
 
         public void ConnectionClosed()
         {
-            var tcs = _tcs;
-            if (tcs != null)
-            {
-                tcs.TrySetCanceled();
-            }
+            _tcs?.TrySetCanceled();
         }
 
-        public override bool CanRead
-        {
-            get { return true; }
-        }
+        public override bool CanRead => true;
 
-        public override bool CanSeek
-        {
-            get { return false; }
-        }
+        public override bool CanSeek => false;
 
-        public override bool CanWrite
-        {
-            get { return true; }
-        }
+        public override bool CanWrite => true;
 
-        public override long Length
-        {
-            get { return (long)_transport2HttpHandler.RequestContentLength; }
-        }
+        public override long Length => (long)_transport2HttpHandler.RequestContentLength;
 
         public override long Position
         {
@@ -193,10 +177,7 @@ namespace Nowin
             set { throw new InvalidOperationException(); }
         }
 
-        public ulong ResponseLength
-        {
-            get { return _responsePosition; }
-        }
+        public ulong ResponseLength => _responsePosition;
 
         public override void Flush()
         {

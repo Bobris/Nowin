@@ -99,15 +99,9 @@ namespace Nowin
 
         public IHttpLayerCallback Callback { set; internal get; }
 
-        public WebSocketAccept WebSocketAcceptFunc
-        {
-            get { return WebSocketAcceptMethod; }
-        }
+        public WebSocketAccept WebSocketAcceptFunc => WebSocketAcceptMethod;
 
-        public object Capabilities
-        {
-            get { return _owinCapabilities; }
-        }
+        public object Capabilities => _owinCapabilities;
 
         public OwinHandler(OwinApp app, IDictionary<string, object> owinCapabilities, int handlerId)
         {
@@ -146,9 +140,7 @@ namespace Nowin
 
         void ReportFinishOfAppFunc()
         {
-            var tcs = _lastRequestFinished;
-            if (tcs != null)
-                tcs.SetResult(true);
+            _lastRequestFinished?.SetResult(true);
         }
 
         void OnSendingHeadersMethod(Action<object> action, object state)
@@ -163,9 +155,7 @@ namespace Nowin
 
         public Task WaitForFinishingLastRequest()
         {
-            if (_lastRequestFinished == null)
-                return null;
-            return _lastRequestFinished.Task;
+            return _lastRequestFinished?.Task;
         }
 
         public void PrepareForRequest()
@@ -368,10 +358,8 @@ namespace Nowin
             if (!success)
             {
                 _webSocketReceiveState = WebSocketReceiveState.Close;
-                var tcs = _webSocketReceiveTcs;
-                if (tcs != null) tcs.SetCanceled();
-                var tcs2 = _webSocketTcsReceivedClose;
-                if (tcs2 != null) tcs2.TrySetResult(null);
+                _webSocketReceiveTcs?.SetCanceled();
+                _webSocketTcsReceivedClose?.TrySetResult(null);
                 return;
             }
             ParseWebSocketReceivedData();
@@ -557,11 +545,7 @@ namespace Nowin
                         _webSocketReceiveTcs = null;
                         tcs.SetResult(new WebSocketReceiveTuple(0x8, true, 0));
                     }
-                    var tcs2 = _webSocketTcsReceivedClose;
-                    if (tcs2 != null)
-                    {
-                        tcs2.TrySetResult(null);
-                    }
+                    _webSocketTcsReceivedClose?.TrySetResult(null);
                     return;
                 }
                 var len = (int)Math.Min(_webSocketFrameLen, (ulong)_webSocketReceiveSegment.Count);

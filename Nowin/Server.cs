@@ -69,9 +69,8 @@ namespace Nowin
                     ListenSocket.Bind(_parameters.EndPoint);
                     break;
                 }
-                catch
+                catch when(start + _parameters.RetrySocketBindingTime > DateTime.UtcNow)
                 {
-                    if (start + _parameters.RetrySocketBindingTime <= DateTime.UtcNow) throw;
                 }
                 Thread.Sleep(50);
             }
@@ -81,17 +80,11 @@ namespace Nowin
             _blocks.Add(new ConnectionBlock(this, _layerFactory, initialConnectionCount));
         }
 
-        public int ConnectionCount
-        {
-            get { return ConnectedCount; }
-        }
+        public int ConnectionCount => ConnectedCount;
 
-        public int CurrentMaxConnectionCount
-        {
-            get { return AllocatedConnections; }
-        }
+        public int CurrentMaxConnectionCount => AllocatedConnections;
 
-        public ExecutionContextFlow ContextFlow { get { return _parameters.ContextFlow; } }
+        public ExecutionContextFlow ContextFlow => _parameters.ContextFlow;
 
         public void Dispose()
         {
@@ -100,10 +93,7 @@ namespace Nowin
                 _connectionAllocationStrategy = new FinishingAllocationStrategy();
             }
 
-            if (ListenSocket != null)
-            {
-                ListenSocket.Dispose();
-            }
+            ListenSocket?.Dispose();
 
             ConnectionBlock block;
             while (_blocks.TryTake(out block))

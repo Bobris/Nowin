@@ -2,13 +2,13 @@ using System.Diagnostics;
 
 namespace Nowin
 {
-    internal static class TraceSources
+    static class TraceSources
     {
         public static readonly ReleaseTraceSource Core = new ReleaseTraceSource("Nowin.Core");
         public static readonly DebugTraceSource CoreDebug = new DebugTraceSource("Nowin.Core.Debug");
     }
 
-    internal class ReleaseTraceSource : TraceSource
+    class ReleaseTraceSource : TraceSource
     {
         public ReleaseTraceSource(string name) : base(name) { }
         public ReleaseTraceSource(string name, SourceLevels defaultLevel) : base(name, defaultLevel) { }
@@ -44,7 +44,7 @@ namespace Nowin
         public void TraceError(string format, params object[] args) { TraceEvent(TraceEventType.Error, 0, format, args); }
     }
 
-    internal class DebugTraceSource : TraceSource
+    class DebugTraceSource : TraceSource
     {
         public DebugTraceSource(string name) : base(name) { }
         public DebugTraceSource(string name, SourceLevels defaultLevel) : base(name, defaultLevel) { }

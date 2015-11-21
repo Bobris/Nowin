@@ -111,11 +111,6 @@ namespace Nowin
             StartNextReceive();
         }
 
-        public int ReceiveBufferDataLength
-        {
-            get { return _receiveBufferFullness - StartBufferOffset - ReceiveBufferPos; }
-        }
-
         void ParseRequest(byte[] buffer, int startBufferOffset, int posOfReqEnd)
         {
             _isWebSocket = false;
@@ -132,7 +127,7 @@ namespace Nowin
             _requestMethod = ParseHttpMethod(buffer, ref pos);
             _requestScheme = _isSsl ? "https" : "http";
             string reqHost;
-            ParseHttpPath(buffer, ref pos, out _requestPath, out _requestQueryString, ref _requestScheme, out reqHost);
+            ParseHttpPath(buffer, ref pos, out _requestPath, out _requestQueryString, out reqHost);
             ParseHttpProtocol(buffer, ref pos, out _requestProtocol);
             if (!SkipCrLf(buffer, ref pos)) throw new Exception("Request line does not end with CRLF");
             _isKeepAlive = !_isHttp10;
@@ -206,7 +201,7 @@ namespace Nowin
             {
                 if (!ulong.TryParse(value, out RequestContentLength))
                 {
-                    throw new InvalidDataException(string.Format("Wrong request content length: {0}", value));
+                    throw new InvalidDataException($"Wrong request content length: {value}");
                 }
             }
             else if (name.Equals("Transfer-Encoding", StringComparison.OrdinalIgnoreCase))
@@ -304,10 +299,10 @@ namespace Nowin
             var p = pos;
             SearchForFirstSpaceOrEndOfLine(buffer, ref p);
             reqProtocol = StringFromLatin1(buffer, pos, p);
-            throw new InvalidDataException(string.Format("Unsupported request protocol: {0}", reqProtocol));
+            throw new InvalidDataException($"Unsupported request protocol: {reqProtocol}");
         }
 
-        void ParseHttpPath(byte[] buffer, ref int pos, out string reqPath, out string reqQueryString, ref string reqScheme, out string reqHost)
+        void ParseHttpPath(byte[] buffer, ref int pos, out string reqPath, out string reqQueryString, out string reqHost)
         {
             var start = pos;
             var p = start;
@@ -367,12 +362,12 @@ namespace Nowin
         {
             var chs = GetCharBuffer();
             var used = 0;
-            var cch = 0;
             var cchacc = 0;
             var cchlen = 0;
             while (start < end)
             {
                 var ch = buffer[start++];
+                int cch;
                 if (ch == '%')
                 {
                     ch = buffer[start++];
@@ -644,11 +639,12 @@ namespace Nowin
             }
             foreach (var header in _responseHeaders)
             {
-                if (header.Value is String)
+                var str = header.Value as string;
+                if (str != null)
                 {
                     HeaderAppend(header.Key);
                     HeaderAppend(": ");
-                    HeaderAppend((String)header.Value);
+                    HeaderAppend(str);
                     HeaderAppendCrLf();
                 }
                 else
@@ -707,7 +703,7 @@ namespace Nowin
         void NormalizeReceiveBuffer()
         {
             if (ReceiveBufferPos == 0) return;
-            Array.Copy(_buffer, StartBufferOffset + ReceiveBufferPos, _buffer, StartBufferOffset, _receiveBufferFullness - StartBufferOffset - ReceiveBufferPos);
+            Array.Copy(_buffer, StartBufferOffset + ReceiveBufferPos, _buffer, StartBufferOffset, ReceiveDataLength);
             _receiveBufferFullness -= ReceiveBufferPos;
             ReceiveBufferPos = 0;
         }
@@ -836,7 +832,8 @@ namespace Nowin
             {
                 if (_buffer != buffer) throw new InvalidOperationException();
                 FillResponse(false);
-                if (_responseHeaderPos > ReceiveBufferSize) throw new ArgumentException(string.Format("Response headers are longer({0}) than buffer({1})", _responseHeaderPos, ReceiveBufferSize));
+                if (_responseHeaderPos > ReceiveBufferSize) throw new ArgumentException(
+                    $"Response headers are longer({_responseHeaderPos}) than buffer({ReceiveBufferSize})");
                 if (_isMethodHead)
                     len = 0;
                 if (_responseIsChunked && len != 0)
@@ -929,10 +926,10 @@ namespace Nowin
             Callback.StartSend(_buffer, _constantsOffset, Server.Status100Continue.Length);
         }
 
-        public void StartNextReceive()
+        void StartNextReceive()
         {
             if (_clientClosedConnection) return;
-            var shouldStartRecv = false;
+            bool shouldStartRecv;
             lock (_receiveProcessingLock)
             {
                 shouldStartRecv = ProcessReceive();
@@ -1023,7 +1020,7 @@ namespace Nowin
             Debug.Assert(_receiveBufferFullness == offset);
             TraceSources.CoreDebug.TraceInformation("======= Offset {0}, Length {1}", offset - StartBufferOffset, length);
             TraceSources.CoreDebug.TraceInformation(Encoding.UTF8.GetString(buffer, offset, length));
-            var startNextRecv = false;
+            bool startNextRecv;
             lock (_receiveProcessingLock)
             {
                 _receiving = false;
@@ -1046,7 +1043,7 @@ namespace Nowin
         /// <returns>true if new read request should be started</returns>
         bool ProcessReceive()
         {
-            while (ReceiveBufferDataLength > 0)
+            while (ReceiveDataLength > 0)
             {
                 if (_waitingForRequest)
                 {
@@ -1073,7 +1070,7 @@ namespace Nowin
                             ReceiveBufferPos = posOfReqEnd - StartBufferOffset;
                             ParseRequest(_buffer, peqStartBufferOffset, posOfReqEnd);
                             var startRealReceive = false;
-                            if (ReceiveBufferDataLength == 0 && !_receiving)
+                            if (ReceiveDataLength == 0 && !_receiving)
                             {
                                 _receiving = true;
                                 ReceiveBufferPos = 0;
@@ -1120,11 +1117,7 @@ namespace Nowin
                     }
                     else if (_startedReceiveRequestData)
                     {
-                        _startedReceiveRequestData = false;
-                        if (_reqRespStream.ProcessDataAndShouldReadMore())
-                        {
-                            _startedReceiveRequestData = true;
-                        }
+                        _startedReceiveRequestData = _reqRespStream.ProcessDataAndShouldReadMore();
                     }
                     else
                     {
@@ -1137,7 +1130,7 @@ namespace Nowin
                 ReceiveBufferPos = 0;
                 _receiveBufferFullness = StartBufferOffset;
             }
-            if (ReceiveBufferDataLength == 0 || _waitingForRequest)
+            if (ReceiveDataLength == 0 || _waitingForRequest)
             {
                 if (!_receiving && !_clientClosedConnection)
                 {
@@ -1195,65 +1188,29 @@ namespace Nowin
             }
         }
 
-        public CancellationToken CallCancelled
-        {
-            get { return _cancellation.Token; }
-        }
+        public CancellationToken CallCancelled => _cancellation.Token;
 
-        public Stream ReqRespBody
-        {
-            get { return _reqRespStream; }
-        }
+        public Stream ReqRespBody => _reqRespStream;
 
-        public string RequestPath
-        {
-            get { return _requestPath; }
-        }
+        public string RequestPath => _requestPath;
 
-        public string RequestQueryString
-        {
-            get { return _requestQueryString; }
-        }
+        public string RequestQueryString => _requestQueryString;
 
-        public string RequestMethod
-        {
-            get { return _requestMethod; }
-        }
+        public string RequestMethod => _requestMethod;
 
-        public string RequestScheme
-        {
-            get { return _requestScheme; }
-        }
+        public string RequestScheme => _requestScheme;
 
-        public string RequestProtocol
-        {
-            get { return _requestProtocol; }
-        }
+        public string RequestProtocol => _requestProtocol;
 
-        public string RemoteIpAddress
-        {
-            get { return _remoteIpAddress ?? (_remoteIpAddress = _remoteEndPoint.Address.ToString()); }
-        }
+        public string RemoteIpAddress => _remoteIpAddress ?? (_remoteIpAddress = _remoteEndPoint.Address.ToString());
 
-        public X509Certificate ClientCertificate
-        {
-            get { return _clientCertificate; }
-        }
+        public X509Certificate ClientCertificate => _clientCertificate;
 
-        public string RemotePort
-        {
-            get { return _remotePort ?? (_remotePort = _remoteEndPoint.Port.ToString(CultureInfo.InvariantCulture)); }
-        }
+        public string RemotePort => _remotePort ?? (_remotePort = _remoteEndPoint.Port.ToString(CultureInfo.InvariantCulture));
 
-        public string LocalIpAddress
-        {
-            get { return _localIpAddress ?? (_localIpAddress = _localEndPoint.Address.ToString()); }
-        }
+        public string LocalIpAddress => _localIpAddress ?? (_localIpAddress = _localEndPoint.Address.ToString());
 
-        public string LocalPort
-        {
-            get { return _localPort ?? (_localPort = _localEndPoint.Port.ToString(CultureInfo.InvariantCulture)); }
-        }
+        public string LocalPort => _localPort ?? (_localPort = _localEndPoint.Port.ToString(CultureInfo.InvariantCulture));
 
         public bool IsLocal
         {
@@ -1264,10 +1221,7 @@ namespace Nowin
             }
         }
 
-        public bool IsWebSocketReq
-        {
-            get { return _webSocketReqCondition == WebSocketReqConditions.AllSatisfied; }
-        }
+        public bool IsWebSocketReq => _webSocketReqCondition == WebSocketReqConditions.AllSatisfied;
 
         public int ResponseStatusCode
         {
@@ -1332,11 +1286,12 @@ namespace Nowin
             HeaderAppendCrLf();
             foreach (var header in _responseHeaders)
             {
-                if (header.Value is String)
+                var str = header.Value as string;
+                if (str != null)
                 {
                     HeaderAppend(header.Key);
                     HeaderAppend(": ");
-                    HeaderAppend((String)header.Value);
+                    HeaderAppend(str);
                     HeaderAppendCrLf();
                 }
                 else
@@ -1413,25 +1368,13 @@ namespace Nowin
                 Callback.StartDisconnect();
         }
 
-        public bool HeadersSend
-        {
-            get { return _responseHeadersSend; }
-        }
+        public bool HeadersSend => _responseHeadersSend;
 
-        public byte[] Buffer
-        {
-            get { return _buffer; }
-        }
+        public byte[] Buffer => _buffer;
 
-        public int ReceiveDataOffset
-        {
-            get { return StartBufferOffset + ReceiveBufferPos; }
-        }
+        public int ReceiveDataOffset => StartBufferOffset + ReceiveBufferPos;
 
-        public int ReceiveDataLength
-        {
-            get { return _receiveBufferFullness - StartBufferOffset - ReceiveBufferPos; }
-        }
+        public int ReceiveDataLength => _receiveBufferFullness - StartBufferOffset - ReceiveBufferPos;
 
         public void ConsumeReceiveData(int count)
         {
@@ -1444,18 +1387,12 @@ namespace Nowin
             StartNextReceive();
         }
 
-        public int SendDataOffset
-        {
-            get { return StartBufferOffset + ReceiveBufferSize; }
-        }
+        public int SendDataOffset => StartBufferOffset + ReceiveBufferSize;
 
-        public int SendDataLength
-        {
-            get { return ReceiveBufferSize * 2 + Transport2HttpFactory.AdditionalSpace; }
-        }
+        public int SendDataLength => ReceiveBufferSize * 2 + Transport2HttpFactory.AdditionalSpace;
 
         public int ReceiveBufferPos;
-        private X509Certificate _clientCertificate;
+        X509Certificate _clientCertificate;
 
         public Task SendData(byte[] buffer, int offset, int length)
         {

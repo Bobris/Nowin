@@ -3,9 +3,9 @@ using System.Threading;
 
 namespace Nowin
 {
-    public class DateHeaderValueProvider : IDateHeaderValueProvider
+    public class DateHeaderValueProvider : IDateHeaderValueProvider, IDisposable
     {
-        Timer _timer;
+        readonly Timer _timer;
         volatile string _value;
 
         public DateHeaderValueProvider()
@@ -19,9 +19,11 @@ namespace Nowin
             _value = DateTime.UtcNow.ToString("r");
         }
 
-        public string Value
+        public string Value => _value;
+
+        public void Dispose()
         {
-            get { return _value; }
+            _timer.Dispose();
         }
     }
 }

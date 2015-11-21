@@ -14,7 +14,7 @@ namespace Nowin
         {
             if (properties == null)
             {
-                throw new ArgumentNullException("properties");
+                throw new ArgumentNullException(nameof(properties));
             }
 
             properties[OwinKeys.Version] = "1.0";
@@ -31,12 +31,12 @@ namespace Nowin
         {
             if (app == null)
             {
-                throw new ArgumentNullException("app");
+                throw new ArgumentNullException(nameof(app));
             }
 
             if (properties == null)
             {
-                throw new ArgumentNullException("properties");
+                throw new ArgumentNullException(nameof(properties));
             }
 
             var capabilities = properties.Get<IDictionary<string, object>>(OwinKeys.ServerCapabilitiesKey)

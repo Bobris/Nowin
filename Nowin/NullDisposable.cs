@@ -4,7 +4,7 @@ namespace Nowin
 {
     public sealed class NullDisposable : IDisposable
     {
-        private NullDisposable()
+        NullDisposable()
         {
         }
 

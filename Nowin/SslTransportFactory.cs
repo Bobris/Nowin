@@ -18,15 +18,9 @@ namespace Nowin
             _next = next;
         }
 
-        public int PerConnectionBufferSize
-        {
-            get { return _next.PerConnectionBufferSize; }
-        }
+        public int PerConnectionBufferSize => _next.PerConnectionBufferSize;
 
-        public int CommonBufferSize
-        {
-            get { return _next.CommonBufferSize; }
-        }
+        public int CommonBufferSize => _next.CommonBufferSize;
 
         public void InitCommonBuffer(byte[] buffer, int offset)
         {

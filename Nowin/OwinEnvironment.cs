@@ -6,7 +6,7 @@ using System.Threading;
 
 namespace Nowin
 {
-    internal sealed partial class OwinEnvironment : IDictionary<string, object>
+    sealed partial class OwinEnvironment : IDictionary<string, object>
     {
         readonly OwinHandler _handler;
         IHttpLayerCallback _callback;
@@ -26,10 +26,7 @@ namespace Nowin
             PropertiesReset();
         }
 
-        internal IDictionary<string, object> Extra
-        {
-            get { return _extra; }
-        }
+        internal IDictionary<string, object> Extra => _extra;
 
         IDictionary<string, object> StrongExtra
         {
@@ -43,36 +40,21 @@ namespace Nowin
             }
         }
 
-        internal bool IsExtraDictionaryCreated
-        {
-            get { return _extra != WeakNilEnvironment; }
-        }
+        internal bool IsExtraDictionaryCreated => _extra != WeakNilEnvironment;
 
         class NilDictionary : IDictionary<string, object>
         {
-            private static readonly string[] EmptyKeys = new string[0];
-            private static readonly object[] EmptyValues = new object[0];
-            private static readonly IEnumerable<KeyValuePair<string, object>> EmptyKeyValuePairs = Enumerable.Empty<KeyValuePair<string, object>>();
+            static readonly string[] EmptyKeys = new string[0];
+            static readonly object[] EmptyValues = new object[0];
+            static readonly IEnumerable<KeyValuePair<string, object>> EmptyKeyValuePairs = Enumerable.Empty<KeyValuePair<string, object>>();
 
-            public int Count
-            {
-                get { return 0; }
-            }
+            public int Count => 0;
 
-            public bool IsReadOnly
-            {
-                get { return false; }
-            }
+            public bool IsReadOnly => false;
 
-            public ICollection<string> Keys
-            {
-                get { return EmptyKeys; }
-            }
+            public ICollection<string> Keys => EmptyKeys;
 
-            public ICollection<object> Values
-            {
-                get { return EmptyValues; }
-            }
+            public ICollection<object> Values => EmptyValues;
 
             public object this[string key]
             {
@@ -175,15 +157,9 @@ namespace Nowin
             return Contains(item) && Remove(item.Key);
         }
 
-        public int Count
-        {
-            get { return PropertiesKeys().Count() + Extra.Count; }
-        }
+        public int Count => PropertiesKeys().Count() + Extra.Count;
 
-        public bool IsReadOnly
-        {
-            get { return false; }
-        }
+        public bool IsReadOnly => false;
 
         public bool ContainsKey(string key)
         {
@@ -224,14 +200,8 @@ namespace Nowin
             }
         }
 
-        public ICollection<string> Keys
-        {
-            get { return PropertiesKeys().Concat(Extra.Keys).ToArray(); }
-        }
+        public ICollection<string> Keys => PropertiesKeys().Concat(Extra.Keys).ToArray();
 
-        public ICollection<object> Values
-        {
-            get { return PropertiesValues().Concat(Extra.Values).ToArray(); }
-        }
+        public ICollection<object> Values => PropertiesValues().Concat(Extra.Values).ToArray();
     }
 }

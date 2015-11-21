@@ -65,10 +65,7 @@ namespace Nowin
                     _tcsReceive.SetCanceled();
                 else
                     _tcsReceive.SetResult(length);
-                if (_callbackReceive != null)
-                {
-                    _callbackReceive(_tcsReceive.Task);
-                }
+                _callbackReceive?.Invoke(_tcsReceive.Task);
             }
 
             public override int Read(byte[] buffer, int offset, int count)
@@ -121,10 +118,7 @@ namespace Nowin
                 {
                     _tcsSend.SetException(exception);
                 }
-                if (_callbackSend != null)
-                {
-                    _callbackSend(_tcsSend.Task);
-                }
+                _callbackSend?.Invoke(_tcsSend.Task);
             }
 
             public override void Flush()
@@ -164,25 +158,13 @@ namespace Nowin
                 }
             }
 
-            public override bool CanRead
-            {
-                get { return true; }
-            }
+            public override bool CanRead => true;
 
-            public override bool CanSeek
-            {
-                get { return false; }
-            }
+            public override bool CanSeek => false;
 
-            public override bool CanWrite
-            {
-                get { return true; }
-            }
+            public override bool CanWrite => true;
 
-            public override long Length
-            {
-                get { return long.MaxValue; }
-            }
+            public override long Length => long.MaxValue;
 
             public override long Position { get; set; }
         }

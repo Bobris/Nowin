@@ -2,24 +2,20 @@ namespace Nowin
 {
     class ConnectionBlock
     {
-        readonly Server _server;
-        readonly int _connectionCount;
         readonly SaeaLayerCallback[] _connections;
 
         internal ConnectionBlock(Server server, ILayerFactory layerFactory, int connectionCount)
         {
-            _server = server;
-            _connectionCount = connectionCount;
-            _connections = new SaeaLayerCallback[_connectionCount];
+            _connections = new SaeaLayerCallback[connectionCount];
             var perConnectionBufferSize = layerFactory.PerConnectionBufferSize;
             var reserveAtEnd = layerFactory.CommonBufferSize;
-            var constantsOffset = checked(_connectionCount * perConnectionBufferSize);
+            var constantsOffset = checked(connectionCount * perConnectionBufferSize);
             var buffer = new byte[checked(constantsOffset + reserveAtEnd)];
             layerFactory.InitCommonBuffer(buffer, constantsOffset);
-            for (var i = 0; i < _connectionCount; i++)
+            for (var i = 0; i < connectionCount; i++)
             {
                 var handler = (ITransportLayerHandler)layerFactory.Create(buffer, i * perConnectionBufferSize, constantsOffset, i);
-                var callback = new SaeaLayerCallback(handler, _server.ListenSocket, _server, i, _server.ContextFlow);
+                var callback = new SaeaLayerCallback(handler, server.ListenSocket, server, i, server.ContextFlow);
                 _connections[i] = callback;
                 handler.PrepareAccept();
             }
@@ -30,8 +26,7 @@ namespace Nowin
             if (_connections == null) return;
             foreach (var connection in _connections)
             {
-                if (connection == null) continue;
-                connection.Dispose();
+                connection?.Dispose();
             }
         }
     }

@@ -30,12 +30,9 @@ namespace Nowin
             return _receiveBufferSize * 3 + AdditionalSpace;
         }
 
-        public int PerConnectionBufferSize { get; private set; }
+        public int PerConnectionBufferSize { get; }
 
-        public int CommonBufferSize
-        {
-            get { return MyCommonBufferSize() + _next.CommonBufferSize; }
-        }
+        public int CommonBufferSize => MyCommonBufferSize() + _next.CommonBufferSize;
 
         static int MyCommonBufferSize()
         {
