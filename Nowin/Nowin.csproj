@@ -45,12 +45,12 @@
     <Compile Include="ChunkedDecoder.cs" />
     <Compile Include="ConnectionAllocationStrategy.cs" />
     <Compile Include="ConnectionBlock.cs" />
-    <Compile Include="DateHeaderValueProvider.cs" />
+    <Compile Include="TimeBasedService.cs" />
     <Compile Include="DictionaryExtensions.cs" />
     <Compile Include="ExecutionContextFlow.cs" />
     <Compile Include="ExecutionContextFlowSuppresser.cs" />
     <Compile Include="GlobalSuppressions.cs" />
-    <Compile Include="IDateHeaderValueProvider.cs" />
+    <Compile Include="ITimeBasedService.cs" />
     <Compile Include="IHttpLayerCallback.cs" />
     <Compile Include="IHttpLayerHandler.cs" />
     <Compile Include="IIpIsLocalChecker.cs" />

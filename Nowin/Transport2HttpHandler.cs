@@ -31,7 +31,7 @@ namespace Nowin
         bool _responseHeadersSend;
         readonly bool _isSsl;
         readonly string _serverName;
-        readonly IDateHeaderValueProvider _dateProvider;
+        readonly ITimeBasedService _dateProvider;
         readonly IIpIsLocalChecker _ipIsLocalChecker;
         readonly ReqRespStream _reqRespStream;
         volatile TaskCompletionSource<bool> _tcsSend;
@@ -87,7 +87,7 @@ namespace Nowin
         bool _dateOverwrite;
         bool _startedReceiveRequestData;
 
-        public Transport2HttpHandler(IHttpLayerHandler next, bool isSsl, string serverName, IDateHeaderValueProvider dateProvider, IIpIsLocalChecker ipIsLocalChecker, byte[] buffer, int startBufferOffset, int receiveBufferSize, int constantsOffset, ThreadLocal<char[]> charBuffer, int handlerId)
+        public Transport2HttpHandler(IHttpLayerHandler next, bool isSsl, string serverName, ITimeBasedService dateProvider, IIpIsLocalChecker ipIsLocalChecker, byte[] buffer, int startBufferOffset, int receiveBufferSize, int constantsOffset, ThreadLocal<char[]> charBuffer, int handlerId)
         {
             _next = next;
             StartBufferOffset = startBufferOffset;
@@ -635,7 +635,7 @@ namespace Nowin
             if (!_dateOverwrite)
             {
                 HeaderAppend("Date: ");
-                HeaderAppend(_dateProvider.Value);
+                HeaderAppend(_dateProvider.DateHeaderValue);
                 HeaderAppendCrLf();
             }
             foreach (var header in _responseHeaders)
@@ -788,7 +788,7 @@ namespace Nowin
             _lastPacket = true;
             try
             {
-                response = "HTTP/1.1 " + response + "\r\nServer: " + _serverName + "\r\nDate: " + _dateProvider.Value + "\r\nContent-Length: 0\r\n\r\n";
+                response = "HTTP/1.1 " + response + "\r\nServer: " + _serverName + "\r\nDate: " + _dateProvider.DateHeaderValue + "\r\nContent-Length: 0\r\n\r\n";
                 var resbytes = Encoding.UTF8.GetBytes(response);
                 Callback.StartSend(resbytes, 0, resbytes.Length);
             }
@@ -1141,14 +1141,70 @@ namespace Nowin
                     if (_startedReceiveData)
                     {
                         _startedReceiveData = false;
-                        _next.FinishReceiveData(true);
+                        var reenter = false;
+                        var currentAcceptCounter = _acceptCounter;
+                        try
+                        {
+                            Monitor.Exit(_receiveProcessingLock);
+                            reenter = true;
+                            _next.FinishReceiveData(true);
+                            reenter = false;
+                            Monitor.Enter(_receiveProcessingLock);
+                            if (currentAcceptCounter != _acceptCounter)
+                            {
+                                // Delayed thread different connection already running this one needs to stop ASAP
+                                return false;
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            if (reenter)
+                                Monitor.Enter(_receiveProcessingLock);
+                            if (currentAcceptCounter != _acceptCounter)
+                            {
+                                // Delayed thread different connection already running this one needs to stop ASAP
+                                return false;
+                            }
+                            ResponseStatusCode = 5000; // Means hardcoded 500 Internal Server Error
+                            ResponseReasonPhase = null;
+                            ResponseFinished();
+                            return false;
+                        }
                     }
                     else if (_startedReceiveRequestData)
                     {
                         _startedReceiveRequestData = false;
-                        if (_reqRespStream.ProcessDataAndShouldReadMore())
+                        var reenter = false;
+                        var currentAcceptCounter = _acceptCounter;
+                        try
                         {
-                            _startedReceiveRequestData = true;
+                            Monitor.Exit(_receiveProcessingLock);
+                            reenter = true;
+                            if (_reqRespStream.ProcessDataAndShouldReadMore())
+                                {
+                                    _startedReceiveRequestData = true;
+                                }
+                            reenter = false;
+                            Monitor.Enter(_receiveProcessingLock);
+                            if (currentAcceptCounter != _acceptCounter)
+                            {
+                                // Delayed thread different connection already running this one needs to stop ASAP
+                                return false;
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            if (reenter)
+                                Monitor.Enter(_receiveProcessingLock);
+                            if (currentAcceptCounter != _acceptCounter)
+                            {
+                                // Delayed thread different connection already running this one needs to stop ASAP
+                                return false;
+                            }
+                            ResponseStatusCode = 5000; // Means hardcoded 500 Internal Server Error
+                            ResponseReasonPhase = null;
+                            ResponseFinished();
+                            return false;
                         }
                     }
                     else

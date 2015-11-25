@@ -12,7 +12,7 @@ namespace Nowin
         readonly IIpIsLocalChecker _ipIsLocalChecker;
         readonly ILayerFactory _next;
         readonly ThreadLocal<char[]> _charBuffer;
-        static readonly IDateHeaderValueProvider DateProvider = new DateHeaderValueProvider();
+        static readonly ITimeBasedService _dateProvider = new TimeBasedService(0);
 
         public Transport2HttpFactory(int receiveBufferSize, bool isSsl, string serverName, IIpIsLocalChecker ipIsLocalChecker, ILayerFactory next)
         {
@@ -48,7 +48,7 @@ namespace Nowin
         public ILayerHandler Create(byte[] buffer, int offset, int commonOffset, int handlerId)
         {
             var nextHandler = (IHttpLayerHandler)_next.Create(buffer, offset + MyPerConnectionBufferSize(), commonOffset + MyCommonBufferSize(), handlerId);
-            return new Transport2HttpHandler(nextHandler, _isSsl, _serverName, DateProvider, _ipIsLocalChecker, buffer, offset, _receiveBufferSize, commonOffset, _charBuffer, handlerId);
+            return new Transport2HttpHandler(nextHandler, _isSsl, _serverName, _dateProvider, _ipIsLocalChecker, buffer, offset, _receiveBufferSize, commonOffset, _charBuffer, handlerId);
         }
     }
 }
