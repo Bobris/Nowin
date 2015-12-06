@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Nowin
 {
-    public class ServerBuilder : IServerParameters
+    public class ServerBuilder : IServerParameters, IUpdateCertificate
     {
         IConnectionAllocationStrategy _connectionAllocationStrategy;
         IPEndPoint _endPoint;
@@ -161,5 +161,10 @@ namespace Nowin
         public SslProtocols Protocols => _protocols;
 
         public bool ClientCertificateRequired => _clientCertificateRequired;
+
+        public void UpdateCertificate(X509Certificate certificate)
+        {
+            _certificate = certificate;
+        }
     }
 }

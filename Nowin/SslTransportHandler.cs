@@ -4,7 +4,6 @@ using System.IO;
 using System.Net;
 using System.Net.Security;
 using System.Runtime.ExceptionServices;
-using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,9 +13,7 @@ namespace Nowin
     class SslTransportHandler : ITransportLayerHandler, ITransportLayerCallback
     {
         readonly ITransportLayerHandler _next;
-        readonly X509Certificate _serverCertificate;
-        readonly SslProtocols _protocols;
-        readonly bool _clientCertificateRequired;
+        readonly IServerParameters _serverParameters;
         SslStream _ssl;
         Task _authenticateTask;
         byte[] _recvBuffer;
@@ -24,12 +21,10 @@ namespace Nowin
         int _recvLength;
         readonly InputStream _inputStream;
 
-        public SslTransportHandler(ITransportLayerHandler next, X509Certificate serverCertificate, SslProtocols protocols, bool clientCertificateRequired)
+        public SslTransportHandler(ITransportLayerHandler next, IServerParameters serverParameters)
         {
-            _protocols = protocols;
-            _clientCertificateRequired = clientCertificateRequired;
             _next = next;
-            _serverCertificate = serverCertificate;
+            _serverParameters = serverParameters;
             _inputStream = new InputStream(this);
             next.Callback = this;
         }
@@ -196,14 +191,14 @@ namespace Nowin
             try
             {
                 _ssl = new SslStream(_inputStream, true);
-                _authenticateTask = _ssl.AuthenticateAsServerAsync(_serverCertificate, _clientCertificateRequired, _protocols, false).ContinueWith((t, selfObject) =>
-                {
-                    var self = (SslTransportHandler)selfObject;
-                    if (t.IsFaulted || t.IsCanceled)
-                        self.Callback.StartDisconnect();
-                    else
-                        _next.SetRemoteCertificate(_ssl.RemoteCertificate);
-                }, this);
+                _authenticateTask = _ssl.AuthenticateAsServerAsync(_serverParameters.Certificate, _serverParameters.ClientCertificateRequired, _serverParameters.Protocols, false).ContinueWith((t, selfObject) =>
+                  {
+                      var self = (SslTransportHandler)selfObject;
+                      if (t.IsFaulted || t.IsCanceled)
+                          self.Callback.StartDisconnect();
+                      else
+                          _next.SetRemoteCertificate(_ssl.RemoteCertificate);
+                  }, this);
                 _next.FinishAccept(_recvBuffer, _recvOffset, 0, remoteEndPoint, localEndPoint);
             }
             catch (Exception)

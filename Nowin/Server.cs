@@ -58,7 +58,7 @@ namespace Nowin
             _layerFactory = new Transport2HttpFactory(_parameters.BufferSize, isSsl, _parameters.ServerHeader, _ipIsLocalChecker, _layerFactory);
             if (isSsl)
             {
-                _layerFactory = new SslTransportFactory(_parameters.Certificate, _parameters.Protocols, _layerFactory, _parameters.ClientCertificateRequired);
+                _layerFactory = new SslTransportFactory(_parameters, _layerFactory);
             }
             ListenSocket = new Socket(_parameters.EndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
             var start = DateTime.UtcNow;

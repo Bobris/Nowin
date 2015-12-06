@@ -1,20 +1,13 @@
-using System.Security.Authentication;
-using System.Security.Cryptography.X509Certificates;
-
 namespace Nowin
 {
     public class SslTransportFactory : ILayerFactory
     {
-        readonly X509Certificate _certificate;
+        readonly IServerParameters _serverParameters;
         readonly ILayerFactory _next;
-        readonly SslProtocols _protocols;
-        readonly bool _clientCertificateRequired;
 
-        public SslTransportFactory(X509Certificate certificate, SslProtocols protocols, ILayerFactory next, bool clientCertificateRequired)
+        internal SslTransportFactory(IServerParameters serverParameters, ILayerFactory next)
         {
-            _certificate = certificate;
-            _protocols = protocols;
-            _clientCertificateRequired = clientCertificateRequired;
+            _serverParameters = serverParameters;
             _next = next;
         }
 
@@ -30,7 +23,7 @@ namespace Nowin
         public ILayerHandler Create(byte[] buffer, int offset, int commonOffset, int handlerId)
         {
             var nextHandler = (ITransportLayerHandler)_next.Create(buffer, offset, commonOffset, handlerId);
-            var handler = new SslTransportHandler(nextHandler, _certificate, _protocols, _clientCertificateRequired);
+            var handler = new SslTransportHandler(nextHandler, _serverParameters);
             return handler;
         }
     }

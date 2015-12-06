@@ -45,6 +45,7 @@
     <Compile Include="ChunkedDecoder.cs" />
     <Compile Include="ConnectionAllocationStrategy.cs" />
     <Compile Include="ConnectionBlock.cs" />
+    <Compile Include="IUpdateCertificate.cs" />
     <Compile Include="TimeBasedService.cs" />
     <Compile Include="DictionaryExtensions.cs" />
     <Compile Include="ExecutionContextFlow.cs" />
