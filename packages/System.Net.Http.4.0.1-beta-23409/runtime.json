@@ -1,0 +1,19 @@
+{
+  "runtimes": {
+    "win7": {
+      "System.Net.Http": {
+        "runtime.win7.System.Net.Http": "4.0.1-beta-23409"
+      }
+    },
+    "linux": {
+      "System.Net.Http": {
+        "runtime.linux.System.Net.Http": "4.0.1-beta-23409"
+      }
+    },
+    "osx.10.10": {
+      "System.Net.Http": {
+        "runtime.osx.10.10.System.Net.Http": "4.0.1-beta-23409"
+      }
+    }
+  }
+}

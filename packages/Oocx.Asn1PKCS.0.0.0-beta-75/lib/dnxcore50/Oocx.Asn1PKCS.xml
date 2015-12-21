@@ -1,0 +1,62 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Oocx.Asn1PKCS</name>
+    </assembly>
+    <members>
+        <member name="T:Oocx.Asn1PKCS.Asn1BaseTypes.BitString">
+            <summary>
+            https://msdn.microsoft.com/en-us/library/windows/desktop/bb540792(v=vs.85).aspx
+            </summary>
+        </member>
+        <member name="T:Oocx.Asn1PKCS.Asn1BaseTypes.Integer">
+            <see cref="!:https://msdn.microsoft.com/en-us/library/windows/desktop/bb540806(v=vs.85).aspx"/>
+        </member>
+        <member name="M:Oocx.Asn1PKCS.Asn1BaseTypes.LengthEncodingExtensions.ToVLQEncodedInt(System.UInt32)">
+            <summary>
+            https://en.wikipedia.org/wiki/Variable-length_quantity        
+            </summary>        
+        </member>
+        <member name="T:Oocx.Asn1PKCS.Asn1BaseTypes.ObjectIdentifier">
+            <summary>
+            https://msdn.microsoft.com/en-us/library/bb540809(v=vs.85).aspx
+            </summary>
+        </member>
+        <member name="P:Oocx.Asn1PKCS.PKCS10.CertificateRequestData.C">
+            <summary>
+            Country
+            </summary>
+            <see cref="!:http://www.alvestrand.no/objectid/2.5.4.6.html"/>
+        </member>
+        <member name="P:Oocx.Asn1PKCS.PKCS10.CertificateRequestData.S">
+            <summary>
+            State or Province Name
+            </summary>
+            <see cref="!:http://www.alvestrand.no/objectid/2.5.4.8.html"/>
+        </member>
+        <member name="P:Oocx.Asn1PKCS.PKCS10.CertificateRequestData.L">
+            <summary>
+            Locality Name
+            </summary>
+            <see cref="!:http://www.alvestrand.no/objectid/2.5.4.7.html"/>
+        </member>
+        <member name="P:Oocx.Asn1PKCS.PKCS10.CertificateRequestData.O">
+            <summary>
+            Organization Name
+            </summary>
+            <see cref="!:http://www.alvestrand.no/objectid/2.5.4.10.html"/>
+        </member>
+        <member name="P:Oocx.Asn1PKCS.PKCS10.CertificateRequestData.OU">
+            <summary>
+            Organizational Unit Name
+            </summary>
+            <see cref="!:http://www.alvestrand.no/objectid/2.5.4.11.html"/>
+        </member>
+        <member name="P:Oocx.Asn1PKCS.PKCS10.CertificateRequestData.CN">
+            <summary>
+            Common Name
+            </summary>
+            <see cref="!:http://www.alvestrand.no/objectid/2.5.4.3.html"/>
+        </member>
+    </members>
+</doc>

@@ -1,0 +1,14 @@
+{
+  "runtimes": {
+    "win7": {
+      "System.Threading": {
+        "runtime.win7.System.Threading": "4.0.11-beta-23409"
+      }
+    },
+    "unix": {
+      "System.Threading": {
+        "runtime.unix.System.Threading": "4.0.11-beta-23409"
+      }
+    }
+  }
+}
