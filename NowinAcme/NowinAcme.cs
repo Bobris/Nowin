@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Oocx.ACME.Common;
 
@@ -36,6 +37,16 @@ namespace NowinAcme
             {
                 _cfg.LogError(message, args);
             }
+        }
+
+        public static Task RedirectToHttps(IDictionary<string, object> env)
+        {
+            var query = (string)env["owin.RequestQueryString"];
+            var loc = "https://" + ((IDictionary<string, string[]>)env["owin.RequestHeaders"])["Host"].First() +
+                      env["owin.RequestPath"] + (query.Length > 0 ? "?" + query : "");
+            env["owin.ResponseStatusCode"] = 301;
+            ((IDictionary<string, string[]>)env["owin.ResponseHeaders"]).Add("Location", new[] { loc });
+            return Task.CompletedTask;
         }
 
         // This must run on server port 80 - Let's encrypt does not allow anything else
