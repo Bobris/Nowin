@@ -30,6 +30,7 @@ namespace Nowin
         readonly Socket _listenSocket;
         readonly Server _server;
         readonly int _handlerId;
+        SocketAsyncEventArgs _acceptEvent;
         SocketAsyncEventArgs _receiveEvent;
         SocketAsyncEventArgs _sendEvent;
         SocketAsyncEventArgs _disconnectEvent;
@@ -52,15 +53,19 @@ namespace Nowin
         void RecreateSaeas()
         {
             DisposeEventArgs();
+            _acceptEvent = new SocketAsyncEventArgs();
             _receiveEvent = new SocketAsyncEventArgs();
             _sendEvent = new SocketAsyncEventArgs();
             _disconnectEvent = new SocketAsyncEventArgs();
+            _acceptEvent.Completed += IoCompleted;
             _receiveEvent.Completed += IoCompleted;
             _sendEvent.Completed += IoCompleted;
             _disconnectEvent.Completed += IoCompleted;
+            _acceptEvent.DisconnectReuseSocket = RuntimeCorrectlyImplementsDisconnectReuseSocket;
             _receiveEvent.DisconnectReuseSocket = RuntimeCorrectlyImplementsDisconnectReuseSocket;
             _sendEvent.DisconnectReuseSocket = RuntimeCorrectlyImplementsDisconnectReuseSocket;
             _disconnectEvent.DisconnectReuseSocket = RuntimeCorrectlyImplementsDisconnectReuseSocket;
+            _acceptEvent.UserToken = this;
             _receiveEvent.UserToken = this;
             _sendEvent.UserToken = this;
             _disconnectEvent.UserToken = this;
@@ -80,7 +85,7 @@ namespace Nowin
             switch (e.LastOperation)
             {
                 case SocketAsyncOperation.Accept:
-                    Debug.Assert(e == self._receiveEvent);
+                    Debug.Assert(e == self._acceptEvent);
                     if (e.SocketError != SocketError.Success)
                     {
                         return;
@@ -112,12 +117,12 @@ namespace Nowin
                 oldState = _state;
                 newState = oldState & ~(int)State.Receive;
             } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
-            var bytesTransfered = _receiveEvent.BytesTransferred;
-            var socketError = _receiveEvent.SocketError;
+            var bytesTransfered = _acceptEvent.BytesTransferred;
+            var socketError = _acceptEvent.SocketError;
 
             if (bytesTransfered >= 0 && socketError == SocketError.Success)
             {
-                _socket = _receiveEvent.AcceptSocket;
+                _socket = _acceptEvent.AcceptSocket;
                 IPEndPoint remoteEndpoint = null;
                 IPEndPoint localEndpoint = null;
                 try
@@ -131,7 +136,7 @@ namespace Nowin
                 if (remoteEndpoint != null && localEndpoint != null)
                 {
                     _server.ReportNewConnectedClient();
-                    _handler.FinishAccept(_receiveEvent.Buffer, _receiveEvent.Offset, bytesTransfered,
+                    _handler.FinishAccept(_acceptEvent.Buffer, _acceptEvent.Offset, bytesTransfered,
                         remoteEndpoint, localEndpoint);
                     return;
                 }
@@ -195,7 +200,7 @@ namespace Nowin
             } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
             if (!RuntimeCorrectlyImplementsDisconnectReuseSocket)
             {
-                _receiveEvent.AcceptSocket = null;
+                _acceptEvent.AcceptSocket = null;
                 _socket.Close();
                 _socket.Dispose();
             }
@@ -219,9 +224,10 @@ namespace Nowin
             bool willRaiseEvent;
             try
             {
-                _receiveEvent.SetBuffer(buffer, offset, length);
+                _acceptEvent.SetBuffer(buffer, offset, length);
+
                 using (StopExecutionContextFlow())
-                    willRaiseEvent = _listenSocket.AcceptAsync(_receiveEvent);
+                    willRaiseEvent = _listenSocket.AcceptAsync(_acceptEvent);
             }
             catch (ObjectDisposedException)
             {
@@ -229,7 +235,7 @@ namespace Nowin
             }
             if (!willRaiseEvent)
             {
-                var e = _receiveEvent;
+                var e = _acceptEvent;
                 TraceSources.CoreDebug.TraceInformation("ID{0,-5} Sync Accept {1} {2} {3} {4}", _handlerId, e.LastOperation, e.Offset, e.BytesTransferred, e.SocketError);
                 ProcessAccept();
             }
