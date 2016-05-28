@@ -1,6 +1,8 @@
 Nowin
 =====
 
+This project is mostly discontinued. Please look at Kestrel. I will have to resurect this one only in case Kestrel will not be stable and usable soon enough. If you don't agree with this speak yourself up in issues.
+
 Fast and scalable Owin Web Server in pure .Net 4.5 (it does not use HttpListener)
 
 Additional library for Owin Acme client with sample Nowin server updating Certificate completely automatically, which also redirect all http to https.  
