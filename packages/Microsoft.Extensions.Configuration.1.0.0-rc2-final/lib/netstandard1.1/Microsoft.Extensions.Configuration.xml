@@ -1,0 +1,68 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Microsoft.Extensions.Configuration</name>
+    </assembly>
+    <members>
+        <member name="T:Microsoft.Extensions.Configuration.ConfigurationBuilder">
+            <summary>
+            Used to build key/value based configuration settings for use in an application.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Configuration.ConfigurationBuilder.Sources">
+            <summary>
+            Returns the sources used to obtain configuation values.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Configuration.ConfigurationBuilder.Properties">
+            <summary>
+            Gets a key/value collection that can be used to share data between the <see cref="T:Microsoft.Extensions.Configuration.IConfigurationBuilder"/>
+            and the registered <see cref="T:Microsoft.Extensions.Configuration.IConfigurationProvider"/>s.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.Configuration.ConfigurationBuilder.Add(Microsoft.Extensions.Configuration.IConfigurationSource)">
+            <summary>
+            Adds a new configuration source.
+            </summary>
+            <param name="source">The configuration source to add.</param>
+            <returns>The same <see cref="T:Microsoft.Extensions.Configuration.IConfigurationBuilder"/>.</returns>
+        </member>
+        <member name="M:Microsoft.Extensions.Configuration.ConfigurationBuilder.Build">
+            <summary>
+            Builds an <see cref="T:Microsoft.Extensions.Configuration.IConfiguration"/> with keys and values from the set of providers registered in
+            <see cref="P:Microsoft.Extensions.Configuration.ConfigurationBuilder.Sources"/>.
+            </summary>
+            <returns>An <see cref="T:Microsoft.Extensions.Configuration.IConfigurationRoot"/> with keys and values from the registered providers.</returns>
+        </member>
+        <member name="M:Microsoft.Extensions.Configuration.ConfigurationProvider.OnReload">
+            <summary>
+            Fires the Change Token
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.Configuration.DefaultConfigurationBuilderExtensions.AddInMemoryCollection(Microsoft.Extensions.Configuration.IConfigurationBuilder)">
+            <summary>
+            Adds the memory configuration provider to <paramref name="configurationBuilder"/>.
+            </summary>
+            <param name="configurationBuilder">The <see cref="T:Microsoft.Extensions.Configuration.IConfigurationBuilder"/> to add to.</param>
+            <returns>The <see cref="T:Microsoft.Extensions.Configuration.IConfigurationBuilder"/>.</returns>
+        </member>
+        <member name="M:Microsoft.Extensions.Configuration.DefaultConfigurationBuilderExtensions.AddInMemoryCollection(Microsoft.Extensions.Configuration.IConfigurationBuilder,System.Collections.Generic.IEnumerable{System.Collections.Generic.KeyValuePair{System.String,System.String}})">
+            <summary>
+            Adds the memory configuration provider to <paramref name="configurationBuilder"/>.
+            </summary>
+            <param name="configurationBuilder">The <see cref="T:Microsoft.Extensions.Configuration.IConfigurationBuilder"/> to add to.</param>
+            <param name="initialData">The data to add to memory configuration provider.</param>
+            <returns>The <see cref="T:Microsoft.Extensions.Configuration.IConfigurationBuilder"/>.</returns>
+        </member>
+        <member name="P:Microsoft.Extensions.Configuration.Resources.Error_NoSources">
+            <summary>
+            A configuration provider is not registered. Please register one before setting a value.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.Configuration.Resources.FormatError_NoSources">
+            <summary>
+            A configuration provider is not registered. Please register one before setting a value.
+            </summary>
+        </member>
+    </members>
+</doc>

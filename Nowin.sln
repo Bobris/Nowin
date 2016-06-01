@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.23107.0
+VisualStudioVersion = 14.0.25123.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NowinSample", "NowinSample\NowinSample.csproj", "{59409616-C3C9-4962-B965-2F8E107E51BA}"
 EndProject
@@ -16,6 +16,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NowinAcme", "NowinAcme\NowinAcme.csproj", "{8EDEC294-9E0B-4E51-88B7-98C1FA4E00E1}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NowinAcmeSample", "NowinAcmeSample\NowinAcmeSample.csproj", "{39CECD4E-F976-4FB0-8E07-ED9C9A00B647}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KestrelTest", "KestrelTest\KestrelTest.csproj", "{E0FB0135-C123-4BF1-94DB-551C0380883C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -51,6 +53,10 @@ Global
 		{39CECD4E-F976-4FB0-8E07-ED9C9A00B647}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{39CECD4E-F976-4FB0-8E07-ED9C9A00B647}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{39CECD4E-F976-4FB0-8E07-ED9C9A00B647}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E0FB0135-C123-4BF1-94DB-551C0380883C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E0FB0135-C123-4BF1-94DB-551C0380883C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E0FB0135-C123-4BF1-94DB-551C0380883C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E0FB0135-C123-4BF1-94DB-551C0380883C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

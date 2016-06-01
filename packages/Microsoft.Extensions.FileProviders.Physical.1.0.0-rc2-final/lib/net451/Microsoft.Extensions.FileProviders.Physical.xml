@@ -1,0 +1,65 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Microsoft.Extensions.FileProviders.Physical</name>
+    </assembly>
+    <members>
+        <member name="T:Microsoft.Extensions.FileProviders.CompositeDisposable">
+            <summary>
+            Represents a composition of <see cref="T:System.IDisposable"/>.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.FileProviders.CompositeDisposable.#ctor(System.Collections.Generic.IList{System.IDisposable})">
+            <summary>
+            Creates a new instance of <see cref="T:Microsoft.Extensions.FileProviders.CompositeDisposable"/>.
+            </summary>
+            <param name="disposables">The list of <see cref="T:System.IDisposable"/> to compose.</param>
+        </member>
+        <member name="T:Microsoft.Extensions.FileProviders.CompositeFileChangeToken">
+            <summary>
+            Represents a composition of <see cref="T:Microsoft.Extensions.Primitives.IChangeToken"/>.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.FileProviders.CompositeFileChangeToken.#ctor(System.Collections.Generic.IList{Microsoft.Extensions.Primitives.IChangeToken})">
+            <summary>
+            Creates a new instance of <see cref="T:Microsoft.Extensions.FileProviders.CompositeFileChangeToken"/>.
+            </summary>
+            <param name="changeTokens">The list of <see cref="T:Microsoft.Extensions.Primitives.IChangeToken"/> to compose.</param>
+        </member>
+        <member name="T:Microsoft.Extensions.FileProviders.NotFoundFileInfo">
+            <summary>
+            Represents a non-existing file.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Extensions.FileProviders.PhysicalFileProvider">
+            <summary>
+            Looks up files using the on-disk file system
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.FileProviders.PhysicalFileProvider.#ctor(System.String)">
+            <summary>
+            Creates a new instance of a PhysicalFileProvider at the given root directory.
+            </summary>
+            <param name="root">The root directory. This should be an absolute path.</param>
+        </member>
+        <member name="P:Microsoft.Extensions.FileProviders.PhysicalFileProvider.Root">
+            <summary>
+            The root directory for this instance.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.FileProviders.PhysicalFileProvider.GetFileInfo(System.String)">
+            <summary>
+            Locate a file at the given path by directly mapping path segments to physical directories.
+            </summary>
+            <param name="subpath">A path under the root directory</param>
+            <returns>The file information. Caller must check Exists property. </returns>
+        </member>
+        <member name="M:Microsoft.Extensions.FileProviders.PhysicalFileProvider.GetDirectoryContents(System.String)">
+            <summary>
+            Enumerate a directory at the given path, if any.
+            </summary>
+            <param name="subpath">A path under the root directory</param>
+            <returns>Contents of the directory. Caller must check Exists property.</returns>
+        </member>
+    </members>
+</doc>

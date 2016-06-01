@@ -1,0 +1,700 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Microsoft.AspNetCore.Server.Kestrel</name>
+    </assembly>
+    <members>
+        <member name="P:Microsoft.AspNetCore.Server.Kestrel.KestrelServerOptions.MaxPooledStreams">
+            <summary>
+            Gets or sets value that instructs <seealso cref="T:Microsoft.AspNetCore.Server.Kestrel.KestrelServer"/> whether it is safe to 
+            pool the Request and Response <seealso cref="T:System.IO.Stream"/> objects
+            for another request after the Response's OnCompleted callback has fired. 
+            When this values is greater than zero, it is not safe to retain references to feature components after this event has fired.
+            Value is zero by default.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNetCore.Server.Kestrel.KestrelServerOptions.MaxPooledHeaders">
+            <summary>
+            Gets or sets value that instructs <seealso cref="T:Microsoft.AspNetCore.Server.Kestrel.KestrelServer"/> whether it is safe to 
+            pool the Request and Response headers
+            for another request after the Response's OnCompleted callback has fired. 
+            When this values is greater than zero, it is not safe to retain references to feature components after this event has fired.
+            Value is zero by default.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNetCore.Server.Kestrel.KestrelServerOptions.ShutdownTimeout">
+            <summary>
+            The amount of time after the server begins shutting down before connections will be forcefully closed.
+            By default, Kestrel will wait 5 seconds for any ongoing requests to complete before terminating
+            the connection.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNetCore.Server.Kestrel.Filter.SocketInputStream">
+            <summary>
+            This is a write-only stream that copies what is written into a
+            <see cref="T:Microsoft.AspNetCore.Server.Kestrel.Http.SocketInput"/> object. This is used as an argument to
+            <see cref="M:System.IO.Stream.CopyToAsync(System.IO.Stream)" /> so input filtered by a
+            ConnectionFilter (e.g. SslStream) can be consumed by <see cref="T:Microsoft.AspNetCore.Server.Kestrel.Http.Frame"/>.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNetCore.Server.Kestrel.Http.DateHeaderValueManager">
+            <summary>
+            Manages the generation of the date header value.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.DateHeaderValueManager.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Microsoft.AspNetCore.Server.Kestrel.Http.DateHeaderValueManager"/> class.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.DateHeaderValueManager.GetDateHeaderValue">
+            <summary>
+            Returns a value representing the current server date/time for use in the HTTP "Date" response header
+            in accordance with http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.18
+            </summary>
+            <returns>The value.</returns>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.DateHeaderValueManager.Dispose">
+            <summary>
+            Releases all resources used by the current instance of <see cref="T:Microsoft.AspNetCore.Server.Kestrel.Http.DateHeaderValueManager"/>.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.DateHeaderValueManager.StartTimer">
+            <summary>
+            Starts the timer
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.DateHeaderValueManager.StopTimer">
+            <summary>
+            Stops the timer
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.DateHeaderValueManager.PrepareDateValues">
+            <summary>
+            Starts the timer if it's turned off, or sets the datevalues to the current time if disposed. 
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.DateHeaderValueManager.SetDateValues(System.DateTimeOffset)">
+            <summary>
+            Sets date values from a provided ticks value
+            </summary>
+            <param name="value">A DateTimeOffset value</param>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.Frame.Start">
+            <summary>
+            Called once by Connection class to begin the RequestProcessingAsync loop.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.Frame.Stop">
+            <summary>
+            Should be called when the server wants to initiate a shutdown. The Task returned will
+            become complete when the RequestProcessingAsync function has exited. It is expected that
+            Stop will be called on all active connections, and Task.WaitAll() will be called on every
+            return value.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.Frame.Abort">
+            <summary>
+            Immediate kill the connection and poison the request and response streams.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.Frame.RequestProcessingAsync">
+            <summary>
+            Primary loop which consumes socket input, parses it for protocol framing, and invokes the
+            application delegate for as long as the socket is intended to remain open.
+            The resulting Task from this loop is preserved in a field which is used when the server needs
+            to drain and close all currently active connections.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.Frame`1.RequestProcessingAsync">
+            <summary>
+            Primary loop which consumes socket input, parses it for protocol framing, and invokes the
+            application delegate for as long as the socket is intended to remain open.
+            The resulting Task from this loop is preserved in a field which is used when the server needs
+            to drain and close all currently active connections.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNetCore.Server.Kestrel.Http.ISocketOutput">
+            <summary>
+              Operations performed for buffered socket output
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.ISocketOutput.ProducingStart">
+            <summary>
+            Returns an iterator pointing to the tail of the response buffer. Response data can be appended
+            manually or by using <see cref="M:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolIterator.CopyFrom(System.ArraySegment{System.Byte})"/>.
+            Be careful to ensure all appended blocks are backed by a <see cref="T:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolSlab"/>. 
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.ISocketOutput.ProducingComplete(Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolIterator)">
+            <summary>
+            Commits the response data appended to the iterator returned from <see cref="M:Microsoft.AspNetCore.Server.Kestrel.Http.ISocketOutput.ProducingStart"/>.
+            All the data up to <paramref name="end"/> will be included in the response.
+            A write operation isn't guaranteed to be scheduled unless <see cref="M:Microsoft.AspNetCore.Server.Kestrel.Http.ISocketOutput.Write(System.ArraySegment{System.Byte},System.Boolean)"/>
+            or <see cref="M:Microsoft.AspNetCore.Server.Kestrel.Http.ISocketOutput.WriteAsync(System.ArraySegment{System.Byte},System.Boolean,System.Threading.CancellationToken)"/> is called afterwards.
+            </summary>
+            <param name="end">Points to the end of the committed data.</param>
+        </member>
+        <member name="T:Microsoft.AspNetCore.Server.Kestrel.Http.Listener">
+            <summary>
+            Base class for listeners in Kestrel. Listens for incoming connections
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.Listener.CreateListenSocket">
+            <summary>
+            Creates the socket used to listen for incoming connections
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.Listener.OnConnection(Microsoft.AspNetCore.Server.Kestrel.Networking.UvStreamHandle,System.Int32)">
+            <summary>
+            Handles an incoming connection
+            </summary>
+            <param name="listenSocket">Socket being used to listen on</param>
+            <param name="status">Connection status</param>
+        </member>
+        <member name="T:Microsoft.AspNetCore.Server.Kestrel.Http.ListenerPrimary">
+            <summary>
+            A primary listener waits for incoming connections on a specified socket. Incoming 
+            connections may be passed to a secondary listener to handle.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNetCore.Server.Kestrel.Http.ListenerSecondary">
+            <summary>
+            A secondary listener is delegated requests from a primary listener via a named pipe or 
+            UNIX domain socket.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.ListenerSecondary.CreateAcceptSocket">
+            <summary>
+            Creates a socket which can be used to accept an incoming connection
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNetCore.Server.Kestrel.Http.MessageBody.ForChunkedEncoding">
+            <summary>
+              http://tools.ietf.org/html/rfc2616#section-3.6.1
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNetCore.Server.Kestrel.Http.PipeListener">
+            <summary>
+            Implementation of <see cref="T:Microsoft.AspNetCore.Server.Kestrel.Http.Listener"/> that uses UNIX domain sockets as its transport.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.PipeListener.CreateListenSocket">
+            <summary>
+            Creates the socket used to listen for incoming connections
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.PipeListener.OnConnection(Microsoft.AspNetCore.Server.Kestrel.Networking.UvStreamHandle,System.Int32)">
+            <summary>
+            Handles an incoming connection
+            </summary>
+            <param name="listenSocket">Socket being used to listen on</param>
+            <param name="status">Connection status</param>
+        </member>
+        <member name="T:Microsoft.AspNetCore.Server.Kestrel.Http.PipeListenerPrimary">
+            <summary>
+            An implementation of <see cref="T:Microsoft.AspNetCore.Server.Kestrel.Http.ListenerPrimary"/> using UNIX sockets.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.PipeListenerPrimary.CreateListenSocket">
+            <summary>
+            Creates the socket used to listen for incoming connections
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.PipeListenerPrimary.OnConnection(Microsoft.AspNetCore.Server.Kestrel.Networking.UvStreamHandle,System.Int32)">
+            <summary>
+            Handles an incoming connection
+            </summary>
+            <param name="listenSocket">Socket being used to listen on</param>
+            <param name="status">Connection status</param>
+        </member>
+        <member name="T:Microsoft.AspNetCore.Server.Kestrel.Http.PipeListenerSecondary">
+            <summary>
+            An implementation of <see cref="T:Microsoft.AspNetCore.Server.Kestrel.Http.ListenerSecondary"/> using UNIX sockets.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.PipeListenerSecondary.CreateAcceptSocket">
+            <summary>
+            Creates a socket which can be used to accept an incoming connection
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.SocketOutput.WriteContext.DoWriteIfNeeded">
+            <summary>
+            First step: initiate async write if needed, otherwise go to next step
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.SocketOutput.WriteContext.DoShutdownIfNeeded">
+            <summary>
+            Second step: initiate async shutdown if needed, otherwise go to next step
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.SocketOutput.WriteContext.DoDisconnectIfNeeded">
+            <summary>
+            Third step: disconnect socket if needed, otherwise this work item is complete
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNetCore.Server.Kestrel.Http.TcpListener">
+            <summary>
+            Implementation of <see cref="T:Microsoft.AspNetCore.Server.Kestrel.Http.Listener"/> that uses TCP sockets as its transport.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.TcpListener.CreateListenSocket">
+            <summary>
+            Creates the socket used to listen for incoming connections
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.TcpListener.OnConnection(Microsoft.AspNetCore.Server.Kestrel.Networking.UvStreamHandle,System.Int32)">
+            <summary>
+            Handle an incoming connection
+            </summary>
+            <param name="listenSocket">Socket being used to listen on</param>
+            <param name="status">Connection status</param>
+        </member>
+        <member name="T:Microsoft.AspNetCore.Server.Kestrel.Http.TcpListenerPrimary">
+            <summary>
+            An implementation of <see cref="T:Microsoft.AspNetCore.Server.Kestrel.Http.ListenerPrimary"/> using TCP sockets.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.TcpListenerPrimary.CreateListenSocket">
+            <summary>
+            Creates the socket used to listen for incoming connections
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.TcpListenerPrimary.OnConnection(Microsoft.AspNetCore.Server.Kestrel.Networking.UvStreamHandle,System.Int32)">
+            <summary>
+            Handles an incoming connection
+            </summary>
+            <param name="listenSocket">Socket being used to listen on</param>
+            <param name="status">Connection status</param>
+        </member>
+        <member name="T:Microsoft.AspNetCore.Server.Kestrel.Http.TcpListenerSecondary">
+            <summary>
+            An implementation of <see cref="T:Microsoft.AspNetCore.Server.Kestrel.Http.ListenerSecondary"/> using TCP sockets.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.TcpListenerSecondary.CreateAcceptSocket">
+            <summary>
+            Creates a socket which can be used to accept an incoming connection
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.UrlPathDecoder.Unescape(Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolIterator,Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolIterator)">
+            <summary>
+            Unescapes the string between given memory iterators in place.
+            </summary>
+            <param name="start">The iterator points to the beginning of the sequence.</param>
+            <param name="end">The iterator points to the byte behind the end of the sequence.</param>
+            <returns>The iterator points to the byte behind the end of the processed sequence.</returns>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.UrlPathDecoder.DecodeCore(Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolIterator@,Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolIterator@,Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolIterator)">
+            <summary>
+            Unescape the percent-encodings
+            </summary>
+            <param name="reader">The iterator point to the first % char</param>
+            <param name="writer">The place to write to</param>
+            <param name="end">The end of the sequence</param>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.UrlPathDecoder.UnescapePercentEncoding(Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolIterator@,Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolIterator)">
+            <summary>
+            Read the percent-encoding and try unescape it.
+            
+            The operation first peek at the character the <paramref name="scan"/> 
+            iterator points at. If it is % the <paramref name="scan"/> is then 
+            moved on to scan the following to characters. If the two following 
+            characters are hexadecimal literals they will be unescaped and the 
+            value will be returned.
+            
+            If the first character is not % the <paramref name="scan"/> iterator 
+            will be removed beyond the location of % and -1 will be returned.
+            
+            If the following two characters can't be successfully unescaped the 
+            <paramref name="scan"/> iterator will be move behind the % and -1 
+            will be returned.
+            </summary>
+            <param name="scan">The value to read</param>
+            <param name="end">The end of the sequence</param>
+            <returns>The unescaped byte if success. Otherwise return -1.</returns>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Http.UrlPathDecoder.ReadHex(Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolIterator@,Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolIterator)">
+            <summary>
+            Read the next char and convert it into hexadecimal value.
+            
+            The <paramref name="scan"/> iterator will be moved to the next
+            byte no matter no matter whether the operation successes.
+            </summary>
+            <param name="scan">The value to read</param>
+            <param name="end">The end of the sequence</param>
+            <returns>The hexadecimal value if successes, otherwise -1.</returns>
+        </member>
+        <member name="F:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.Constants.UnixPipeHostPrefix">
+            <summary>
+            Prefix of host name used to specify Unix sockets in the configuration.
+            </summary>
+        </member>
+        <member name="F:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.Constants.RFC1123DateFormat">
+            <summary>
+            DateTime format string for RFC1123. See  https://msdn.microsoft.com/en-us/library/az4se3k1(v=vs.110).aspx#RFC1123
+            for info on the format.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.ISystemClock">
+            <summary>
+            Abstracts the system clock to facilitate testing.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.ISystemClock.UtcNow">
+            <summary>
+            Retrieves the current system time in UTC.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPool">
+            <summary>
+            Used to allocate and distribute re-usable blocks of memory.
+            </summary>
+        </member>
+        <member name="F:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPool._blockStride">
+            <summary>
+            The gap between blocks' starting address. 4096 is chosen because most operating systems are 4k pages in size and alignment.
+            </summary>
+        </member>
+        <member name="F:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPool._blockUnused">
+            <summary>
+            The last 64 bytes of a block are unused to prevent CPU from pre-fetching the next 64 byte into it's memory cache. 
+            See https://github.com/aspnet/KestrelHttpServer/issues/117 and https://www.youtube.com/watch?v=L7zSU9HI-6I
+            </summary>
+        </member>
+        <member name="F:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPool._blockCount">
+            <summary>
+            Allocating 32 contiguous blocks per slab makes the slab size 128k. This is larger than the 85k size which will place the memory
+            in the large object heap. This means the GC will not try to relocate this array, so the fact it remains pinned does not negatively
+            affect memory management's compactification.
+            </summary>
+        </member>
+        <member name="F:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPool._blockLength">
+            <summary>
+            4096 - 64 gives you a blockLength of 4032 usable bytes per block.
+            </summary>
+        </member>
+        <member name="F:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPool.MaxPooledBlockLength">
+            <summary>
+            Max allocation block size for pooled blocks, 
+            larger values can be leased but they will be disposed after use rather than returned to the pool.
+            </summary>
+        </member>
+        <member name="F:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPool._slabLength">
+            <summary>
+            4096 * 32 gives you a slabLength of 128k contiguous bytes allocated per slab
+            </summary>
+        </member>
+        <member name="F:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPool._blocks">
+            <summary>
+            Thread-safe collection of blocks which are currently in the pool. A slab will pre-allocate all of the block tracking objects
+            and add them to this collection. When memory is requested it is taken from here first, and when it is returned it is re-added.
+            </summary>
+        </member>
+        <member name="F:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPool._slabs">
+            <summary>
+            Thread-safe collection of slabs which have been allocated by this pool. As long as a slab is in this collection and slab.IsActive, 
+            the blocks will be added to _blocks when returned.
+            </summary>
+        </member>
+        <member name="F:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPool._disposedValue">
+            <summary>
+            This is part of implementing the IDisposable pattern.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPool.Lease(System.Int32)">
+            <summary>
+            Called to take a block from the pool.
+            </summary>
+            <param name="minimumSize">The block returned must be at least this size. It may be larger than this minimum size, and if so,
+            the caller may write to the block's entire size rather than being limited to the minumumSize requested.</param>
+            <returns>The block that is reserved for the called. It must be passed to Return when it is no longer being used.</returns>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPool.AllocateSlab">
+            <summary>
+            Internal method called when a block is requested and the pool is empty. It allocates one additional slab, creates all of the 
+            block tracking objects, and adds them all to the pool.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPool.Return(Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolBlock)">
+            <summary>
+            Called to return a block to the pool. Once Return has been called the memory no longer belongs to the caller, and
+            Very Bad Things will happen if the memory is read of modified subsequently. If a caller fails to call Return and the
+            block tracking object is garbage collected, the block tracking object's finalizer will automatically re-create and return
+            a new tracking object into the pool. This will only happen if there is a bug in the server, however it is necessary to avoid
+            leaving "dead zones" in the slab due to lost block tracking objects.
+            </summary>
+            <param name="block">The block to return. It must have been acquired by calling Lease on the same memory pool instance.</param>
+        </member>
+        <member name="T:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolBlock">
+            <summary>
+            Block tracking object used by the byte buffer memory pool. A slab is a large allocation which is divided into smaller blocks. The
+            individual blocks are then treated as independant array segments.
+            </summary>
+        </member>
+        <member name="F:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolBlock._pinHandle">
+            <summary>
+            If this block represents a one-time-use memory object, this GCHandle will hold that memory object at a fixed address
+            so it can be used in native operations.
+            </summary>
+        </member>
+        <member name="F:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolBlock._dataArrayPtr">
+            <summary>
+            Native address of the first byte of this block's Data memory. It is null for one-time-use memory, or copied from 
+            the Slab's ArrayPtr for a slab-block segment. The byte it points to corresponds to Data.Array[0], and in practice you will always
+            use the _dataArrayPtr + Start or _dataArrayPtr + End, which point to the start of "active" bytes, or point to just after the "active" bytes.
+            </summary>
+        </member>
+        <member name="F:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolBlock.Data">
+            <summary>
+            The array segment describing the range of memory this block is tracking. The caller which has leased this block may only read and
+            modify the memory in this range.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolBlock.#ctor">
+            <summary>
+            This object cannot be instantiated outside of the static Create method
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolBlock.Pool">
+            <summary>
+            Back-reference to the memory pool which this block was allocated from. It may only be returned to this pool.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolBlock.Slab">
+            <summary>
+            Back-reference to the slab from which this block was taken, or null if it is one-time-use memory.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolBlock.Array">
+            <summary>
+            Convenience accessor
+            </summary>
+        </member>
+        <member name="F:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolBlock.Start">
+            <summary>
+            The Start represents the offset into Array where the range of "active" bytes begins. At the point when the block is leased
+            the Start is guaranteed to be equal to Array.Offset. The value of Start may be assigned anywhere between Data.Offset and
+            Data.Offset + Data.Count, and must be equal to or less than End.
+            </summary>
+        </member>
+        <member name="F:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolBlock.End">
+            <summary>
+            The End represents the offset into Array where the range of "active" bytes ends. At the point when the block is leased
+            the End is guaranteed to be equal to Array.Offset. The value of Start may be assigned anywhere between Data.Offset and
+            Data.Offset + Data.Count, and must be equal to or less than End.
+            </summary>
+        </member>
+        <member name="F:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolBlock.Next">
+            <summary>
+            Reference to the next block of data when the overall "active" bytes spans multiple blocks. At the point when the block is
+            leased Next is guaranteed to be null. Start, End, and Next are used together in order to create a linked-list of discontiguous 
+            working memory. The "active" memory is grown when bytes are copied in, End is increased, and Next is assigned. The "active" 
+            memory is shrunk when bytes are consumed, Start is increased, and blocks are returned to the pool.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolBlock.Pin">
+            <summary>
+            Called to ensure that a block is pinned, and return the pointer to the native address
+            of the first byte of this block's Data memory. Arriving data is read into Pin() + End.
+            Outgoing data is read from Pin() + Start.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolBlock.Reset">
+            <summary>
+            called when the block is returned to the pool. mutable values are re-assigned to their guaranteed initialized state.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolBlock.ToString">
+            <summary>
+            ToString overridden for debugger convenience. This displays the "active" byte information in this block as ASCII characters.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolBlock.GetIterator">
+            <summary>
+            acquires a cursor pointing into this block at the Start of "active" byte information
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolIterator.FindFirstEqualByte(System.Numerics.Vector{System.Byte}@)">
+            <summary>
+            Find first byte
+            </summary>
+            <param  name="byteEquals"></param >
+            <returns>The first index of the result vector</returns>
+            <exception cref="T:System.InvalidOperationException">byteEquals = 0</exception>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolIterator.Put(System.Byte)">
+            <summary>
+            Save the data at the current location then move to the next available space.
+            </summary>
+            <param name="data">The byte to be saved.</param>
+            <returns>true if the operation successes. false if can't find available space.</returns>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolIteratorExtensions.GetKnownMethod(Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolIterator,Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolIterator@,System.String@)">
+            <summary>
+            Checks that up to 8 bytes from <paramref name="begin"/> correspond to a known HTTP method.
+            </summary>
+            <remarks>
+            A "known HTTP method" can be an HTTP method name defined in the HTTP/1.1 RFC.
+            Since all of those fit in at most 8 bytes, they can be optimally looked up by reading those bytes as a long. Once
+            in that format, it can be checked against the known method. 
+            The Known Methods (CONNECT, DELETE, GET, HEAD, PATCH, POST, PUT, OPTIONS, TRACE) are all less than 8 bytes 
+            and will be compared with the required space. A mask is used if the Known method is less than 8 bytes.
+            To optimize performance the GET method will be checked first.
+            </remarks>
+            <param name="begin">The iterator from which to start the known string lookup.</param>
+            <param name="scan">If we found a valid method, then scan will be updated to new position</param>
+            <param name="knownMethod">A reference to a pre-allocated known string, if the input matches any.</param>
+            <returns><c>true</c> if the input matches a known string, <c>false</c> otherwise.</returns>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolIteratorExtensions.GetKnownVersion(Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolIterator,Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolIterator@,System.String@)">
+            <summary>
+            Checks 9 bytes from <paramref name="begin"/>  correspond to a known HTTP version.
+            </summary>
+            <remarks>
+            A "known HTTP version" Is is either HTTP/1.0 or HTTP/1.1.
+            Since those fit in 8 bytes, they can be optimally looked up by reading those bytes as a long. Once
+            in that format, it can be checked against the known versions.
+            The Known versions will be checked with the required '\r'.
+            To optimize performance the HTTP/1.1 will be checked first.
+            </remarks>
+            <param name="begin">The iterator from which to start the known string lookup.</param>
+            <param name="scan">If we found a valid method, then scan will be updated to new position</param>
+            <param name="knownVersion">A reference to a pre-allocated known string, if the input matches any.</param>
+            <returns><c>true</c> if the input matches a known string, <c>false</c> otherwise.</returns>
+        </member>
+        <member name="T:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolSlab">
+            <summary>
+            Slab tracking object used by the byte buffer memory pool. A slab is a large allocation which is divided into smaller blocks. The
+            individual blocks are then treated as independant array segments.
+            </summary>
+        </member>
+        <member name="F:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolSlab._gcHandle">
+            <summary>
+            This handle pins the managed array in memory until the slab is disposed. This prevents it from being
+            relocated and enables any subsections of the array to be used as native memory pointers to P/Invoked API calls.
+            </summary>
+        </member>
+        <member name="F:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolSlab.Array">
+            <summary>
+            The managed memory allocated in the large object heap.
+            </summary>
+        </member>
+        <member name="F:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolSlab.ArrayPtr">
+            <summary>
+            The native memory pointer of the pinned Array. All block native addresses are pointers into the memory 
+            ranging from ArrayPtr to ArrayPtr + Array.Length
+            </summary>
+        </member>
+        <member name="F:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolSlab.IsActive">
+            <summary>
+            True as long as the blocks from this slab are to be considered returnable to the pool. In order to shrink the 
+            memory pool size an entire slab must be removed. That is done by (1) setting IsActive to false and removing the
+            slab from the pool's _slabs collection, (2) as each block currently in use is Return()ed to the pool it will
+            be allowed to be garbage collected rather than re-pooled, and (3) when all block tracking objects are garbage
+            collected and the slab is no longer references the slab will be garbage collected and the memory unpinned will
+            be unpinned by the slab's Dispose.
+            </summary>
+        </member>
+        <member name="F:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.MemoryPoolSlab._disposedValue">
+            <summary>
+            Part of the IDisposable implementation
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.SystemClock">
+            <summary>
+            Provides access to the normal system clock.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNetCore.Server.Kestrel.Infrastructure.SystemClock.UtcNow">
+            <summary>
+            Retrieves the current system time in UTC.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNetCore.Server.Kestrel.Disposable">
+            <summary>
+            Summary description for Disposable
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNetCore.Server.Kestrel.KestrelThread">
+            <summary>
+            Summary description for KestrelThread
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNetCore.Server.Kestrel.KestrelTrace">
+            <summary>
+            Summary description for KestrelTrace
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNetCore.Server.Kestrel.Networking.UvConnectRequest">
+            <summary>
+            Summary description for UvWriteRequest
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNetCore.Server.Kestrel.Networking.UvMemory">
+            <summary>
+            Summary description for UvMemory
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNetCore.Server.Kestrel.Networking.UvShutdownReq">
+            <summary>
+            Summary description for UvShutdownRequest
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Server.Kestrel.Networking.UvTcpHandle.CreateIPEndpoint(Microsoft.AspNetCore.Server.Kestrel.ServerAddress)">
+            <summary>
+            Returns an <see cref="T:System.Net.IPEndPoint"/> for the given host an port.
+            If the host parameter isn't "localhost" or an IP address, use IPAddress.Any.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNetCore.Server.Kestrel.Networking.UvWriteReq">
+            <summary>
+            Summary description for UvWriteRequest
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Hosting.WebHostBuilderKestrelExtensions.UseKestrel(Microsoft.AspNetCore.Hosting.IWebHostBuilder)">
+            <summary>
+            Specify Kestrel as the server to be used by the web host.
+            </summary>
+            <param name="hostBuilder">
+            The Microsoft.AspNetCore.Hosting.IWebHostBuilder to configure.
+            </param>
+            <returns>
+            The Microsoft.AspNetCore.Hosting.IWebHostBuilder.
+            </returns>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Hosting.WebHostBuilderKestrelExtensions.UseKestrel(Microsoft.AspNetCore.Hosting.IWebHostBuilder,System.Action{Microsoft.AspNetCore.Server.Kestrel.KestrelServerOptions})">
+            <summary>
+            Specify Kestrel as the server to be used by the web host.
+            </summary>
+            <param name="hostBuilder">
+            The Microsoft.AspNetCore.Hosting.IWebHostBuilder to configure.
+            </param>
+            <param name="options">
+            A callback to configure Kestrel options.
+            </param>
+            <returns>
+            The Microsoft.AspNetCore.Hosting.IWebHostBuilder.
+            </returns>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Hosting.KestrelServerOptionsConnectionLoggingExtensions.UseConnectionLogging(Microsoft.AspNetCore.Server.Kestrel.KestrelServerOptions)">
+            <summary>
+            Emits verbose logs for bytes read from and written to the connection.
+            </summary>
+            <returns>
+            The Microsoft.AspNetCore.Server.KestrelServerOptions.
+            </returns>
+        </member>
+        <member name="M:Microsoft.AspNetCore.Hosting.KestrelServerOptionsConnectionLoggingExtensions.UseConnectionLogging(Microsoft.AspNetCore.Server.Kestrel.KestrelServerOptions,System.String)">
+            <summary>
+            Emits verbose logs for bytes read from and written to the connection.
+            </summary>
+            <returns>
+            The Microsoft.AspNetCore.Server.KestrelServerOptions.
+            </returns>
+        </member>
+    </members>
+</doc>
