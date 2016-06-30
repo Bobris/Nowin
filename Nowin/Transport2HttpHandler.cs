@@ -665,12 +665,19 @@ namespace Nowin
 
         void HeaderAppendHttpStatus(int status)
         {
-            // It always fits so skip buffer size check
-            var j = StartBufferOffset + ReceiveBufferSize + _responseHeaderPos;
-            _buffer[j++] = (byte)('0' + status / 100);
-            _buffer[j++] = (byte)('0' + status / 10 % 10);
-            _buffer[j] = (byte)('0' + status % 10);
-            _responseHeaderPos += 3;
+            if (status == 200)
+            {
+                HeaderAppend("200 OK");
+            }
+            else
+            {
+                // It always fits so skip buffer size check
+                var j = StartBufferOffset + ReceiveBufferSize + _responseHeaderPos;
+                _buffer[j++] = (byte) ('0' + status/100);
+                _buffer[j++] = (byte) ('0' + status/10%10);
+                _buffer[j] = (byte) ('0' + status%10);
+                _responseHeaderPos += 3;
+            }
         }
 
         void HeaderAppendCrLf()
