@@ -169,12 +169,12 @@ namespace Nowin
 
         public override bool CanWrite => true;
 
-        public override long Length => (long)_transport2HttpHandler.RequestContentLength;
+        public override long Length => throw new NotSupportedException();
 
         public override long Position
         {
-            get { throw new InvalidOperationException(); }
-            set { throw new InvalidOperationException(); }
+            get { throw new NotSupportedException(); }
+            set { throw new NotSupportedException(); }
         }
 
         public ulong ResponseLength => _responsePosition;
