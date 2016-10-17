@@ -60,7 +60,10 @@ namespace Nowin
             {
                 _layerFactory = new SslTransportFactory(_parameters, _layerFactory);
             }
-            ListenSocket = new Socket(_parameters.EndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+
+            ListenSocket = new Socket(AddressFamily.InterNetworkV6, SocketType.Stream, ProtocolType.Tcp);
+            ListenSocket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IPv6Only, false);
+
             var start = DateTime.UtcNow;
             while (true)
             {
