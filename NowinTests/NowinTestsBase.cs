@@ -419,11 +419,9 @@ namespace NowinTests
                     Assert.True(env.TryGetValue("server.IsLocal", out ignored));
                     Assert.Equal(true, env["server.IsLocal"]);
 
+                    // Don't check for actual IP address as it might be IPv6 local address
                     Assert.True(env.TryGetValue("server.RemoteIpAddress", out ignored));
-                    Assert.Equal("127.0.0.1", env["server.RemoteIpAddress"]);
-
                     Assert.True(env.TryGetValue("server.LocalIpAddress", out ignored));
-                    Assert.Equal("127.0.0.1", env["server.LocalIpAddress"]);
 
                     Assert.True(env.TryGetValue("server.RemotePort", out ignored));
                     Assert.True(env.TryGetValue("server.LocalPort", out ignored));

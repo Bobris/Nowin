@@ -32,7 +32,20 @@ namespace Nowin
 
         public bool IsLocal(IPAddress address)
         {
-            return _dict.ContainsKey(address);
+            if (_dict.ContainsKey(address))
+                return true;
+
+            if (IPAddress.IsLoopback(address))
+                return true;
+
+            if (address.IsIPv4MappedToIPv6)
+            {
+                var ip4 = address.MapToIPv4();
+                if (_dict.ContainsKey(ip4))
+                    return true;
+            }
+
+            return false;
         }
     }
 }

@@ -194,11 +194,8 @@ namespace Nowin
                 _authenticateTask = _ssl.AuthenticateAsServerAsync(_serverParameters.Certificate, _serverParameters.ClientCertificateRequired, _serverParameters.Protocols, false).ContinueWith((t, selfObject) =>
                   {
                       var self = (SslTransportHandler)selfObject;
-                      if (t.IsFaulted || t.IsCanceled)
-                          self.Callback.StartDisconnect();
-                      else
-                          _next.SetRemoteCertificate(_ssl.RemoteCertificate);
-                  }, this);
+                      self._next.SetRemoteCertificate(_ssl.RemoteCertificate);
+                  }, this, TaskContinuationOptions.OnlyOnRanToCompletion);
                 _next.FinishAccept(_recvBuffer, _recvOffset, 0, remoteEndPoint, localEndPoint);
             }
             catch (Exception)
@@ -248,18 +245,32 @@ namespace Nowin
                         }
                         else
                         {
-                            _ssl.ReadAsync(self._recvBuffer, self._recvOffset, self._recvLength).ContinueWith((t2, selfObject2) =>
+                            try
                             {
-                                var self2 = (SslTransportHandler)selfObject2;
-                                if (t2.IsFaulted || t2.IsCanceled || t2.Result == 0)
-                                    self._next.FinishReceive(null, 0, -1);
-                                else
-                                    self._next.FinishReceive(self2._recvBuffer, self2._recvOffset, t2.Result);
-                            }, self);
+                                self._ssl.ReadAsync(self._recvBuffer, self._recvOffset, self._recvLength).ContinueWith((t2, selfObject2) =>
+                                {
+                                    var self2 = (SslTransportHandler)selfObject2;
+                                    if (t2.IsFaulted || t2.IsCanceled || t2.Result == 0)
+                                        self2._next.FinishReceive(null, 0, -1);
+                                    else
+                                        self2._next.FinishReceive(self2._recvBuffer, self2._recvOffset, t2.Result);
+                                }, self);
+                            }
+                            catch (Exception)
+                            {
+                                self._next.FinishReceive(null, 0, -1);
+                            }
                         }
                     }, this);
                     return;
                 }
+
+                if (_authenticateTask.IsCanceled || _authenticateTask.IsFaulted)
+                {
+                    _next.FinishReceive(null, 0, -1);
+                    return;
+                }
+
                 _ssl.ReadAsync(buffer, offset, length).ContinueWith((t, selfObject) =>
                 {
                     var self = (SslTransportHandler)selfObject;
