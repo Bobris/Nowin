@@ -358,7 +358,7 @@ namespace Nowin
             if (!success)
             {
                 _webSocketReceiveState = WebSocketReceiveState.Close;
-                _webSocketReceiveTcs?.SetCanceled();
+                _webSocketReceiveTcs?.TrySetCanceled();
                 _webSocketTcsReceivedClose?.TrySetResult(null);
                 return;
             }
@@ -427,7 +427,7 @@ namespace Nowin
             var tcs = new TaskCompletionSource<WebSocketReceiveTuple>();
             if (_webSocketReceiveState == WebSocketReceiveState.Close || _webSocketReceiveState == WebSocketReceiveState.Closing)
             {
-                tcs.SetCanceled();
+                tcs.TrySetCanceled();
                 return tcs.Task;
             }
             _webSocketReceiveTcs = tcs;
