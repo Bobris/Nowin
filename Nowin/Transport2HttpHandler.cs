@@ -737,7 +737,7 @@ namespace Nowin
                 {
                     if (len != 0)
                     {
-                        WrapInChunk(_buffer, ref offset, ref len);
+                        WrapInChunk(_buffer, ref offset, ref len, false);
                     }
                     AppendZeroChunk(_buffer, offset, ref len);
                 }
@@ -827,7 +827,7 @@ namespace Nowin
             _reqRespStream.Reset();
         }
 
-        public Task WriteAsync(byte[] buffer, int startOffset, int len)
+        public Task WriteAsync(byte[] buffer, int startOffset, int len, bool lastPart)
         {
             if (!_responseHeadersSend)
             {
@@ -839,7 +839,7 @@ namespace Nowin
                     len = 0;
                 if (_responseIsChunked && len != 0)
                 {
-                    WrapInChunk(_buffer, ref startOffset, ref len);
+                    WrapInChunk(_buffer, ref startOffset, ref len, false);
                 }
                 OptimallyMergeTwoRegions(_buffer, StartBufferOffset + ReceiveBufferSize, _responseHeaderPos, ref startOffset, ref len);
                 _responseHeadersSend = true;
@@ -850,7 +850,7 @@ namespace Nowin
                 if (_isMethodHead)
                     len = 0;
                 if (len == 0) return Task.Delay(0);
-                WrapInChunk(_buffer, ref startOffset, ref len);
+                WrapInChunk(_buffer, ref startOffset, ref len, lastPart);
             }
             else
             {
@@ -884,12 +884,20 @@ namespace Nowin
             return tcs.Task;
         }
 
-        static void WrapInChunk(byte[] buffer, ref int startOffset, ref int len)
+        static void WrapInChunk(byte[] buffer, ref int startOffset, ref int len, bool lastPart)
         {
             var l = (uint)len;
             var o = (uint)startOffset;
             buffer[o + l] = 13;
             buffer[o + l + 1] = 10;
+            if (lastPart) {
+                buffer[o + l + 2] = (byte) '0';
+                buffer[o + l + 3] = 13;
+                buffer[o + l + 4] = 10;
+                buffer[o + l + 5] = 13;
+                buffer[o + l + 6] = 10;
+                len += 5;
+            }
             buffer[--o] = 10;
             buffer[--o] = 13;
             len += 4;

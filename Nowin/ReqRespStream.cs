@@ -188,14 +188,14 @@ namespace Nowin
 
         public override Task FlushAsync(CancellationToken cancellationToken)
         {
-            return FlushAsyncCore();
+            return FlushAsyncCore(true);
         }
 
-        Task FlushAsyncCore()
+        Task FlushAsyncCore(bool lastPart)
         {
             var len = ResponseLocalPos;
             ResponseLocalPos = 0;
-            return _transport2HttpHandler.WriteAsync(_buf, ResponseStartOffset, len);
+            return _transport2HttpHandler.WriteAsync(_buf, ResponseStartOffset, len, lastPart);
         }
 
         public override long Seek(long offset, SeekOrigin origin)
@@ -233,11 +233,11 @@ namespace Nowin
             {
                 if (ResponseLocalPos == _responseMaxLen)
                 {
-                    await FlushAsyncCore();
+                    await FlushAsyncCore(false);
                     if ((count >= _responseMaxLen) && _transport2HttpHandler.CanUseDirectWrite())
                     {
                         _responsePosition += (ulong)count;
-                        await _transport2HttpHandler.WriteAsync(buffer, offset, count);
+                        await _transport2HttpHandler.WriteAsync(buffer, offset, count, false);
                         return;
                     }
                 }
