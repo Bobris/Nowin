@@ -24,50 +24,54 @@ Features it supports:
 
 Sample: (uses Microsoft.Owin.Hosting nuget)
 
-    static class Program
+```csharp
+static class Program
+{
+    static void Main(string[] args)
     {
-        static void Main(string[] args)
+        var options = new StartOptions
         {
-            var options = new StartOptions
-            {
-                ServerFactory = "Nowin",
-                Port = 8080
-            };
+            ServerFactory = "Nowin",
+            Port = 8080
+        };
 
-            using (WebApp.Start<Startup>(options))
+        using (WebApp.Start<Startup>(options))
+        {
+            Console.WriteLine("Running a http server on port 8080");
+            Console.ReadKey();
+        }
+    }
+}
+
+public class Startup
+{
+    public void Configuration(IAppBuilder app)
+    {
+        app.Use(context =>
+        {
+            if (context.Request.Path == "/")
             {
-                Console.WriteLine("Running a http server on port 8080");
-                Console.ReadKey();
+                context.Response.ContentType = "text/plain";
+                return context.Response.WriteAsync("Hello World!");
             }
-        }
-    }
 
-    public class Startup
-    {
-        public void Configuration(IAppBuilder app)
-        {
-            app.Use(context =>
-            {
-                if (context.Request.Path == "/")
-                {
-                    context.Response.ContentType = "text/plain";
-                    return context.Response.WriteAsync("Hello World!");
-                }
-
-                context.Response.StatusCode = 404;
-                return Task.Delay(0);
-            });
-        }
+            context.Response.StatusCode = 404;
+            return Task.Delay(0);
+        });
     }
+}
+```
 
 Https sample using builder:
 
-    var builder = ServerBuilder.New().SetPort(8888).SetOwinApp(SomeOwinApp);
-    builder.SetCertificate(new X509Certificate2("certificate.pfx", "password"));
-    using (builder.Start())
-    {
-        Console.WriteLine("Listening on port 8888. Enter to exit.");
-        Console.ReadLine();
-    }
+```csharp
+var builder = ServerBuilder.New().SetPort(8888).SetOwinApp(SomeOwinApp);
+builder.SetCertificate(new X509Certificate2("certificate.pfx", "password"));
+using (builder.Start())
+{
+    Console.WriteLine("Listening on port 8888. Enter to exit.");
+    Console.ReadLine();
+}
+```
 
 *If running on OSX/Linux and MonoDevelop/Xamarin, to use the above sample please select external console in your project options by going to Options / Run / General / Run on external console*
